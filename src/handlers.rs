@@ -1,15 +1,15 @@
 use axum::{
-    extract::{OriginalUri, RequestParts, Extension, FromRequest},
     async_trait,
-    http::{StatusCode},
-    http::{Response},
+    extract::{Extension, FromRequest, OriginalUri, RequestParts},
+    http::Response,
+    http::StatusCode,
     response::IntoResponse,
     Json,
 };
-use hyper::{Body};
-use serde_json::{Value};
-use std::sync::Arc;
+use hyper::{Body, HeaderMap};
+use serde_json::Value;
 use std::convert::Infallible;
+use std::sync::Arc;
 
 use crate::State;
 
@@ -30,16 +30,31 @@ where
     }
 }
 
-pub async fn pass_through(Extension(state): Extension<Arc<State>>, payload: Option<Json<Value>>, OriginalUri(original_uri): OriginalUri, RequestMethod(method): RequestMethod) -> Response<Body> {
+pub async fn pass_through(
+    Extension(state): Extension<Arc<State>>,
+    payload: Option<Json<Value>>,
+    OriginalUri(original_uri): OriginalUri,
+    RequestMethod(method): RequestMethod,
+    all_headers: HeaderMap,
+) -> Response<Body> {
     let parts = original_uri.into_parts();
     let path_and_query = parts.path_and_query.expect("Missing post path and query");
-    log::info!("{{\"fn\": \"pass_through\", \"method\": \"{}\", \"uri\":\"{}\"}}", &method.as_str(), &path_and_query);
-    state.response(method, &path_and_query.as_str(), payload).await
+    log::info!(
+        "{{\"fn\": \"pass_through\", \"method\": \"{}\", \"uri\":\"{}\"}}",
+        &method.as_str(),
+        &path_and_query
+    );
+    state
+        .response(method, &path_and_query.as_str(), all_headers, payload)
+        .await
 }
 
 pub async fn handler_404(OriginalUri(original_uri): OriginalUri) -> impl IntoResponse {
     let parts = original_uri.into_parts();
     let path_and_query = parts.path_and_query.expect("Missing post path and query");
     log::info!("\"Bad path: {}\"", path_and_query);
-    (StatusCode::NOT_FOUND, "{\"error_code\": 404, \"message\": \"HTTP 404 Not Found\"}")
+    (
+        StatusCode::NOT_FOUND,
+        "{\"error_code\": 404, \"message\": \"HTTP 404 Not Found\"}",
+    )
 }

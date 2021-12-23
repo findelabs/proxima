@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
-use std::sync::{Arc};
+use std::sync::Arc;
 
 pub type ConfigHash = Arc<HashMap<String, ConfigEntry>>;
 

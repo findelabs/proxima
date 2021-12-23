@@ -1,31 +1,21 @@
-use axum::{
-    handler::Handler,
-    routing::{any},
-    AddExtensionLayer, Router,
-};
+use axum::{handler::Handler, routing::any, AddExtensionLayer, Router};
 use chrono::Local;
 use clap::{crate_version, App, Arg};
 use env_logger::{Builder, Target};
 use log::LevelFilter;
+use native_tls::TlsConnector;
 use std::io::Write;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tower_http::{trace::TraceLayer};
-use native_tls::TlsConnector;
+use tower_http::trace::TraceLayer;
 
-
+mod config;
 mod handlers;
 mod state;
-mod config;
 
-use handlers::{
-    pass_through,
-    handler_404
-};
+use handlers::{handler_404, pass_through};
 
-use state::{
-    State,
-};
+use state::State;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -75,7 +65,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         8080
     });
 
-    
     // All this junk is needed to ensure that we can connect to an endpoint with bad certs/hostname
     let tls = TlsConnector::builder()
         .danger_accept_invalid_hostnames(true)
@@ -84,18 +73,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let mut http = hyper::client::HttpConnector::new();
     http.enforce_http(false);
-    let https: hyper_tls::HttpsConnector<hyper::client::HttpConnector> = hyper_tls::HttpsConnector::from((http, tls.into()));
+    let https: hyper_tls::HttpsConnector<hyper::client::HttpConnector> =
+        hyper_tls::HttpsConnector::from((http, tls.into()));
     let client = hyper::Client::builder().build::<_, hyper::Body>(https);
     let config_path = opts.value_of("config").unwrap().to_owned();
     let config = config::parse(&config_path)?;
 
     let state = Arc::new(State {
-        config, 
-        client: client
+        config,
+        client: client,
     });
 
-    let base = Router::new()
-        .route("/*path", any(pass_through));
+    let base = Router::new().route("/*path", any(pass_through));
 
     let app = Router::new()
         .merge(base)
@@ -113,5 +102,3 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     Ok(())
 }
-
-

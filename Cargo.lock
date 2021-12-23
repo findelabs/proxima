@@ -829,7 +829,7 @@ dependencies = [
 
 [[package]]
 name = "rest-proxy-rs"
-version = "0.0.4"
+version = "0.1.1"
 dependencies = [
  "axum",
  "chrono",

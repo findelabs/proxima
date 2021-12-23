@@ -1,26 +1,25 @@
 use axum::{
-    http::{StatusCode, uri::Uri},
+    http::{uri::Uri, StatusCode},
     http::{Request, Response},
     Json,
 };
 use hyper::{
+    client::HttpConnector,
     header::{HeaderValue, CONTENT_TYPE},
-    client::HttpConnector, 
-    Body, 
-    Method
+    Body, HeaderMap, Method,
 };
 use hyper_tls::HttpsConnector;
-use serde_json::{Value};
-use std::{convert::TryFrom};
+use serde_json::Value;
+use std::convert::TryFrom;
 //use std::error::Error;
-use crate::config::{ConfigHash, ConfigEntry};
+use crate::config::{ConfigEntry, ConfigHash};
 
 type HttpsClient = hyper::client::Client<HttpsConnector<HttpConnector>, Body>;
 //type BoxResult<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 pub struct State {
     pub config: ConfigHash,
-    pub client: HttpsClient
+    pub client: HttpsClient,
 }
 
 impl State {
@@ -29,18 +28,19 @@ impl State {
         self.config.get(item)
     }
 
-    pub async fn response(&self,
+    pub async fn response(
+        &self,
         method: Method,
         path_and_query: &str,
-        payload: Option<Json<Value>>
+        mut all_headers: HeaderMap,
+        payload: Option<Json<Value>>,
     ) -> Response<Body> {
-
         // Convert path to string, so we can remove the first char
         let mut path_and_query = path_and_query.to_string();
         path_and_query.remove(0);
 
-        let (first,rest) = match path_and_query.split_once("/") {
-            Some((f,r)) => (f,r),
+        let (first, rest) = match path_and_query.split_once("/") {
+            Some((f, r)) => (f, r),
             None => {
                 return Response::builder()
                     .status(StatusCode::BAD_REQUEST)
@@ -69,7 +69,7 @@ impl State {
                     Some(p) => {
                         log::debug!("Received body: {:?}", &p);
                         Body::from(p.to_string())
-                    },
+                    }
                     None => {
                         log::debug!("Did not receive a body");
                         Body::empty()
@@ -81,27 +81,33 @@ impl State {
                     .uri(u)
                     .body(body)
                     .expect("request builder");
-    
-                req.headers_mut()
-                    .insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-    
+
+                // Append to request the headers passed by client
+                all_headers.remove(hyper::header::HOST);
+                all_headers.remove(hyper::header::USER_AGENT);
+                if !all_headers.contains_key(CONTENT_TYPE) {
+                    all_headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
+                };
+                let headers = req.headers_mut();
+                headers.extend(all_headers.clone());
+
                 match self.client.request(req).await {
                     Ok(s) => s,
                     Err(e) => {
                         log::error!("{}", e);
                         Response::builder()
                             .status(StatusCode::INTERNAL_SERVER_ERROR)
-                            .body(Body::from("{\"error\": \"Error connecting to rest endpoint\"}"))
+                            .body(Body::from(
+                                "{\"error\": \"Error connecting to rest endpoint\"}",
+                            ))
                             .unwrap()
                     }
                 }
-            },
-            Err(_) => {
-                Response::builder()
-                    .status(StatusCode::BAD_REQUEST)
-                    .body(Body::from("{\"error\": \"Error parsing uri\"}"))
-                    .unwrap()
             }
+            Err(_) => Response::builder()
+                .status(StatusCode::BAD_REQUEST)
+                .body(Body::from("{\"error\": \"Error parsing uri\"}"))
+                .unwrap(),
         }
     }
 }
