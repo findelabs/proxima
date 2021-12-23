@@ -44,7 +44,7 @@ impl State {
             None => {
                 return Response::builder()
                     .status(StatusCode::BAD_REQUEST)
-                    .body(Body::from("{\"error\": \"please specify endpoint\"}"))
+                    .body(Body::from(serde_json::to_string(&*self.config).unwrap()))
                     .unwrap()
             }
         };
@@ -54,7 +54,7 @@ impl State {
             None => {
                 return Response::builder()
                     .status(StatusCode::BAD_REQUEST)
-                    .body(Body::from(serde_json::to_string(&*self.config).unwrap()))
+                    .body(Body::from("{\"error\": \"please specify known endpoint\"}"))
                     .unwrap()
             }
         };
