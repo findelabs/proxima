@@ -61,6 +61,7 @@ impl State {
 
         let path_and_query = rest.replace(" ", "%20");
         let host_and_path = format!("{}{}", config_entry.url, path_and_query);
+        log::debug!("full uri: {}", host_and_path);
 
         match Uri::try_from(host_and_path) {
             Ok(u) => {
