@@ -12,7 +12,7 @@ use hyper::{
 use hyper_tls::HttpsConnector;
 use serde_json::{Value};
 use std::{convert::TryFrom};
-use std::error::Error;
+//use std::error::Error;
 use crate::config::{ConfigHash, ConfigEntry};
 
 type HttpsClient = hyper::client::Client<HttpsConnector<HttpConnector>, Body>;
@@ -44,7 +44,7 @@ impl State {
             None => {
                 return Response::builder()
                     .status(StatusCode::BAD_REQUEST)
-                    .body(Body::from("{\"error\": \"endpoint missing\"}"))
+                    .body(Body::from("{\"error\": \"please specify endpoint\"}"))
                     .unwrap()
             }
         };
@@ -54,13 +54,13 @@ impl State {
             None => {
                 return Response::builder()
                     .status(StatusCode::BAD_REQUEST)
-                    .body(Body::from("{\"error\": \"endpoint not known\"}"))
+                    .body(Body::from(serde_json::to_string(&*self.config).unwrap()))
                     .unwrap()
             }
         };
 
         let path_and_query = rest.replace(" ", "%20");
-        let host_and_path = format!("{}{}", config_entry.url, path_and_query);
+        let host_and_path = format!("{}/{}", config_entry.url, path_and_query);
         log::debug!("full uri: {}", host_and_path);
 
         match Uri::try_from(host_and_path) {
@@ -87,10 +87,11 @@ impl State {
     
                 match self.client.request(req).await {
                     Ok(s) => s,
-                    Err(_) => {
+                    Err(e) => {
+                        log::error!("{}", e);
                         Response::builder()
                             .status(StatusCode::INTERNAL_SERVER_ERROR)
-                            .body(Body::from("{\"error\": \"Error connecting to connect rest endpoint\"}"))
+                            .body(Body::from("{\"error\": \"Error connecting to rest endpoint\"}"))
                             .unwrap()
                     }
                 }

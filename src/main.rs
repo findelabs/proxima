@@ -1,17 +1,18 @@
 use axum::{
     handler::Handler,
-    routing::{get, post, put, delete},
+    routing::{any},
     AddExtensionLayer, Router,
 };
 use chrono::Local;
 use clap::{crate_version, App, Arg};
 use env_logger::{Builder, Target};
-use hyper_tls::HttpsConnector;
 use log::LevelFilter;
 use std::io::Write;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tower_http::{trace::TraceLayer};
+use native_tls::TlsConnector;
+
 
 mod handlers;
 mod state;
@@ -74,7 +75,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         8080
     });
 
-    let https = HttpsConnector::new();
+    
+    // All this junk is needed to ensure that we can connect to an endpoint with bad certs/hostname
+    let tls = TlsConnector::builder()
+        .danger_accept_invalid_hostnames(true)
+        .danger_accept_invalid_certs(true)
+        .build()?;
+
+    let mut http = hyper::client::HttpConnector::new();
+    http.enforce_http(false);
+    let https: hyper_tls::HttpsConnector<hyper::client::HttpConnector> = hyper_tls::HttpsConnector::from((http, tls.into()));
     let client = hyper::Client::builder().build::<_, hyper::Body>(https);
     let config_path = opts.value_of("config").unwrap().to_owned();
     let config = config::parse(&config_path)?;
@@ -85,7 +95,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     });
 
     let base = Router::new()
-        .route("/*path", get(pass_through).put(pass_through).post(pass_through).delete(pass_through));
+        .route("/*path", any(pass_through));
 
     let app = Router::new()
         .merge(base)
