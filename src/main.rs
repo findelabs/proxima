@@ -1,4 +1,4 @@
-use axum::{handler::Handler, routing::any, AddExtensionLayer, Router};
+use axum::{handler::Handler, routing::{any, get, post}, AddExtensionLayer, Router};
 use chrono::Local;
 use clap::{crate_version, App, Arg};
 use env_logger::{Builder, Target};
@@ -13,7 +13,7 @@ mod config;
 mod handlers;
 mod state;
 
-use handlers::{handler_404, pass_through};
+use handlers::{handler_404, pass_through, health, echo, help, get_endpoint};
 
 use state::State;
 
@@ -84,7 +84,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         client: client,
     });
 
-    let base = Router::new().route("/*path", any(pass_through));
+    let base = Router::new()
+        .route("/health", get(health))
+        .route("/config", get(help))
+        .route("/echo", post(echo))
+        .route("/:endpoint", any(get_endpoint))
+        .route("/:endpoint/*path", any(pass_through));
 
     let app = Router::new()
         .merge(base)

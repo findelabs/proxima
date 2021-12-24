@@ -23,33 +23,26 @@ pub struct State {
 }
 
 impl State {
-    async fn get_entry(&self, item: &str) -> Option<&ConfigEntry> {
+    pub async fn get_entry(&self, item: &str) -> Option<&ConfigEntry> {
         log::debug!("Getting {} from ConfigHash", &item);
         self.config.get(item)
+    }
+
+    pub async fn config(&self) -> Value {
+        serde_json::to_value(&*self.config).expect("Cannot convert to JSON")
     }
 
     pub async fn response(
         &self,
         method: Method,
-        path_and_query: &str,
+        endpoint: &str,
+        path: &str,
+        query: Option<String>,
         mut all_headers: HeaderMap,
         payload: Option<Json<Value>>,
     ) -> Response<Body> {
-        // Convert path to string, so we can remove the first char
-        let mut path_and_query = path_and_query.to_string();
-        path_and_query.remove(0);
 
-        let (first, rest) = match path_and_query.split_once("/") {
-            Some((f, r)) => (f, r),
-            None => {
-                return Response::builder()
-                    .status(StatusCode::BAD_REQUEST)
-                    .body(Body::from(serde_json::to_string(&*self.config).unwrap()))
-                    .unwrap()
-            }
-        };
-
-        let config_entry = match self.get_entry(first).await {
+        let config_entry = match self.get_entry(endpoint).await {
             Some(e) => e,
             None => {
                 return Response::builder()
@@ -59,8 +52,11 @@ impl State {
             }
         };
 
-        let path_and_query = rest.replace(" ", "%20");
-        let host_and_path = format!("{}/{}", config_entry.url, path_and_query);
+        let path = path.replace(" ", "%20");
+        let host_and_path = match query {
+            Some(q) => format!("{}/{}?{}", config_entry.url, path, q),
+            None => format!("{}/{}", config_entry.url, path)
+        };
         log::debug!("full uri: {}", host_and_path);
 
         match Uri::try_from(host_and_path) {
