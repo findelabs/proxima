@@ -3,8 +3,6 @@ use std::collections::HashMap;
 use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
-use std::sync::Arc;
-use tokio::sync::RwLock;
 
 pub type ConfigHash = HashMap<String, ConfigEntry>;
 
