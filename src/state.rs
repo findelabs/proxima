@@ -4,32 +4,41 @@ use axum::{
     Json,
 };
 use hyper::{
-    client::HttpConnector,
     header::{HeaderValue, CONTENT_TYPE},
     Body, HeaderMap, Method,
 };
-use hyper_tls::HttpsConnector;
 use serde_json::Value;
 use std::convert::TryFrom;
-//use std::error::Error;
 use crate::config::{ConfigEntry, ConfigHash};
-
-type HttpsClient = hyper::client::Client<HttpsConnector<HttpConnector>, Body>;
-//type BoxResult<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
+use crate::https::HttpsClient;
+use crate::config;
 
 pub struct State {
+    pub config_path: String,
     pub config: ConfigHash,
     pub client: HttpsClient,
 }
 
 impl State {
-    pub async fn get_entry(&self, item: &str) -> Option<&ConfigEntry> {
+    pub async fn get_entry(&self, item: &str) -> Option<ConfigEntry> {
         log::debug!("Getting {} from ConfigHash", &item);
-        self.config.get(item)
+        let entry = self.config.get(item);
+        entry.cloned()
     }
 
     pub async fn config(&self) -> Value {
-        serde_json::to_value(&*self.config).expect("Cannot convert to JSON")
+        serde_json::to_value(&self.config).expect("Cannot convert to JSON")
+    }
+
+    pub async fn reload(&mut self) {
+        let config = match config::parse(&self.config_path) {
+            Ok(e) => e,
+            Err(e) => {
+                log::error!("Could not parse config: {}", e);
+                self.config.clone()
+            }
+        };
+        self.config = config;
     }
 
     pub async fn response(

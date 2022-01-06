@@ -3,18 +3,19 @@ use chrono::Local;
 use clap::{crate_version, App, Arg};
 use env_logger::{Builder, Target};
 use log::LevelFilter;
-use native_tls::TlsConnector;
 use std::io::Write;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
+use tokio::sync::RwLock;
 
 mod config;
 mod handlers;
 mod state;
+mod https;
 
-use handlers::{handler_404, pass_through, health, echo, help, get_endpoint};
-
+use handlers::{handler_404, pass_through, health, echo, help, get_endpoint, reload};
+use https::create_https_client;
 use state::State;
 
 #[tokio::main]
@@ -65,28 +66,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         8080
     });
 
-    // All this junk is needed to ensure that we can connect to an endpoint with bad certs/hostname
-    let tls = TlsConnector::builder()
-        .danger_accept_invalid_hostnames(true)
-        .danger_accept_invalid_certs(true)
-        .build()?;
-
-    let mut http = hyper::client::HttpConnector::new();
-    http.enforce_http(false);
-    let https: hyper_tls::HttpsConnector<hyper::client::HttpConnector> =
-        hyper_tls::HttpsConnector::from((http, tls.into()));
-    let client = hyper::Client::builder().build::<_, hyper::Body>(https);
+    let client = create_https_client()?;
     let config_path = opts.value_of("config").unwrap().to_owned();
     let config = config::parse(&config_path)?;
 
-    let state = Arc::new(State {
+    let state = Arc::new(RwLock::new(State {
+        config_path,
         config,
         client: client,
-    });
+    }));
 
     let base = Router::new()
         .route("/health", get(health))
         .route("/config", get(help))
+        .route("/reload", post(reload))
         .route("/echo", post(echo))
         .route("/:endpoint", any(get_endpoint))
         .route("/:endpoint/*path", any(pass_through));

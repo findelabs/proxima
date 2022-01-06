@@ -11,8 +11,11 @@ use serde_json::Value;
 use std::convert::Infallible;
 use std::sync::Arc;
 use serde_json::json;
+use tokio::sync::RwLock;
 
 use crate::State;
+
+type SharedState = Arc<RwLock<State>>;
 
 // This is required in order to get the method from the request
 #[derive(Debug)]
@@ -32,35 +35,44 @@ where
 }
 
 pub async fn pass_through(
-    Extension(state): Extension<Arc<State>>,
+    Extension(state): Extension<SharedState>,
     payload: Option<Json<Value>>,
     Path((endpoint, path)): Path<(String, String)>,
     RequestMethod(method): RequestMethod,
     all_headers: HeaderMap,
     RawQuery(query): RawQuery
 ) -> Response<Body> {
+    let me = state.read().await;
     log::info!(
         "{{\"fn\": \"pass_through\", \"method\": \"{}\", \"endpoint\":\"{}\",\"uri\":\"{}\"}}",
         &method.as_str(),
         &endpoint,
         &path
     );
-    state
+    me 
         .response(method, &endpoint, &path, query, all_headers, payload)
         .await
 }
 
-pub async fn get_endpoint(Path(endpoint): Path<String>, Extension(state): Extension<Arc<State>>) -> Json<Value> {
+pub async fn get_endpoint(Path(endpoint): Path<String>, Extension(state): Extension<SharedState>) -> Json<Value> {
     log::info!("\"GET /{}\"", endpoint);
-	match state.get_entry(&endpoint).await {
+    let me = state.read().await;
+	match me.get_entry(&endpoint).await {
 		Some(e) => Json(json!(e)),
 		None => Json(json!({"error": "unknown endpoint"}))
 	}
 }
 
-pub async fn help(Extension(state): Extension<Arc<State>>) -> Json<Value> {
+pub async fn reload(Extension(state): Extension<SharedState>) {
+    log::info!("\"GET /reload\"");
+    let mut me = state.write().await;
+	me.reload().await;
+}
+
+pub async fn help(Extension(state): Extension<SharedState>) -> Json<Value> {
     log::info!("\"GET /\"");
-	Json(state.config().await)
+    let me = state.read().await;
+	Json(me.config().await)
 }
 
 pub async fn health() -> Json<Value> {

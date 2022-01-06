@@ -4,8 +4,9 @@ use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
 use std::sync::Arc;
+use tokio::sync::RwLock;
 
-pub type ConfigHash = Arc<HashMap<String, ConfigEntry>>;
+pub type ConfigHash = HashMap<String, ConfigEntry>;
 
 #[derive(Hash, Eq, PartialEq, Serialize, Deserialize, Debug, Clone)]
 pub struct ConfigEntry {
@@ -31,7 +32,12 @@ impl fmt::Display for Url {
     }
 }
 
-pub fn parse(file: &str) -> Result<ConfigHash, serde_yaml::Error> {
+//pub fn new(file: &str) -> Result<ConfigHash, serde_yaml::Error> {
+//    let config = parse(file)?;
+//    Ok(Arc::new(RwLock::new(config)))
+//}
+
+pub fn parse(file: &str) -> Result<HashMap<String, ConfigEntry>, serde_yaml::Error> {
     let mut file = File::open(file).expect("Unable to open config");
     let mut contents = String::new();
 
@@ -39,6 +45,5 @@ pub fn parse(file: &str) -> Result<ConfigHash, serde_yaml::Error> {
         .expect("Unable to read config");
 
     let deck: HashMap<String, ConfigEntry> = serde_yaml::from_str(&contents)?;
-
-    Ok(Arc::new(deck))
+    Ok(deck)
 }
