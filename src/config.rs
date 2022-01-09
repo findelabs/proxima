@@ -11,11 +11,32 @@ pub struct ConfigEntry {
     pub url: Url,
 
     #[serde(default)]
-    pub timeout: u32,
+    pub username: String,
+
+    #[serde(default)]
+    pub password: String
 }
 
 #[derive(Hash, Eq, PartialEq, Serialize, Deserialize, Debug, Clone)]
 pub struct Url(String);
+
+impl Url {
+    pub fn set_basic_auth(mut self, username: String, password: String) -> Self {
+
+        let username_password = format!("{}:{}@", username, password);
+
+        let mut string = self.to_string();
+        let start = match string.find(r#"://"#) {
+            Some(p) => p + 3usize,
+            None => 0
+        };
+
+        string.insert_str(start, &username_password);
+        self = Url(string);
+
+        self
+    }
+}
 
 impl Default for Url {
     fn default() -> Self {

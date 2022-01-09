@@ -21,6 +21,10 @@ type SharedState = Arc<RwLock<State>>;
 #[derive(Debug)]
 pub struct RequestMethod(pub hyper::Method);
 
+// This is required in order to get the username/password from the request
+#[derive(Debug)]
+pub struct BasicAuth(pub String);
+
 #[async_trait]
 impl<B> FromRequest<B> for RequestMethod
 where
@@ -31,6 +35,37 @@ where
     async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
         let method = req.method().to_owned();
         Ok(Self(method))
+    }
+}
+
+#[async_trait]
+impl<B> FromRequest<B> for BasicAuth
+where
+    B: Send,
+{
+    type Rejection = Infallible;
+
+    async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
+        let user_pass = match req.uri().authority() {
+            Some(authority) => {
+                println!("authority: {}", authority);
+                let string = authority.as_str();
+                let left = match string.split_once('@') {
+                    Some((left,_)) => left,
+                    None => return Ok(Self("".to_string()))
+                };
+
+                let user_pass = match left.split_once(r#"://"#) {
+                    Some((_,right)) => right,
+                    None => return Ok(Self("".to_string()))
+                };
+
+                user_pass
+            },
+            None => ""
+        };
+
+        Ok(Self(user_pass.to_string()))
     }
 }
 

@@ -89,10 +89,18 @@ impl State {
         };
 
         let path = path.replace(" ", "%20");
-        let host_and_path = match query {
-            Some(q) => format!("{}/{}?{}", config_entry.url, path, q),
-            None => format!("{}/{}", config_entry.url, path)
+
+        let url = if config_entry.username != "" {
+            config_entry.url.set_basic_auth(config_entry.username, config_entry.password)
+        } else {
+            config_entry.url
         };
+
+        let host_and_path = match query {
+            Some(q) => format!("{}/{}?{}", url, path, q),
+            None => format!("{}/{}", url, path)
+        };
+
         log::debug!("full uri: {}", host_and_path);
 
         match Uri::try_from(host_and_path) {
