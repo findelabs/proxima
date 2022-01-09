@@ -12,6 +12,14 @@ use std::convert::TryFrom;
 use crate::config::{ConfigEntry, ConfigHash};
 use crate::https::HttpsClient;
 use crate::config;
+use std::error::Error;
+use tokio::sync::RwLock;
+use clap::ArgMatches;
+use std::sync::Arc;
+
+use crate::create_https_client;
+
+type BoxResult<T> = Result<T,Box<dyn Error + Send + Sync>>;
 
 pub struct State {
     pub config_path: String,
@@ -20,6 +28,25 @@ pub struct State {
 }
 
 impl State {
+    pub async fn new(opts: ArgMatches<'_>) -> BoxResult<Arc<RwLock<Self>>> {
+
+		// Set timeout
+	    let timeout: u64 = opts.value_of("timeout").unwrap().parse().unwrap_or_else(|_| {
+	        eprintln!("Supplied timeout not in range, defaulting to 60");
+	        60
+	    });
+
+		let client = create_https_client(timeout)?;
+	    let config_path = opts.value_of("config").unwrap().to_owned();
+	    let config = config::parse(&config_path)?;
+	
+	    Ok(Arc::new(RwLock::new(State {
+	        config_path,
+	        config,
+	        client: client,
+	    })))
+    }
+
     pub async fn get_entry(&self, item: &str) -> Option<ConfigEntry> {
         log::debug!("Getting {} from ConfigHash", &item);
         let entry = self.config.get(item);

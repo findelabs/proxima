@@ -5,9 +5,7 @@ use env_logger::{Builder, Target};
 use log::LevelFilter;
 use std::io::Write;
 use std::net::SocketAddr;
-use std::sync::Arc;
 use tower_http::trace::TraceLayer;
-use tokio::sync::RwLock;
 
 mod config;
 mod handlers;
@@ -32,6 +30,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .required(false)
                 .env("LISTEN_PORT")
                 .default_value("8080")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("timeout")
+                .short("t")
+                .long("timeout")
+                .help("Set default global timeout")
+                .required(false)
+                .env("CONNECT_TIMEOUT")
+                .default_value("60")
                 .takes_value(true),
         )
         .arg(
@@ -66,15 +74,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         8080
     });
 
-    let client = create_https_client()?;
-    let config_path = opts.value_of("config").unwrap().to_owned();
-    let config = config::parse(&config_path)?;
-
-    let state = Arc::new(RwLock::new(State {
-        config_path,
-        config,
-        client: client,
-    }));
+    // Create state for axum
+    let state = State::new(opts).await?;
 
     let base = Router::new()
         .route("/health", get(health))
