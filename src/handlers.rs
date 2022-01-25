@@ -104,7 +104,7 @@ pub async fn reload(Extension(state): Extension<SharedState>) {
 	me.reload().await;
 }
 
-pub async fn help(Extension(state): Extension<SharedState>) -> Json<Value> {
+pub async fn config(Extension(state): Extension<SharedState>) -> Json<Value> {
     log::info!("\"GET /\"");
     let me = state.read().await;
 	Json(me.config().await)
@@ -117,6 +117,21 @@ pub async fn health() -> Json<Value> {
 
 pub async fn echo(Json(payload): Json<Value>) -> Json<Value> {
     log::info!("\"POST /echo\"");
+    Json(payload)
+}
+
+pub async fn help() -> Json<Value> {
+    log::info!("\"GET /help\"");
+    let payload = json!({"paths": {
+            "/health": "Get the health of the api",
+            "/config": "Get config of api",
+            "/reload": "Reload the api's config",
+            "/echo": "Echo back json payload (debugging)",
+            "/help": "Show this help message",
+            "/:endpoint": "Show config for specific endpoint",
+            "/:endpoint/*path": "Pass through any request to specified endpoint"
+        }
+    });
     Json(payload)
 }
 

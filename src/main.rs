@@ -12,7 +12,7 @@ mod handlers;
 mod state;
 mod https;
 
-use handlers::{handler_404, pass_through, health, echo, help, get_endpoint, reload};
+use handlers::{handler_404, pass_through, health, echo, config, get_endpoint, reload, help};
 use https::create_https_client;
 use state::State;
 
@@ -79,9 +79,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let base = Router::new()
         .route("/health", get(health))
-        .route("/config", get(help))
+        .route("/config", get(config))
         .route("/reload", post(reload))
         .route("/echo", post(echo))
+        .route("/help", get(help))
         .route("/:endpoint", any(get_endpoint))
         .route("/:endpoint/*path", any(pass_through));
 
