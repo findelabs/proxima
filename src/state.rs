@@ -4,7 +4,7 @@ use axum::{
     Json,
 };
 use hyper::{
-    header::{HeaderValue, CONTENT_TYPE},
+    header::{AUTHORIZATION, HeaderValue, CONTENT_TYPE},
     Body, HeaderMap, Method,
 };
 use serde_json::Value;
@@ -16,6 +16,7 @@ use std::error::Error;
 use tokio::sync::RwLock;
 use clap::ArgMatches;
 use std::sync::Arc;
+use base64;
 
 use crate::create_https_client;
 
@@ -90,15 +91,9 @@ impl State {
 
         let path = path.replace(" ", "%20");
 
-        let url = if config_entry.username != "" {
-            config_entry.url.set_basic_auth(config_entry.username, config_entry.password)
-        } else {
-            config_entry.url
-        };
-
         let host_and_path = match query {
-            Some(q) => format!("{}{}?{}", url, path, q),
-            None => format!("{}{}", url, path)
+            Some(q) => format!("{}{}?{}", config_entry.url, path, q),
+            None => format!("{}{}", config_entry.url, path)
         };
 
         log::debug!("full uri: {}", host_and_path);
@@ -130,6 +125,27 @@ impl State {
                 };
                 let headers = req.headers_mut();
                 headers.extend(all_headers.clone());
+
+                // Added Basic Auth if username/password exist
+                if config_entry.username != "" {
+                    log::debug!("Generating Basic auth");
+                    let user_pass = format!("{}:{}", config_entry.username, config_entry.password);
+                    let encoded = base64::encode(user_pass);
+                    let basic_auth = format!("Basic {}", encoded);
+                    let header_basic_auth = match HeaderValue::from_str(&basic_auth) {
+                        Ok(a) => a,
+                        Err(e) => {
+                            log::error!("{}", e);
+                            return Response::builder()
+                                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                                .body(Body::from(
+                                    "{\"error\": \"Unparsable username and password provided\"}",
+                                ))
+                                .unwrap()
+                        }
+                    };
+                    headers.insert(AUTHORIZATION, header_basic_auth);
+                };
 
                 match self.client.request(req).await {
                     Ok(s) => s,

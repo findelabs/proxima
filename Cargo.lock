@@ -782,9 +782,10 @@ dependencies = [
 
 [[package]]
 name = "rest-proxy-rs"
-version = "0.2.2"
+version = "0.2.3"
 dependencies = [
  "axum",
+ "base64",
  "chrono",
  "clap",
  "env_logger",
