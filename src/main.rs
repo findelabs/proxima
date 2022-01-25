@@ -6,6 +6,7 @@ use log::LevelFilter;
 use std::io::Write;
 use std::net::SocketAddr;
 use tower_http::trace::TraceLayer;
+use tower_http::auth::RequireAuthorizationLayer;
 
 mod config;
 mod handlers;
@@ -43,6 +44,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .takes_value(true),
         )
         .arg(
+            Arg::with_name("username")
+                .short("u")
+                .long("username")
+                .help("Set required username")
+                .required(false)
+                .env("AUTH_USERNAME")
+                .requires("password")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("password")
+                .short("p")
+                .long("password")
+                .help("Set required password")
+                .required(false)
+                .env("AUTH_PASSWORD")
+                .takes_value(true),
+        )
+        .arg(
             Arg::with_name("config")
                 .short("c")
                 .long("config")
@@ -75,7 +95,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     });
 
     // Create state for axum
-    let state = State::new(opts).await?;
+    let state = State::new(opts.clone()).await?;
 
     let base = Router::new()
         .route("/health", get(health))
@@ -86,10 +106,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .route("/:endpoint", any(get_endpoint))
         .route("/:endpoint/*path", any(pass_through));
 
-    let app = Router::new()
-        .merge(base)
-        .layer(TraceLayer::new_for_http())
-        .layer(AddExtensionLayer::new(state));
+    let app = match opts.is_present("username") {
+        true => {
+            let username = &opts.value_of("username").expect("Missing username").clone();
+            let password = &opts.value_of("password").expect("Missing username").clone();
+            Router::new()
+                .merge(base)
+                .layer(TraceLayer::new_for_http())
+                .layer(AddExtensionLayer::new(state))
+                .layer(RequireAuthorizationLayer::basic(username, password))
+        },
+        false => {
+            Router::new()
+                .merge(base)
+                .layer(TraceLayer::new_for_http())
+                .layer(AddExtensionLayer::new(state))
+        }
+    };
 
     // add a fallback service for handling routes to unknown paths
     let app = app.fallback(handler_404.into_service());
