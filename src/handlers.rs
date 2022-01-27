@@ -6,16 +6,15 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use axum_debug::debug_handler;
 use hyper::{Body, HeaderMap};
 use serde_json::Value;
 use std::convert::Infallible;
-use std::sync::Arc;
 use serde_json::json;
-use tokio::sync::RwLock;
 
 use crate::State;
 
-type SharedState = Arc<RwLock<State>>;
+type SharedState = State;
 
 // This is required in order to get the method from the request
 #[derive(Debug)]
@@ -69,6 +68,7 @@ where
     }
 }
 
+#[debug_handler]
 pub async fn pass_through(
     Extension(state): Extension<SharedState>,
     payload: Option<Json<Value>>,
@@ -77,37 +77,34 @@ pub async fn pass_through(
     all_headers: HeaderMap,
     RawQuery(query): RawQuery
 ) -> Response<Body> {
-    let me = state.read().await;
+    log::debug!("Start of pass_through");
     log::info!(
         "{{\"fn\": \"pass_through\", \"method\": \"{}\", \"endpoint\":\"{}\",\"uri\":\"{}\"}}",
         &method.as_str(),
         &endpoint,
         &path
     );
-    me 
+    state
         .response(method, &endpoint, &path, query, all_headers, payload)
         .await
 }
 
 pub async fn get_endpoint(Path(endpoint): Path<String>, Extension(state): Extension<SharedState>) -> Json<Value> {
     log::info!("\"GET /{}\"", endpoint);
-    let me = state.read().await;
-	match me.get_entry(&endpoint).await {
+	match state.get_entry(&endpoint).await {
 		Some(e) => Json(json!(e)),
 		None => Json(json!({"error": "unknown endpoint"}))
 	}
 }
 
-pub async fn reload(Extension(state): Extension<SharedState>) {
+pub async fn reload(Extension(mut state): Extension<SharedState>) {
     log::info!("\"GET /reload\"");
-    let mut me = state.write().await;
-	me.reload().await;
+	state.reload().await;
 }
 
 pub async fn config(Extension(state): Extension<SharedState>) -> Json<Value> {
     log::info!("\"GET /\"");
-    let me = state.read().await;
-	Json(me.config().await)
+	Json(state.config().await)
 }
 
 pub async fn health() -> Json<Value> {
@@ -115,8 +112,10 @@ pub async fn health() -> Json<Value> {
     Json(json!({ "msg": "Healthy"}))
 }
 
+#[debug_handler]
 pub async fn echo(Json(payload): Json<Value>) -> Json<Value> {
     log::info!("\"POST /echo\"");
+    log::info!("Got payload: {}", &payload);
     Json(payload)
 }
 

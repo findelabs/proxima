@@ -22,14 +22,15 @@ use crate::create_https_client;
 
 type BoxResult<T> = Result<T,Box<dyn Error + Send + Sync>>;
 
+#[derive(Clone, Debug)]
 pub struct State {
     pub config_path: String,
-    pub config: ConfigHash,
+    pub config: Arc<RwLock<ConfigHash>>,
     pub client: HttpsClient,
 }
 
 impl State {
-    pub async fn new(opts: ArgMatches<'_>) -> BoxResult<Arc<RwLock<Self>>> {
+    pub async fn new(opts: ArgMatches<'_>) -> BoxResult<Self> {
 
 		// Set timeout
 	    let timeout: u64 = opts.value_of("timeout").unwrap().parse().unwrap_or_else(|_| {
@@ -41,32 +42,35 @@ impl State {
 	    let config_path = opts.value_of("config").unwrap().to_owned();
 	    let config = config::parse(&config_path)?;
 	
-	    Ok(Arc::new(RwLock::new(State {
+	    Ok(State {
 	        config_path,
-	        config,
+	        config: Arc::new(RwLock::new(config)),
 	        client: client,
-	    })))
+	    })
     }
 
     pub async fn get_entry(&self, item: &str) -> Option<ConfigEntry> {
         log::debug!("Getting {} from ConfigHash", &item);
-        let entry = self.config.get(item);
+        let config = self.config.read().await;
+        let entry = config.get(item);
         entry.cloned()
     }
 
     pub async fn config(&self) -> Value {
-        serde_json::to_value(&self.config).expect("Cannot convert to JSON")
+        let config = self.config.read().await;
+        serde_json::to_value(&*config).expect("Cannot convert to JSON")
     }
 
     pub async fn reload(&mut self) {
-        let config = match config::parse(&self.config_path) {
+        let mut config = self.config.write().await;
+        let new_config = match config::parse(&self.config_path) {
             Ok(e) => e,
             Err(e) => {
                 log::error!("Could not parse config: {}", e);
-                self.config.clone()
+                config.clone()
             }
         };
-        self.config = config;
+        *config = new_config;
     }
 
     pub async fn response(
@@ -102,7 +106,7 @@ impl State {
             Ok(u) => {
                 let body = match payload {
                     Some(p) => {
-                        log::debug!("Received body: {:?}", &p);
+                        log::info!("Received body: {}", &p.to_string());
                         Body::from(p.to_string())
                     }
                     None => {
@@ -116,6 +120,7 @@ impl State {
                     .uri(u)
                     .body(body)
                     .expect("request builder");
+
 
                 // Append to request the headers passed by client
                 all_headers.remove(hyper::header::HOST);
