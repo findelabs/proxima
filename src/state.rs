@@ -16,6 +16,7 @@ use std::convert::TryFrom;
 use std::error::Error;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use chrono::offset::Utc;
 
 use crate::create_https_client;
 
@@ -24,6 +25,7 @@ type BoxResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 #[derive(Clone, Debug)]
 pub struct State {
     pub config_path: String,
+    pub config_read: Arc<RwLock<i64>>,
     pub config: Arc<RwLock<ConfigHash>>,
     pub client: HttpsClient,
 }
@@ -43,28 +45,45 @@ impl State {
         let client = create_https_client(timeout)?;
         let config_path = opts.value_of("config").unwrap().to_owned();
         let config = config::parse(&config_path)?;
+        let config_read = Utc::now().timestamp();
 
         Ok(State {
             config_path,
             config: Arc::new(RwLock::new(config)),
             client,
+            config_read: Arc::new(RwLock::new(config_read))
         })
     }
 
-    pub async fn get_entry(&self, item: &str) -> Option<ConfigEntry> {
+    pub async fn get_entry(&mut self, item: &str) -> Option<ConfigEntry> {
+        self.renew().await;
         log::debug!("Getting {} from ConfigHash", &item);
         let config = self.config.read().await;
         let entry = config.get(item);
         entry.cloned()
     }
 
-    pub async fn config(&self) -> Value {
+    pub async fn config(&mut self) -> Value {
+        self.renew().await;
         let config = self.config.read().await;
         serde_json::to_value(&*config).expect("Cannot convert to JSON")
     }
 
+    pub async fn renew(&mut self) {
+        let config_read = self.config_read.read().await;
+        let diff = Utc::now().timestamp() - *config_read;
+        if diff >= 30 {
+            log::debug!("cache has expired, kicking off config reload");
+            drop(config_read);
+            self.reload().await;
+        } else {
+            log::debug!("\"cache has not expired, difference is {} seconds\"", diff);
+        }
+    }
+
     pub async fn reload(&mut self) {
         let mut config = self.config.write().await;
+        let mut config_read = self.config_read.write().await;
         let new_config = match config::parse(&self.config_path) {
             Ok(e) => e,
             Err(e) => {
@@ -72,11 +91,13 @@ impl State {
                 config.clone()
             }
         };
+        let config_read_time = Utc::now().timestamp();
         *config = new_config;
+        *config_read = config_read_time;
     }
 
     pub async fn response(
-        &self,
+        &mut self,
         method: Method,
         endpoint: &str,
         path: &str,

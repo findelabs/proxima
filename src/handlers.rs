@@ -69,7 +69,7 @@ where
 
 #[debug_handler]
 pub async fn proxy(
-    Extension(state): Extension<State>,
+    Extension(mut state): Extension<State>,
     payload: Option<BodyStream>,
     Path((endpoint, path)): Path<(String, String)>,
     RequestMethod(method): RequestMethod,
@@ -89,9 +89,8 @@ pub async fn proxy(
 
 pub async fn get_endpoint(
     Path(endpoint): Path<String>,
-    Extension(state): Extension<State>,
+    Extension(mut state): Extension<State>,
 ) -> Json<Value> {
-    //    log::info!("\"GET /{}\"", endpoint);
     log::info!(
         "{{\"fn\": \"get_endpoint\", \"endpoint\":\"{}\"}}",
         endpoint
@@ -103,32 +102,27 @@ pub async fn get_endpoint(
 }
 
 pub async fn reload(Extension(mut state): Extension<State>) {
-    //    log::info!("\"GET /reload\"");
     log::info!("{{\"fn\": \"reload\", \"method\":\"get\"}}");
     state.reload().await;
 }
 
-pub async fn config(Extension(state): Extension<State>) -> Json<Value> {
-    //    log::info!("\"GET /\"");
+pub async fn config(Extension(mut state): Extension<State>) -> Json<Value> {
     log::info!("{{\"fn\": \"config\", \"method\":\"get\"}}");
     Json(state.config().await)
 }
 
 pub async fn health() -> Json<Value> {
-    //    log::info!("\"GET /health\"");
     log::info!("{{\"fn\": \"health\", \"method\":\"get\"}}");
     Json(json!({ "msg": "Healthy"}))
 }
 
 #[debug_handler]
 pub async fn echo(Json(payload): Json<Value>) -> Json<Value> {
-    //    log::info!("\"POST /echo\"");
     log::info!("{{\"fn\": \"echo\", \"method\":\"post\"}}");
     Json(payload)
 }
 
 pub async fn help() -> Json<Value> {
-    //    log::info!("\"GET /help\"");
     log::info!("{{\"fn\": \"help\", \"method\":\"get\"}}");
     let payload = json!({"paths": {
             "/health": "Get the health of the api",
@@ -146,7 +140,6 @@ pub async fn help() -> Json<Value> {
 pub async fn handler_404(OriginalUri(original_uri): OriginalUri) -> impl IntoResponse {
     let parts = original_uri.into_parts();
     let path_and_query = parts.path_and_query.expect("Missing post path and query");
-    //    log::info!("\"Bad path: {}\"", path_and_query);
     log::info!(
         "{{\"fn\": \"handler_404\", \"method\":\"get\", \"path\":\"{}\"}}",
         path_and_query
