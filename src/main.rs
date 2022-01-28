@@ -1,19 +1,23 @@
-use axum::{handler::Handler, routing::{any, get, post}, AddExtensionLayer, Router};
+use axum::{
+    handler::Handler,
+    routing::{any, get, post},
+    AddExtensionLayer, Router,
+};
 use chrono::Local;
 use clap::{crate_version, App, Arg};
 use env_logger::{Builder, Target};
 use log::LevelFilter;
 use std::io::Write;
 use std::net::SocketAddr;
-use tower_http::trace::TraceLayer;
 use tower_http::auth::RequireAuthorizationLayer;
+use tower_http::trace::TraceLayer;
 
 mod config;
 mod handlers;
-mod state;
 mod https;
+mod state;
 
-use handlers::{handler_404, pass_through, health, echo, config, get_endpoint, reload, help};
+use handlers::{config, echo, get_endpoint, handler_404, health, help, proxy, reload};
 use https::create_https_client;
 use state::State;
 
@@ -104,24 +108,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .route("/echo", post(echo))
         .route("/help", get(help))
         .route("/:endpoint", any(get_endpoint))
-        .route("/:endpoint/*path", any(pass_through));
+        .route("/:endpoint/*path", any(proxy));
 
     let app = match opts.is_present("username") {
         true => {
-            let username = &opts.value_of("username").expect("Missing username").clone();
-            let password = &opts.value_of("password").expect("Missing username").clone();
+            let username = opts.value_of("username").expect("Missing username").to_string();
+            let password = opts.value_of("password").expect("Missing username").to_string();
             Router::new()
                 .merge(base)
                 .layer(TraceLayer::new_for_http())
                 .layer(AddExtensionLayer::new(state))
-                .layer(RequireAuthorizationLayer::basic(username, password))
-        },
-        false => {
-            Router::new()
-                .merge(base)
-                .layer(TraceLayer::new_for_http())
-                .layer(AddExtensionLayer::new(state))
+                .layer(RequireAuthorizationLayer::basic(&username, &password))
         }
+        false => Router::new()
+            .merge(base)
+            .layer(TraceLayer::new_for_http())
+            .layer(AddExtensionLayer::new(state)),
     };
 
     // add a fallback service for handling routes to unknown paths

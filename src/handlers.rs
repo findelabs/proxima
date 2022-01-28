@@ -1,6 +1,7 @@
+use axum::extract::BodyStream;
 use axum::{
     async_trait,
-    extract::{Extension, FromRequest, OriginalUri, RequestParts, Path, RawQuery},
+    extract::{Extension, FromRequest, OriginalUri, Path, RawQuery, RequestParts},
     http::Response,
     http::StatusCode,
     response::IntoResponse,
@@ -8,13 +9,11 @@ use axum::{
 };
 use axum_debug::debug_handler;
 use hyper::{Body, HeaderMap};
+use serde_json::json;
 use serde_json::Value;
 use std::convert::Infallible;
-use serde_json::json;
 
 use crate::State;
-
-type SharedState = State;
 
 // This is required in order to get the method from the request
 #[derive(Debug)]
@@ -50,18 +49,18 @@ where
                 println!("authority: {}", authority);
                 let string = authority.as_str();
                 let left = match string.split_once('@') {
-                    Some((left,_)) => left,
-                    None => return Ok(Self("".to_string()))
+                    Some((left, _)) => left,
+                    None => return Ok(Self("".to_string())),
                 };
 
                 let user_pass = match left.split_once(r#"://"#) {
-                    Some((_,right)) => right,
-                    None => return Ok(Self("".to_string()))
+                    Some((_, right)) => right,
+                    None => return Ok(Self("".to_string())),
                 };
 
                 user_pass
-            },
-            None => ""
+            }
+            None => "",
         };
 
         Ok(Self(user_pass.to_string()))
@@ -69,17 +68,16 @@ where
 }
 
 #[debug_handler]
-pub async fn pass_through(
-    Extension(state): Extension<SharedState>,
-    payload: Option<Json<Value>>,
+pub async fn proxy(
+    Extension(state): Extension<State>,
+    payload: Option<BodyStream>,
     Path((endpoint, path)): Path<(String, String)>,
     RequestMethod(method): RequestMethod,
     all_headers: HeaderMap,
-    RawQuery(query): RawQuery
+    RawQuery(query): RawQuery,
 ) -> Response<Body> {
-    log::debug!("Start of pass_through");
     log::info!(
-        "{{\"fn\": \"pass_through\", \"method\": \"{}\", \"endpoint\":\"{}\",\"uri\":\"{}\"}}",
+        "{{\"fn\": \"proxy\", \"method\": \"{}\", \"endpoint\":\"{}\",\"uri\":\"{}\"}}",
         &method.as_str(),
         &endpoint,
         &path
@@ -89,38 +87,49 @@ pub async fn pass_through(
         .await
 }
 
-pub async fn get_endpoint(Path(endpoint): Path<String>, Extension(state): Extension<SharedState>) -> Json<Value> {
-    log::info!("\"GET /{}\"", endpoint);
-	match state.get_entry(&endpoint).await {
-		Some(e) => Json(json!(e)),
-		None => Json(json!({"error": "unknown endpoint"}))
-	}
+pub async fn get_endpoint(
+    Path(endpoint): Path<String>,
+    Extension(state): Extension<State>,
+) -> Json<Value> {
+    //    log::info!("\"GET /{}\"", endpoint);
+    log::info!(
+        "{{\"fn\": \"get_endpoint\", \"endpoint\":\"{}\"}}",
+        endpoint
+    );
+    match state.get_entry(&endpoint).await {
+        Some(e) => Json(json!(e)),
+        None => Json(json!({"error": "unknown endpoint"})),
+    }
 }
 
-pub async fn reload(Extension(mut state): Extension<SharedState>) {
-    log::info!("\"GET /reload\"");
-	state.reload().await;
+pub async fn reload(Extension(mut state): Extension<State>) {
+    //    log::info!("\"GET /reload\"");
+    log::info!("{{\"fn\": \"reload\", \"method\":\"get\"}}");
+    state.reload().await;
 }
 
-pub async fn config(Extension(state): Extension<SharedState>) -> Json<Value> {
-    log::info!("\"GET /\"");
-	Json(state.config().await)
+pub async fn config(Extension(state): Extension<State>) -> Json<Value> {
+    //    log::info!("\"GET /\"");
+    log::info!("{{\"fn\": \"config\", \"method\":\"get\"}}");
+    Json(state.config().await)
 }
 
 pub async fn health() -> Json<Value> {
-    log::info!("\"GET /health\"");
+    //    log::info!("\"GET /health\"");
+    log::info!("{{\"fn\": \"health\", \"method\":\"get\"}}");
     Json(json!({ "msg": "Healthy"}))
 }
 
 #[debug_handler]
 pub async fn echo(Json(payload): Json<Value>) -> Json<Value> {
-    log::info!("\"POST /echo\"");
-    log::info!("Got payload: {}", &payload);
+    //    log::info!("\"POST /echo\"");
+    log::info!("{{\"fn\": \"echo\", \"method\":\"post\"}}");
     Json(payload)
 }
 
 pub async fn help() -> Json<Value> {
-    log::info!("\"GET /help\"");
+    //    log::info!("\"GET /help\"");
+    log::info!("{{\"fn\": \"help\", \"method\":\"get\"}}");
     let payload = json!({"paths": {
             "/health": "Get the health of the api",
             "/config": "Get config of api",
@@ -137,7 +146,11 @@ pub async fn help() -> Json<Value> {
 pub async fn handler_404(OriginalUri(original_uri): OriginalUri) -> impl IntoResponse {
     let parts = original_uri.into_parts();
     let path_and_query = parts.path_and_query.expect("Missing post path and query");
-    log::info!("\"Bad path: {}\"", path_and_query);
+    //    log::info!("\"Bad path: {}\"", path_and_query);
+    log::info!(
+        "{{\"fn\": \"handler_404\", \"method\":\"get\", \"path\":\"{}\"}}",
+        path_and_query
+    );
     (
         StatusCode::NOT_FOUND,
         "{\"error_code\": 404, \"message\": \"HTTP 404 Not Found\"}",

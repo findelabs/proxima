@@ -832,6 +832,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "tokio",
+ "tower",
  "tower-http 0.1.3",
  "tracing",
  "tracing-subscriber",

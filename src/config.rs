@@ -11,12 +11,12 @@ pub struct ConfigEntry {
     pub url: Url,
 
     #[serde(default)]
-    #[serde(skip_serializing_if = "String::is_empty")] 
+    #[serde(skip_serializing_if = "String::is_empty")]
     pub username: String,
 
     #[serde(default)]
-    #[serde(skip_serializing)] 
-    pub password: String
+    #[serde(skip_serializing)]
+    pub password: String,
 }
 
 #[derive(Hash, Eq, PartialEq, Serialize, Deserialize, Debug, Clone)]
