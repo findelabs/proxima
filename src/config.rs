@@ -22,6 +22,10 @@ pub struct ConfigEntry {
     #[serde(default)]
     #[serde(skip_serializing)]
     pub password: String,
+
+    #[serde(default)]
+    #[serde(skip_serializing)]
+    pub token: String,
 }
 
 #[derive(Hash, Eq, PartialEq, Serialize, Deserialize, Debug, Clone)]

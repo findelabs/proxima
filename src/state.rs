@@ -172,6 +172,23 @@ impl State {
                         }
                     };
                     headers.insert(AUTHORIZATION, header_basic_auth);
+                } else if !config_entry.token.is_empty() {
+                    log::debug!("Generating Bearer auth");
+                    let encoded = base64::encode(config_entry.token);
+                    let basic_auth = format!("Bearer {}", encoded);
+                    let header_bearer_auth = match HeaderValue::from_str(&basic_auth) {
+                        Ok(a) => a,
+                        Err(e) => {
+                            log::error!("{{\"error\":\"{}\"", e);
+                            return Response::builder()
+                                .status(StatusCode::INTERNAL_SERVER_ERROR)
+                                .body(Body::from(
+                                    "{\"error\": \"Unparsable token provided\"}",
+                                ))
+                                .unwrap();
+                        }
+                    };
+                    headers.insert(AUTHORIZATION, header_bearer_auth);
                 };
 
                 match self.client.clone().request(req).await {
