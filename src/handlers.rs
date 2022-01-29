@@ -12,6 +12,7 @@ use hyper::{Body, HeaderMap};
 use serde_json::json;
 use serde_json::Value;
 use std::convert::Infallible;
+use clap::{crate_version, crate_name, crate_description};
 
 use crate::State;
 
@@ -114,6 +115,11 @@ pub async fn config(Extension(mut state): Extension<State>) -> Json<Value> {
 pub async fn health() -> Json<Value> {
     log::info!("{{\"fn\": \"health\", \"method\":\"get\"}}");
     Json(json!({ "msg": "Healthy"}))
+}
+
+pub async fn root() -> Json<Value> {
+    log::info!("{{\"fn\": \"root\", \"method\":\"get\"}}");
+    Json(json!({ "version": crate_version!(), "name": crate_name!(), "description": crate_description!()}))
 }
 
 #[debug_handler]

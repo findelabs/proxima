@@ -17,7 +17,7 @@ mod handlers;
 mod https;
 mod state;
 
-use handlers::{config, echo, get_endpoint, handler_404, health, help, proxy, reload};
+use handlers::{config, echo, get_endpoint, handler_404, health, help, proxy, reload, root};
 use https::create_https_client;
 use state::State;
 
@@ -102,6 +102,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let state = State::new(opts.clone()).await?;
 
     let base = Router::new()
+        .route("/", get(root))
         .route("/health", get(health))
         .route("/config", get(config))
         .route("/reload", post(reload))
