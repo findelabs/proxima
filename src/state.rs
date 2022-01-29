@@ -24,7 +24,7 @@ type BoxResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 
 #[derive(Clone, Debug)]
 pub struct State {
-    pub config_path: String,
+    pub config_location: String,
     pub config_read: Arc<RwLock<i64>>,
     pub config: Arc<RwLock<ConfigHash>>,
     pub client: HttpsClient,
@@ -43,12 +43,12 @@ impl State {
             });
 
         let client = create_https_client(timeout)?;
-        let config_path = opts.value_of("config").unwrap().to_owned();
-        let config = config::parse(&config_path)?;
+        let config_location = opts.value_of("config").unwrap().to_owned();
+        let config = config::parse(client.clone(), &config_location).await?;
         let config_read = Utc::now().timestamp();
 
         Ok(State {
-            config_path,
+            config_location,
             config: Arc::new(RwLock::new(config)),
             client,
             config_read: Arc::new(RwLock::new(config_read))
@@ -84,10 +84,10 @@ impl State {
     pub async fn reload(&mut self) {
         let mut config = self.config.write().await;
         let mut config_read = self.config_read.write().await;
-        let new_config = match config::parse(&self.config_path) {
+        let new_config = match config::parse(self.client.clone(), &self.config_location).await {
             Ok(e) => e,
             Err(e) => {
-                log::error!("Could not parse config: {}", e);
+                log::error!("\"Could not parse config: {}\"", e);
                 config.clone()
             }
         };
@@ -147,6 +147,7 @@ impl State {
                 all_headers.remove(hyper::header::HOST);
                 all_headers.remove(hyper::header::USER_AGENT);
                 if !all_headers.contains_key(CONTENT_TYPE) {
+                    log::debug!("\"Adding content-type: application/json\"");
                     all_headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
                 };
                 let headers = req.headers_mut();

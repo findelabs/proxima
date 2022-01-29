@@ -3,8 +3,13 @@ use std::collections::HashMap;
 use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
+use axum::http::Request;
+use hyper::Body;
+use std::error::Error;
+use crate::https::HttpsClient;
 
 pub type ConfigHash = HashMap<String, ConfigEntry>;
+type BoxResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 
 #[derive(Hash, Eq, PartialEq, Serialize, Deserialize, Debug, Clone)]
 pub struct ConfigEntry {
@@ -35,18 +40,43 @@ impl fmt::Display for Url {
     }
 }
 
-//pub fn new(file: &str) -> Result<ConfigHash, serde_yaml::Error> {
-//    let config = parse(file)?;
-//    Ok(Arc::new(RwLock::new(config)))
-//}
+pub async fn parse(client: HttpsClient, location: &str) -> BoxResult<HashMap<String, ConfigEntry>> {
 
-pub fn parse(file: &str) -> Result<HashMap<String, ConfigEntry>, serde_yaml::Error> {
-    let mut file = File::open(file).expect("Unable to open config");
-    let mut contents = String::new();
+    let deck: HashMap<String, ConfigEntry> = match url::Url::parse(location) {
+        Ok(url) => {
+            log::debug!("config location is url: {}", &location);
 
-    file.read_to_string(&mut contents)
-        .expect("Unable to read config");
+            // Create new get request
+            let req = Request::builder()
+                .method("GET")
+                .uri(url.to_string())
+                .body(Body::empty())
+                .expect("request builder");
 
-    let deck: HashMap<String, ConfigEntry> = serde_yaml::from_str(&contents)?;
+            // Send request
+            let response = match client.request(req).await {
+                Ok(s) => s,
+                Err(e) => {
+                    log::error!("{{\"error\":\"{}\"", e);
+                    return Err(Box::new(e))
+                }
+            };
+
+            let contents = hyper::body::to_bytes(response.into_body()).await?;
+
+            serde_json::from_slice(&contents)?
+        },
+        Err(e) => {
+            log::debug!("\"config location {} is not Url: {}\"", &location, e);
+            let mut file = File::open(location).expect("Unable to open config");
+            let mut contents = String::new();
+
+            file.read_to_string(&mut contents)
+                .expect("Unable to read config");
+
+            serde_yaml::from_str(&contents)?
+        }
+    };
+
     Ok(deck)
 }
