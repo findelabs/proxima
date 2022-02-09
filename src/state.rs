@@ -89,9 +89,15 @@ impl State {
         if diff >= 30 {
             log::debug!("cache has expired, kicking off config reload");
             drop(config_read);
-            self.reload().await;
+
+            // Kick off background thread to update config
+            let mut me = self.clone();
+            tokio::spawn(async move {
+                log::debug!("Kicking off background thread to reload config");
+                me.reload().await;
+            });
         } else {
-            log::debug!("\"cache has not expired, difference is {} seconds\"", diff);
+            log::debug!("\"cache has not expired, current age is {} seconds\"", diff);
         }
     }
 

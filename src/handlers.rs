@@ -7,7 +7,6 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use axum_debug::debug_handler;
 use hyper::{Body, HeaderMap};
 use serde_json::json;
 use serde_json::Value;
@@ -68,7 +67,6 @@ where
     }
 }
 
-#[debug_handler]
 pub async fn proxy(
     Extension(mut state): Extension<State>,
     payload: Option<BodyStream>,
@@ -122,7 +120,6 @@ pub async fn root() -> Json<Value> {
     Json(json!({ "version": crate_version!(), "name": crate_name!(), "description": crate_description!()}))
 }
 
-#[debug_handler]
 pub async fn echo(Json(payload): Json<Value>) -> Json<Value> {
     log::info!("{{\"fn\": \"echo\", \"method\":\"post\"}}");
     Json(payload)

@@ -94,17 +94,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "axum-debug"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "86481eea76608eb3e9c3c2273060818369ec6c63e1543f60bc46f1ed6dae386f"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "base64"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -818,7 +807,6 @@ name = "rest-proxy-rs"
 version = "0.2.13"
 dependencies = [
  "axum",
- "axum-debug",
  "base64",
  "chrono",
  "clap",
