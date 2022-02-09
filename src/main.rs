@@ -59,6 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .short("p")
                 .long("password")
                 .help("Set required client password")
+                .requires("username")
                 .env("CLIENT_PASSWORD")
                 .takes_value(true),
         )
