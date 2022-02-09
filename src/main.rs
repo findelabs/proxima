@@ -33,7 +33,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .short("p")
                 .long("port")
                 .help("Set port to listen on")
-                .required(false)
                 .env("LISTEN_PORT")
                 .default_value("8080")
                 .takes_value(true),
@@ -43,8 +42,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .short("t")
                 .long("timeout")
                 .help("Set default global timeout")
-                .required(false)
-                .env("CONNECT_TIMEOUT")
                 .default_value("60")
                 .takes_value(true),
         )
@@ -53,8 +50,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .short("u")
                 .long("username")
                 .help("Set required client username")
-                .required(false)
-                .env("AUTH_USERNAME")
+                .env("CLIENT_USERNAME")
                 .requires("password")
                 .takes_value(true),
         )
@@ -63,8 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .short("p")
                 .long("password")
                 .help("Set required client password")
-                .required(false)
-                .env("AUTH_PASSWORD")
+                .env("CLIENT_PASSWORD")
                 .takes_value(true),
         )
         .arg(
@@ -72,8 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .short("u")
                 .long("config_username")
                 .help("Set required username for config endpoint")
-                .required(false)
-                .env("CONFIG_AUTH_USERNAME")
+                .env("AUTH_USERNAME")
                 .requires("config_password")
                 .takes_value(true),
         )
@@ -82,14 +76,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .short("p")
                 .long("config_password")
                 .help("Set required password for config endpoint")
-                .required(false)
-                .env("CONFIG_AUTH_PASSWORD")
+                .env("AUTH_PASSWORD")
+                .requires("config_username")
                 .takes_value(true),
         )
         .arg(
             Arg::with_name("config")
                 .short("c")
                 .long("config")
+                .env("REST_CONFIG")
                 .required(true)
                 .help("Config file")
                 .takes_value(true),
