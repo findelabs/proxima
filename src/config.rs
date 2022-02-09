@@ -5,11 +5,12 @@ use std::fs::File;
 use std::io::prelude::*;
 use axum::http::Request;
 use hyper::Body;
-use std::error::Error;
 use crate::https::HttpsClient;
+use hyper::header::{AUTHORIZATION, HeaderValue};
+use crate::error::Error as RestError;
 
 pub type ConfigHash = HashMap<String, ConfigEntry>;
-type BoxResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
+type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 #[derive(Hash, Eq, PartialEq, Serialize, Deserialize, Debug, Clone)]
 pub struct ConfigEntry {
@@ -44,18 +45,27 @@ impl fmt::Display for Url {
     }
 }
 
-pub async fn parse(client: HttpsClient, location: &str) -> BoxResult<HashMap<String, ConfigEntry>> {
+pub async fn parse(client: HttpsClient, location: &str, config_auth: Option<String>) -> BoxResult<HashMap<String, ConfigEntry>> {
 
-    let deck: HashMap<String, ConfigEntry> = match url::Url::parse(location) {
+    // Test if config flag is url
+    match url::Url::parse(location) {
         Ok(url) => {
             log::debug!("config location is url: {}", &location);
 
             // Create new get request
-            let req = Request::builder()
+            let mut req = Request::builder()
                 .method("GET")
                 .uri(url.to_string())
                 .body(Body::empty())
                 .expect("request builder");
+
+			// Add in basic auth if required
+			let headers = req.headers_mut();
+			if config_auth.is_some() {
+                log::debug!("Inserting basic auth for config endpoint");
+                let header_basic_auth = HeaderValue::from_str(&config_auth.unwrap())?;
+				headers.insert(AUTHORIZATION, header_basic_auth);
+			};
 
             // Send request
             let response = match client.request(req).await {
@@ -66,9 +76,18 @@ pub async fn parse(client: HttpsClient, location: &str) -> BoxResult<HashMap<Str
                 }
             };
 
-            let contents = hyper::body::to_bytes(response.into_body()).await?;
+			// Error if status code is not 200
+			match response.status().as_u16() {
+            	404 => Err(Box::new(RestError::NotFound)),
+            	403 => Err(Box::new(RestError::Forbidden)),
+            	401 => Err(Box::new(RestError::Unauthorized)),
+            	200 => {
+		            let contents = hyper::body::to_bytes(response.into_body()).await?;
+		            Ok(serde_json::from_slice(&contents)?)
+            	},
+            	_ => Err(Box::new(RestError::UnkError))
+	        }
 
-            serde_json::from_slice(&contents)?
         },
         Err(e) => {
             log::debug!("\"config location {} is not Url: {}\"", &location, e);
@@ -78,9 +97,7 @@ pub async fn parse(client: HttpsClient, location: &str) -> BoxResult<HashMap<Str
             file.read_to_string(&mut contents)
                 .expect("Unable to read config");
 
-            serde_yaml::from_str(&contents)?
+            Ok(serde_yaml::from_str(&contents)?)
         }
-    };
-
-    Ok(deck)
+    }
 }

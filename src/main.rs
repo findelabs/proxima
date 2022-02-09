@@ -16,6 +16,7 @@ mod config;
 mod handlers;
 mod https;
 mod state;
+mod error;
 
 use handlers::{config, echo, get_endpoint, handler_404, health, help, proxy, reload, root};
 use https::create_https_client;
@@ -51,7 +52,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             Arg::with_name("username")
                 .short("u")
                 .long("username")
-                .help("Set required username")
+                .help("Set required client username")
                 .required(false)
                 .env("AUTH_USERNAME")
                 .requires("password")
@@ -61,9 +62,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             Arg::with_name("password")
                 .short("p")
                 .long("password")
-                .help("Set required password")
+                .help("Set required client password")
                 .required(false)
                 .env("AUTH_PASSWORD")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("config_username")
+                .short("u")
+                .long("config_username")
+                .help("Set required username for config endpoint")
+                .required(false)
+                .env("CONFIG_AUTH_USERNAME")
+                .requires("config_password")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("config_password")
+                .short("p")
+                .long("config_password")
+                .help("Set required password for config endpoint")
+                .required(false)
+                .env("CONFIG_AUTH_PASSWORD")
                 .takes_value(true),
         )
         .arg(

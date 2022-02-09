@@ -25,6 +25,7 @@ type BoxResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 #[derive(Clone, Debug)]
 pub struct State {
     pub config_location: String,
+    pub config_auth: Option<String>,
     pub config_read: Arc<RwLock<i64>>,
     pub config: Arc<RwLock<ConfigHash>>,
     pub client: HttpsClient,
@@ -42,15 +43,28 @@ impl State {
                 60
             });
 
+        let config_auth = match opts.value_of("config_username") {
+            Some(config_username) => {
+                log::debug!("Generating Basic auth for config endpoint");
+                let config_password = opts.value_of("config_password").unwrap();
+                let user_pass = format!("{}:{}", config_username, config_password);
+                let encoded = base64::encode(user_pass);
+                let basic_auth = format!("Basic {}", encoded);
+                Some(basic_auth)
+            },
+            None => None
+        };
+
         let client = create_https_client(timeout)?;
         let config_location = opts.value_of("config").unwrap().to_owned();
-        let config = config::parse(client.clone(), &config_location).await?;
+        let config = config::parse(client.clone(), &config_location, config_auth.clone()).await?;
         let config_read = Utc::now().timestamp();
 
         Ok(State {
             config_location,
             config: Arc::new(RwLock::new(config)),
             client,
+            config_auth,
             config_read: Arc::new(RwLock::new(config_read))
         })
     }
@@ -84,7 +98,7 @@ impl State {
     pub async fn reload(&mut self) {
         let mut config = self.config.write().await;
         let mut config_read = self.config_read.write().await;
-        let new_config = match config::parse(self.client.clone(), &self.config_location).await {
+        let new_config = match config::parse(self.client.clone(), &self.config_location, self.config_auth.clone()).await {
             Ok(e) => e,
             Err(e) => {
                 log::error!("\"Could not parse config: {}\"", e);
