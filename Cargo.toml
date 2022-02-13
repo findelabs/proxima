@@ -1,10 +1,8 @@
 [package]
 name = "rest-proxy-rs"
-version = "0.2.15"
+version = "0.2.16"
 description = "ultra fast, simple, http proxy"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 hyper = { version = "0.14", features = ["full"] }
