@@ -3,7 +3,7 @@ use crate::https::HttpsClient;
 use axum::http::Request;
 use hyper::header::{HeaderValue, AUTHORIZATION};
 use hyper::Body;
-use serde::{Deserialize, Serialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::prelude::*;
@@ -22,8 +22,8 @@ pub struct ConfigEntry {
 
     #[serde(default)]
     #[serde(skip_serializing)]
-//    #[serde(skip_serializing_if = "String::is_empty")]
-//    #[serde(deserialize_with = "hide_password")]
+    //    #[serde(skip_serializing_if = "String::is_empty")]
+    //    #[serde(deserialize_with = "hide_password")]
     pub password: String,
 
     #[serde(default)]
@@ -33,7 +33,8 @@ pub struct ConfigEntry {
 
 #[allow(dead_code)]
 fn hide_password<'de, D>(_d: D) -> Result<String, D::Error>
-    where D: Deserializer<'de>,
+where
+    D: Deserializer<'de>,
 {
     Ok(String::from("********"))
 }

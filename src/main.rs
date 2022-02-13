@@ -3,10 +3,12 @@ use axum::{
     routing::{any, get, post},
     AddExtensionLayer, Router,
 };
+use axum_extra::middleware;
 use chrono::Local;
-use clap::{crate_version, crate_name, App, Arg};
+use clap::{crate_name, crate_version, App, Arg};
 use env_logger::{Builder, Target};
 use log::LevelFilter;
+use std::future::ready;
 use std::io::Write;
 use std::net::SocketAddr;
 use tower_http::auth::RequireAuthorizationLayer;
@@ -16,8 +18,10 @@ mod config;
 mod error;
 mod handlers;
 mod https;
+mod metrics;
 mod state;
 
+use crate::metrics::{setup_metrics_recorder, track_metrics};
 use handlers::{config, echo, get_endpoint, handler_404, health, help, proxy, reload, root};
 use https::create_https_client;
 use state::State;
@@ -118,6 +122,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Create state for axum
     let state = State::new(opts.clone()).await?;
 
+    // Create prometheus handle
+    let recorder_handle = setup_metrics_recorder();
+
     let base = Router::new()
         .route("/", get(root))
         .route("/health", get(health))
@@ -125,6 +132,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .route("/reload", post(reload))
         .route("/echo", post(echo))
         .route("/help", get(help))
+        .route("/metrics", get(move || ready(recorder_handle.render())))
         .route("/:endpoint", any(get_endpoint))
         .route("/:endpoint/*path", any(proxy));
 
@@ -141,12 +149,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             Router::new()
                 .merge(base)
                 .layer(TraceLayer::new_for_http())
+                .route_layer(middleware::from_fn(track_metrics))
                 .layer(AddExtensionLayer::new(state))
                 .layer(RequireAuthorizationLayer::basic(&username, &password))
         }
         false => Router::new()
             .merge(base)
             .layer(TraceLayer::new_for_http())
+            .route_layer(middleware::from_fn(track_metrics))
             .layer(AddExtensionLayer::new(state)),
     };
 
