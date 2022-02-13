@@ -1,4 +1,4 @@
-### Proxima
+# Proxima
 
 Ultra fast, simple, http proxy
 
