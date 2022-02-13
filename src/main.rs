@@ -4,7 +4,7 @@ use axum::{
     AddExtensionLayer, Router,
 };
 use chrono::Local;
-use clap::{crate_version, App, Arg};
+use clap::{crate_version, crate_name, App, Arg};
 use env_logger::{Builder, Target};
 use log::LevelFilter;
 use std::io::Write;
@@ -24,16 +24,16 @@ use state::State;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let opts = App::new("rest-proxy-rs")
+    let opts = App::new(crate_name!())
         .version(crate_version!())
         .author("Daniel F. <Verticaleap>")
-        .about("rest-proxy-rs")
+        .about(crate_name!())
         .arg(
             Arg::with_name("port")
                 .short("p")
                 .long("port")
                 .help("Set port to listen on")
-                .env("LISTEN_PORT")
+                .env("PROXIMA_LISTEN_PORT")
                 .default_value("8080")
                 .takes_value(true),
         )
@@ -43,6 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .long("timeout")
                 .help("Set default global timeout")
                 .default_value("60")
+                .env("PROXIMA_TIMEOUT")
                 .takes_value(true),
         )
         .arg(
@@ -50,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .short("u")
                 .long("username")
                 .help("Set required client username")
-                .env("CLIENT_USERNAME")
+                .env("PROXIMA_CLIENT_USERNAME")
                 .requires("password")
                 .takes_value(true),
         )
@@ -60,7 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .long("password")
                 .help("Set required client password")
                 .requires("username")
-                .env("CLIENT_PASSWORD")
+                .env("PROXIMA_CLIENT_PASSWORD")
                 .takes_value(true),
         )
         .arg(
@@ -68,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .short("u")
                 .long("config_username")
                 .help("Set required username for config endpoint")
-                .env("AUTH_USERNAME")
+                .env("PROXIMA_AUTH_USERNAME")
                 .requires("config_password")
                 .takes_value(true),
         )
@@ -77,7 +78,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .short("p")
                 .long("config_password")
                 .help("Set required password for config endpoint")
-                .env("AUTH_PASSWORD")
+                .env("PROXIMA_AUTH_PASSWORD")
                 .requires("config_username")
                 .takes_value(true),
         )
@@ -85,7 +86,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             Arg::with_name("config")
                 .short("c")
                 .long("config")
-                .env("REST_CONFIG")
+                .env("PROXIMA_CONFIG")
                 .required(true)
                 .help("Config file")
                 .takes_value(true),
@@ -104,7 +105,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             )
         })
         .target(Target::Stdout)
-        .filter_level(LevelFilter::Error)
+        .filter_level(LevelFilter::Info)
         .parse_default_env()
         .init();
 
