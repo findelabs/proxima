@@ -7,12 +7,13 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use clap::{crate_description, crate_name, crate_version};
 use hyper::{Body, HeaderMap};
 use serde_json::json;
 use serde_json::Value;
 use std::convert::Infallible;
-use clap::{crate_version, crate_name, crate_description};
 
+use crate::error::Error as RestError;
 use crate::State;
 
 // This is required in order to get the method from the request
@@ -74,7 +75,7 @@ pub async fn proxy(
     RequestMethod(method): RequestMethod,
     all_headers: HeaderMap,
     RawQuery(query): RawQuery,
-) -> Response<Body> {
+) -> Result<Response<Body>, RestError> {
     log::info!(
         "{{\"fn\": \"proxy\", \"method\": \"{}\", \"endpoint\":\"{}\",\"uri\":\"{}\"}}",
         &method.as_str(),
@@ -117,7 +118,9 @@ pub async fn health() -> Json<Value> {
 
 pub async fn root() -> Json<Value> {
     log::info!("{{\"fn\": \"root\", \"method\":\"get\"}}");
-    Json(json!({ "version": crate_version!(), "name": crate_name!(), "description": crate_description!()}))
+    Json(
+        json!({ "version": crate_version!(), "name": crate_name!(), "description": crate_description!()}),
+    )
 }
 
 pub async fn echo(Json(payload): Json<Value>) -> Json<Value> {

@@ -13,10 +13,10 @@ use tower_http::auth::RequireAuthorizationLayer;
 use tower_http::trace::TraceLayer;
 
 mod config;
+mod error;
 mod handlers;
 mod https;
 mod state;
-mod error;
 
 use handlers::{config, echo, get_endpoint, handler_404, health, help, proxy, reload, root};
 use https::create_https_client;
@@ -129,8 +129,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     let app = match opts.is_present("username") {
         true => {
-            let username = opts.value_of("username").expect("Missing username").to_string();
-            let password = opts.value_of("password").expect("Missing username").to_string();
+            let username = opts
+                .value_of("username")
+                .expect("Missing username")
+                .to_string();
+            let password = opts
+                .value_of("password")
+                .expect("Missing username")
+                .to_string();
             Router::new()
                 .merge(base)
                 .layer(TraceLayer::new_for_http())

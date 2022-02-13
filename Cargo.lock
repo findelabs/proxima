@@ -804,7 +804,7 @@ dependencies = [
 
 [[package]]
 name = "rest-proxy-rs"
-version = "0.2.13"
+version = "0.2.14"
 dependencies = [
  "axum",
  "base64",
@@ -1282,6 +1282,7 @@ dependencies = [
  "idna",
  "matches",
  "percent-encoding",
+ "serde",
 ]
 
 [[package]]

@@ -1,17 +1,22 @@
 //use serde_json::error::Error as SerdeError;
-use std::fmt;
 use axum::{
     body::{self},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use std::fmt;
 
 #[derive(Debug)]
 pub enum Error {
     Forbidden,
     Unauthorized,
     NotFound,
-    UnkError
+    UnkError,
+    BadToken,
+    UnknownEndpoint,
+    BadUserPasswd,
+    ConnectionError,
+    UnparseableUrl,
 }
 
 impl std::error::Error for Error {}
@@ -19,10 +24,21 @@ impl std::error::Error for Error {}
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Error::Forbidden=> f.write_str("Forbidden"),
-            Error::Unauthorized=> f.write_str("Unauthorized"),
-            Error::NotFound=> f.write_str("Not found"),
-            Error::UnkError=> f.write_str("Returned bad http status code")
+            Error::Forbidden => f.write_str("{\"error\": \"Cannot get config: Forbidden\"}"),
+            Error::Unauthorized => f.write_str("{\"error\": \"Cannot get config: Unauthorized\"}"),
+            Error::NotFound => f.write_str("{\"error\": \"Cannot get config: Not found\"}"),
+            Error::UnkError => {
+                f.write_str("{\"error\": \"Cannot get config: Returned bad status code\"}")
+            }
+            Error::BadToken => f.write_str("{\"error\": \"Unparsable token provided\"}"),
+            Error::BadUserPasswd => {
+                f.write_str("{\"error\": \"Unparsable username and password provided\"}")
+            }
+            Error::UnknownEndpoint => f.write_str("{\"error\": \"please specify known endpoint\"}"),
+            Error::ConnectionError => {
+                f.write_str("{\"error\": \"Error connecting to rest endpoint\"}")
+            }
+            Error::UnparseableUrl => f.write_str("{\"error\": \"Error parsing uri\"}"),
         }
     }
 }

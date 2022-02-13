@@ -3,9 +3,10 @@ use crate::config::{ConfigEntry, ConfigHash};
 use crate::https::HttpsClient;
 use axum::{
     extract::BodyStream,
-    http::{uri::Uri, StatusCode},
+    http::uri::Uri,
     http::{Request, Response},
 };
+use chrono::offset::Utc;
 use clap::ArgMatches;
 use hyper::{
     header::{HeaderValue, AUTHORIZATION, CONTENT_TYPE},
@@ -16,9 +17,9 @@ use std::convert::TryFrom;
 use std::error::Error;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use chrono::offset::Utc;
 
 use crate::create_https_client;
+use crate::error::Error as RestError;
 
 type BoxResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 
@@ -51,8 +52,8 @@ impl State {
                 let encoded = base64::encode(user_pass);
                 let basic_auth = format!("Basic {}", encoded);
                 Some(basic_auth)
-            },
-            None => None
+            }
+            None => None,
         };
 
         let client = create_https_client(timeout)?;
@@ -65,7 +66,7 @@ impl State {
             config: Arc::new(RwLock::new(config)),
             client,
             config_auth,
-            config_read: Arc::new(RwLock::new(config_read))
+            config_read: Arc::new(RwLock::new(config_read)),
         })
     }
 
@@ -104,10 +105,16 @@ impl State {
     pub async fn reload(&mut self) {
         let mut config = self.config.write().await;
         let mut config_read = self.config_read.write().await;
-        let new_config = match config::parse(self.client.clone(), &self.config_location, self.config_auth.clone()).await {
+        let new_config = match config::parse(
+            self.client.clone(),
+            &self.config_location,
+            self.config_auth.clone(),
+        )
+        .await
+        {
             Ok(e) => e,
             Err(e) => {
-                log::error!("\"Could not parse config: {}\"", e);
+                log::error!("{{\"error\": \"Could not parse config: {}\"}}", e);
                 config.clone()
             }
         };
@@ -124,15 +131,10 @@ impl State {
         query: Option<String>,
         mut all_headers: HeaderMap,
         payload: Option<BodyStream>,
-    ) -> Response<Body> {
+    ) -> Result<Response<Body>, RestError> {
         let config_entry = match self.get_entry(endpoint).await {
             Some(e) => e,
-            None => {
-                return Response::builder()
-                    .status(StatusCode::BAD_REQUEST)
-                    .body(Body::from("{\"error\": \"please specify known endpoint\"}"))
-                    .unwrap()
-            }
+            None => return Err(RestError::UnknownEndpoint),
         };
 
         let path = path.replace(" ", "%20");
@@ -183,12 +185,7 @@ impl State {
                         Ok(a) => a,
                         Err(e) => {
                             log::error!("{{\"error\":\"{}\"", e);
-                            return Response::builder()
-                                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                                .body(Body::from(
-                                    "{\"error\": \"Unparsable username and password provided\"}",
-                                ))
-                                .unwrap();
+                            return Err(RestError::BadUserPasswd);
                         }
                     };
                     headers.insert(AUTHORIZATION, header_basic_auth);
@@ -199,34 +196,24 @@ impl State {
                         Ok(a) => a,
                         Err(e) => {
                             log::error!("{{\"error\":\"{}\"", e);
-                            return Response::builder()
-                                .status(StatusCode::INTERNAL_SERVER_ERROR)
-                                .body(Body::from(
-                                    "{\"error\": \"Unparsable token provided\"}",
-                                ))
-                                .unwrap();
+                            return Err(RestError::BadToken);
                         }
                     };
                     headers.insert(AUTHORIZATION, header_bearer_auth);
                 };
 
                 match self.client.clone().request(req).await {
-                    Ok(s) => s,
+                    Ok(s) => Ok(s),
                     Err(e) => {
                         log::error!("{{\"error\":\"{}\"", e);
-                        Response::builder()
-                            .status(StatusCode::INTERNAL_SERVER_ERROR)
-                            .body(Body::from(
-                                "{\"error\": \"Error connecting to rest endpoint\"}",
-                            ))
-                            .unwrap()
+                        Err(RestError::ConnectionError)
                     }
                 }
             }
-            Err(_) => Response::builder()
-                .status(StatusCode::BAD_REQUEST)
-                .body(Body::from("{\"error\": \"Error parsing uri\"}"))
-                .unwrap(),
+            Err(e) => {
+                log::error!("{{\"error\": \"{}\"}}", e);
+                Err(RestError::UnparseableUrl)
+            }
         }
     }
 }

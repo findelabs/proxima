@@ -1,13 +1,13 @@
-use serde::{Deserialize, Serialize};
+use crate::error::Error as RestError;
+use crate::https::HttpsClient;
+use axum::http::Request;
+use hyper::header::{HeaderValue, AUTHORIZATION};
+use hyper::Body;
+use serde::{Deserialize, Serialize, Deserializer};
 use std::collections::HashMap;
-use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
-use axum::http::Request;
-use hyper::Body;
-use crate::https::HttpsClient;
-use hyper::header::{AUTHORIZATION, HeaderValue};
-use crate::error::Error as RestError;
+use url::Url;
 
 pub type ConfigHash = HashMap<String, ConfigEntry>;
 type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
@@ -22,6 +22,8 @@ pub struct ConfigEntry {
 
     #[serde(default)]
     #[serde(skip_serializing)]
+//    #[serde(skip_serializing_if = "String::is_empty")]
+//    #[serde(deserialize_with = "hide_password")]
     pub password: String,
 
     #[serde(default)]
@@ -29,24 +31,18 @@ pub struct ConfigEntry {
     pub token: String,
 }
 
-#[derive(Hash, Eq, PartialEq, Serialize, Deserialize, Debug, Clone)]
-pub struct Url(String);
-
-impl Default for Url {
-    fn default() -> Self {
-        Url("string".to_string())
-    }
+#[allow(dead_code)]
+fn hide_password<'de, D>(_d: D) -> Result<String, D::Error>
+    where D: Deserializer<'de>,
+{
+    Ok(String::from("********"))
 }
 
-// Add ability to use to_string() with Url
-impl fmt::Display for Url {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-pub async fn parse(client: HttpsClient, location: &str, config_auth: Option<String>) -> BoxResult<HashMap<String, ConfigEntry>> {
-
+pub async fn parse(
+    client: HttpsClient,
+    location: &str,
+    config_auth: Option<String>,
+) -> BoxResult<HashMap<String, ConfigEntry>> {
     // Test if config flag is url
     match url::Url::parse(location) {
         Ok(url) => {
@@ -59,36 +55,35 @@ pub async fn parse(client: HttpsClient, location: &str, config_auth: Option<Stri
                 .body(Body::empty())
                 .expect("request builder");
 
-			// Add in basic auth if required
-			let headers = req.headers_mut();
-			if config_auth.is_some() {
+            // Add in basic auth if required
+            let headers = req.headers_mut();
+            if config_auth.is_some() {
                 log::debug!("Inserting basic auth for config endpoint");
                 let header_basic_auth = HeaderValue::from_str(&config_auth.unwrap())?;
-				headers.insert(AUTHORIZATION, header_basic_auth);
-			};
+                headers.insert(AUTHORIZATION, header_basic_auth);
+            };
 
             // Send request
             let response = match client.request(req).await {
                 Ok(s) => s,
                 Err(e) => {
                     log::error!("{{\"error\":\"{}\"", e);
-                    return Err(Box::new(e))
+                    return Err(Box::new(e));
                 }
             };
 
-			// Error if status code is not 200
-			match response.status().as_u16() {
-            	404 => Err(Box::new(RestError::NotFound)),
-            	403 => Err(Box::new(RestError::Forbidden)),
-            	401 => Err(Box::new(RestError::Unauthorized)),
-            	200 => {
-		            let contents = hyper::body::to_bytes(response.into_body()).await?;
-		            Ok(serde_json::from_slice(&contents)?)
-            	},
-            	_ => Err(Box::new(RestError::UnkError))
-	        }
-
-        },
+            // Error if status code is not 200
+            match response.status().as_u16() {
+                404 => Err(Box::new(RestError::NotFound)),
+                403 => Err(Box::new(RestError::Forbidden)),
+                401 => Err(Box::new(RestError::Unauthorized)),
+                200 => {
+                    let contents = hyper::body::to_bytes(response.into_body()).await?;
+                    Ok(serde_json::from_slice(&contents)?)
+                }
+                _ => Err(Box::new(RestError::UnkError)),
+            }
+        }
         Err(e) => {
             log::debug!("\"config location {} is not Url: {}\"", &location, e);
             let mut file = File::open(location).expect("Unable to open config");
