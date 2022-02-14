@@ -138,22 +138,21 @@ impl State {
         };
 
         let path = path.replace(" ", "%20");
-        let path = match path.chars().nth(0) {
+        let url = match config_entry.url.to_string().chars().last() {
             Some(c) => match c {
                 '/' => {
-                    let mut path = path.to_string();
-                    path.remove(0);
-                    path
+                    let mut url = config_entry.url.to_string();
+                    url.pop();
+                    url
                 },
-                _ => path.to_owned()
+                _ => config_entry.url.to_string()
             },
-            None => path.to_owned()
+            None => config_entry.url.to_string()
         };
-            
 
         let host_and_path = match query {
-            Some(q) => format!("{}{}?{}", config_entry.url, path, q),
-            None => format!("{}{}", config_entry.url, path),
+            Some(q) => format!("{}{}?{}", url, path, q),
+            None => format!("{}{}", url, path),
         };
 
         log::debug!("full uri: {}", host_and_path);
