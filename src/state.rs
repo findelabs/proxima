@@ -138,6 +138,18 @@ impl State {
         };
 
         let path = path.replace(" ", "%20");
+        let path = match path.chars().nth(0) {
+            Some(c) => match c {
+                '/' => {
+                    let mut path = path.to_string();
+                    path.remove(0);
+                    path
+                },
+                _ => path.to_owned()
+            },
+            None => path.to_owned()
+        };
+            
 
         let host_and_path = match query {
             Some(q) => format!("{}{}?{}", config_entry.url, path, q),
