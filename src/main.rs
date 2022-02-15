@@ -125,16 +125,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Create prometheus handle
     let recorder_handle = setup_metrics_recorder();
 
+    // These should be authenticated
     let base = Router::new()
-        .route("/", get(root))
-        .route("/health", get(health))
         .route("/config", get(config))
         .route("/reload", post(reload))
-        .route("/echo", post(echo))
-        .route("/help", get(help))
-        .route("/metrics", get(move || ready(recorder_handle.render())))
         .route("/:endpoint", any(get_endpoint))
         .route("/:endpoint/*path", any(proxy));
+
+    // These should NOT be authenticated
+    let standard = Router::new()
+        .route("/", get(root))
+        .route("/health", get(health))
+        .route("/echo", post(echo))
+        .route("/help", get(help))
+        .route("/metrics", get(move || ready(recorder_handle.render())));
 
     let app = match opts.is_present("username") {
         true => {
@@ -152,9 +156,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .route_layer(middleware::from_fn(track_metrics))
                 .layer(AddExtensionLayer::new(state))
                 .layer(RequireAuthorizationLayer::basic(&username, &password))
+                .merge(standard)
         }
         false => Router::new()
             .merge(base)
+            .merge(standard)
             .layer(TraceLayer::new_for_http())
             .route_layer(middleware::from_fn(track_metrics))
             .layer(AddExtensionLayer::new(state)),
