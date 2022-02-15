@@ -152,18 +152,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .to_string();
             Router::new()
                 .merge(base)
+                .layer(RequireAuthorizationLayer::basic(&username, &password))
+                .merge(standard)
                 .layer(TraceLayer::new_for_http())
                 .route_layer(middleware::from_fn(track_metrics))
                 .layer(AddExtensionLayer::new(state))
-                .layer(RequireAuthorizationLayer::basic(&username, &password))
-                .merge(standard)
         }
         false => Router::new()
             .merge(base)
             .merge(standard)
             .layer(TraceLayer::new_for_http())
             .route_layer(middleware::from_fn(track_metrics))
-            .layer(AddExtensionLayer::new(state)),
+            .layer(AddExtensionLayer::new(state))
     };
 
     // add a fallback service for handling routes to unknown paths
