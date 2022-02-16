@@ -1,115 +1,20 @@
-use axum::extract::BodyStream;
 use axum::{
-    async_trait,
-    extract::{Extension, FromRequest, OriginalUri, Path, RawQuery, RequestParts},
-    http::Response,
+    extract::{OriginalUri},
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
 use clap::{crate_description, crate_name, crate_version};
-use hyper::{Body, HeaderMap};
 use serde_json::json;
 use serde_json::Value;
-use std::convert::Infallible;
 
-use crate::error::Error as RestError;
-use crate::State;
+//use crate::error::Error as RestError;
+//use crate::State;
 
 // This is required in order to get the method from the request
 #[derive(Debug)]
 pub struct RequestMethod(pub hyper::Method);
 
-// This is required in order to get the username/password from the request
-#[derive(Debug)]
-pub struct BasicAuth(pub String);
-
-#[async_trait]
-impl<B> FromRequest<B> for RequestMethod
-where
-    B: Send,
-{
-    type Rejection = Infallible;
-
-    async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
-        let method = req.method().to_owned();
-        Ok(Self(method))
-    }
-}
-
-#[async_trait]
-impl<B> FromRequest<B> for BasicAuth
-where
-    B: Send,
-{
-    type Rejection = Infallible;
-
-    async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
-        let user_pass = match req.uri().authority() {
-            Some(authority) => {
-                println!("authority: {}", authority);
-                let string = authority.as_str();
-                let left = match string.split_once('@') {
-                    Some((left, _)) => left,
-                    None => return Ok(Self("".to_string())),
-                };
-
-                let user_pass = match left.split_once(r#"://"#) {
-                    Some((_, right)) => right,
-                    None => return Ok(Self("".to_string())),
-                };
-
-                user_pass
-            }
-            None => "",
-        };
-
-        Ok(Self(user_pass.to_string()))
-    }
-}
-
-pub async fn proxy(
-    Extension(mut state): Extension<State>,
-    payload: Option<BodyStream>,
-    Path((endpoint, path)): Path<(String, String)>,
-    RequestMethod(method): RequestMethod,
-    all_headers: HeaderMap,
-    RawQuery(query): RawQuery,
-) -> Result<Response<Body>, RestError> {
-    log::info!(
-        "{{\"fn\": \"proxy\", \"method\": \"{}\", \"endpoint\":\"{}\",\"uri\":\"{}\"}}",
-        &method.as_str(),
-        &endpoint,
-        &path
-    );
-    state
-        .response(method, &endpoint, &path, query, all_headers, payload)
-        .await
-}
-
-pub async fn get_endpoint(
-    Path(endpoint): Path<String>,
-    Extension(mut state): Extension<State>,
-) -> Json<Value> {
-    log::info!(
-        "{{\"fn\": \"get_endpoint\", \"endpoint\":\"{}\"}}",
-        endpoint
-    );
-    match state.get_entry(&endpoint).await {
-        Some(e) => Json(json!(e)),
-        None => Json(json!({"error": "unknown endpoint"})),
-    }
-}
-
-pub async fn reload(Extension(mut state): Extension<State>) {
-    log::info!("{{\"fn\": \"reload\", \"method\":\"get\"}}");
-    state.reload().await;
-}
-
-pub async fn config(Extension(mut state): Extension<State>) -> Json<Value> {
-    log::info!("{{\"fn\": \"config\", \"method\":\"get\"}}");
-    Json(state.config().await)
-}
 
 pub async fn health() -> Json<Value> {
     log::info!("{{\"fn\": \"health\", \"method\":\"get\"}}");

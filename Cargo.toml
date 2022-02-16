@@ -1,7 +1,7 @@
 [package]
-name = "proxima"
-version = "0.3.5"
-description = "ultra fast, simple, http proxy"
+name = "rust-api-template"
+version = "0.0.1"
+description = "Rust API Template"
 edition = "2021"
 
 [dependencies]
