@@ -14,5 +14,5 @@ FROM debian:bullseye-slim
 WORKDIR /app
 COPY --from=builder /app/bin/ ./
 
-ENTRYPOINT ["/app/rust-api-template"]
+ENTRYPOINT ["/app/proxima"]
 EXPOSE 8080

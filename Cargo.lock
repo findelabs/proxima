@@ -525,9 +525,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.118"
+version = "0.2.117"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "06e509672465a0504304aa87f9f176f2b2b716ed8fb105ebe5c02dc6dce96a94"
+checksum = "e74d72e0f9b65b5b4ca49a346af3976df0f9c61d550727f349ecd559f251a26c"
 
 [[package]]
 name = "linked-hash-map"
@@ -856,6 +856,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "proxima"
+version = "0.3.4"
+dependencies = [
+ "axum",
+ "axum-extra",
+ "base64",
+ "chrono",
+ "clap",
+ "env_logger",
+ "hyper",
+ "hyper-tls",
+ "log",
+ "metrics",
+ "metrics-exporter-prometheus",
+ "native-tls",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "tokio",
+ "tower",
+ "tower-http 0.1.3",
+ "tracing",
+ "tracing-subscriber",
+ "url",
+]
+
+[[package]]
 name = "quanta"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -967,34 +995,6 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "winreg",
-]
-
-[[package]]
-name = "rust-api-template"
-version = "0.0.1"
-dependencies = [
- "axum",
- "axum-extra",
- "base64",
- "chrono",
- "clap",
- "env_logger",
- "hyper",
- "hyper-tls",
- "log",
- "metrics",
- "metrics-exporter-prometheus",
- "native-tls",
- "reqwest",
- "serde",
- "serde_json",
- "serde_yaml",
- "tokio",
- "tower",
- "tower-http 0.1.3",
- "tracing",
- "tracing-subscriber",
- "url",
 ]
 
 [[package]]
@@ -1229,11 +1229,12 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.1.43"
+version = "0.1.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca8a50ef2360fbd1eeb0ecd46795a87a19024eb4b53c5dc916ca1fd95fe62438"
+checksum = "6db9e6914ab8b1ae1c260a4ae7a49b6c5611b40328a735b21862567685e73255"
 dependencies = [
  "libc",
+ "wasi",
  "winapi",
 ]
 
@@ -1517,9 +1518,9 @@ dependencies = [
 
 [[package]]
 name = "wasi"
-version = "0.10.2+wasi-snapshot-preview1"
+version = "0.10.0+wasi-snapshot-preview1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd6fbd9a79829dd1ad0cc20627bf1ed606756a7f77edff7b66b7064f9cb327c6"
+checksum = "1a143597ca7c7793eff794def352d41792a93c481eb1042423ff7ff72ba2c31f"
 
 [[package]]
 name = "wasm-bindgen"
