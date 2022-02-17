@@ -102,7 +102,7 @@ pub async fn get_endpoint(
 }
 
 pub async fn reload(Extension(mut state): Extension<State>) {
-    log::info!("{{\"fn\": \"reload\", \"method\":\"get\"}}");
+    log::info!("{{\"fn\": \"reload\", \"method\":\"POST\"}}");
     state.reload().await;
 }
 
