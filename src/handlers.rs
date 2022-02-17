@@ -107,24 +107,24 @@ pub async fn reload(Extension(mut state): Extension<State>) {
 }
 
 pub async fn config(Extension(mut state): Extension<State>) -> Json<Value> {
-    log::info!("{{\"fn\": \"config\", \"method\":\"get\"}}");
+    log::info!("{{\"fn\": \"config\", \"method\":\"GET\"}}");
     Json(state.config().await)
 }
 
 pub async fn health() -> Json<Value> {
-    log::info!("{{\"fn\": \"health\", \"method\":\"get\"}}");
+    log::info!("{{\"fn\": \"health\", \"method\":\"GET\"}}");
     Json(json!({ "msg": "Healthy"}))
 }
 
 pub async fn root() -> Json<Value> {
-    log::info!("{{\"fn\": \"root\", \"method\":\"get\"}}");
+    log::info!("{{\"fn\": \"root\", \"method\":\"GET\"}}");
     Json(
         json!({ "version": crate_version!(), "name": crate_name!(), "description": crate_description!()}),
     )
 }
 
 pub async fn echo(Json(payload): Json<Value>) -> Json<Value> {
-    log::info!("{{\"fn\": \"echo\", \"method\":\"post\"}}");
+    log::info!("{{\"fn\": \"echo\", \"method\":\"POST\"}}");
     Json(payload)
 }
 

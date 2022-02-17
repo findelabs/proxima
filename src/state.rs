@@ -103,8 +103,7 @@ impl State {
     }
 
     pub async fn reload(&mut self) {
-        let mut config = self.config.write().await;
-        let mut config_read = self.config_read.write().await;
+        let config = self.config.read().await;
         let new_config = match config::parse(
             self.client.clone(),
             &self.config_location,
@@ -118,7 +117,14 @@ impl State {
                 config.clone()
             }
         };
+
         let config_read_time = Utc::now().timestamp();
+        
+        // Get mutable handle on config and config_read
+        drop(config);
+        let mut config = self.config.write().await;
+        let mut config_read = self.config_read.write().await;
+
         *config = new_config;
         *config_read = config_read_time;
     }
