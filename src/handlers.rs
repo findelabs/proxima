@@ -1,7 +1,7 @@
 use axum::extract::BodyStream;
 use axum::{
     async_trait,
-    extract::{Extension, FromRequest, OriginalUri, Path, RawQuery, RequestParts},
+    extract::{Extension, FromRequest, OriginalUri, Path, RawQuery, RequestParts, ConnectInfo},
     http::Response,
     http::StatusCode,
     response::IntoResponse,
@@ -12,6 +12,7 @@ use hyper::{Body, HeaderMap};
 use serde_json::json;
 use serde_json::Value;
 use std::convert::Infallible;
+use std::net::SocketAddr;
 
 use crate::error::Error as RestError;
 use crate::State;
@@ -19,10 +20,6 @@ use crate::State;
 // This is required in order to get the method from the request
 #[derive(Debug)]
 pub struct RequestMethod(pub hyper::Method);
-
-// This is required in order to get the username/password from the request
-#[derive(Debug)]
-pub struct BasicAuth(pub String);
 
 #[async_trait]
 impl<B> FromRequest<B> for RequestMethod
@@ -37,37 +34,6 @@ where
     }
 }
 
-#[async_trait]
-impl<B> FromRequest<B> for BasicAuth
-where
-    B: Send,
-{
-    type Rejection = Infallible;
-
-    async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
-        let user_pass = match req.uri().authority() {
-            Some(authority) => {
-                println!("authority: {}", authority);
-                let string = authority.as_str();
-                let left = match string.split_once('@') {
-                    Some((left, _)) => left,
-                    None => return Ok(Self("".to_string())),
-                };
-
-                let user_pass = match left.split_once(r#"://"#) {
-                    Some((_, right)) => right,
-                    None => return Ok(Self("".to_string())),
-                };
-
-                user_pass
-            }
-            None => "",
-        };
-
-        Ok(Self(user_pass.to_string()))
-    }
-}
-
 pub async fn proxy(
     Extension(mut state): Extension<State>,
     payload: Option<BodyStream>,
@@ -75,10 +41,12 @@ pub async fn proxy(
     RequestMethod(method): RequestMethod,
     all_headers: HeaderMap,
     RawQuery(query): RawQuery,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>
 ) -> Result<Response<Body>, RestError> {
     log::info!(
-        "{{\"fn\": \"proxy\", \"method\": \"{}\", \"endpoint\":\"{}\",\"uri\":\"{}\"}}",
+        "{{\"fn\": \"proxy\", \"method\": \"{}\", \"addr\":\"{}\", \"endpoint\":\"{}\", \"uri\":\"{}\"}}",
         &method.as_str(),
+        &addr,
         &endpoint,
         &path
     );
@@ -87,13 +55,17 @@ pub async fn proxy(
         .await
 }
 
-pub async fn get_endpoint(
+pub async fn endpoint(
     Path(endpoint): Path<String>,
     Extension(mut state): Extension<State>,
+    RequestMethod(method): RequestMethod,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>
 ) -> Json<Value> {
     log::info!(
-        "{{\"fn\": \"get_endpoint\", \"endpoint\":\"{}\"}}",
-        endpoint
+        "{{\"fn\": \"endpoint\", \"method\": \"{}\", \"addr\":\"{}\", \"endpoint\":\"{}\"}}",
+        &method,
+        &addr,
+        &endpoint,
     );
     match state.get_entry(&endpoint).await {
         Some(e) => Json(json!(e)),
@@ -101,35 +73,59 @@ pub async fn get_endpoint(
     }
 }
 
-pub async fn reload(Extension(mut state): Extension<State>) {
-    log::info!("{{\"fn\": \"reload\", \"method\":\"POST\"}}");
+pub async fn reload(Extension(mut state): Extension<State>, RequestMethod(method): RequestMethod, ConnectInfo(addr): ConnectInfo<SocketAddr>) {
+    log::info!(
+        "{{\"fn\": \"reload\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/reload\"}}",
+        &method,
+        &addr,
+    );
     state.reload().await;
 }
 
-pub async fn config(Extension(mut state): Extension<State>) -> Json<Value> {
-    log::info!("{{\"fn\": \"config\", \"method\":\"GET\"}}");
+pub async fn config(Extension(mut state): Extension<State>, RequestMethod(method): RequestMethod, ConnectInfo(addr): ConnectInfo<SocketAddr>) -> Json<Value> {
+    log::info!(
+        "{{\"fn\": \"config\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/config\"}}",
+        &method,
+        &addr,
+    );
     Json(state.config().await)
 }
 
-pub async fn health() -> Json<Value> {
-    log::info!("{{\"fn\": \"health\", \"method\":\"GET\"}}");
+pub async fn health(RequestMethod(method): RequestMethod, ConnectInfo(addr): ConnectInfo<SocketAddr>) -> Json<Value> {
+    log::info!(
+        "{{\"fn\": \"health\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/health\"}}",
+        &method,
+        &addr,
+    );
     Json(json!({ "msg": "Healthy"}))
 }
 
-pub async fn root() -> Json<Value> {
-    log::info!("{{\"fn\": \"root\", \"method\":\"GET\"}}");
+pub async fn root(RequestMethod(method): RequestMethod, ConnectInfo(addr): ConnectInfo<SocketAddr>) -> Json<Value> {
+    log::info!(
+        "{{\"fn\": \"root\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/\"}}",
+        &method,
+        &addr,
+    );
     Json(
         json!({ "version": crate_version!(), "name": crate_name!(), "description": crate_description!()}),
     )
 }
 
-pub async fn echo(Json(payload): Json<Value>) -> Json<Value> {
-    log::info!("{{\"fn\": \"echo\", \"method\":\"POST\"}}");
+pub async fn echo(Json(payload): Json<Value>, RequestMethod(method): RequestMethod, ConnectInfo(addr): ConnectInfo<SocketAddr>) -> Json<Value> {
+    log::info!(
+        "{{\"fn\": \"echo\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/echo\"}}",
+        &method,
+        &addr,
+    );
     Json(payload)
 }
 
-pub async fn help() -> Json<Value> {
-    log::info!("{{\"fn\": \"help\", \"method\":\"get\"}}");
+pub async fn help(RequestMethod(method): RequestMethod, ConnectInfo(addr): ConnectInfo<SocketAddr>) -> Json<Value> {
+    log::info!(
+        "{{\"fn\": \"help\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/help\"}}",
+        &method,
+        &addr,
+    );
     let payload = json!({"paths": {
             "/health": "Get the health of the api",
             "/config": "Get config of api",
@@ -143,12 +139,14 @@ pub async fn help() -> Json<Value> {
     Json(payload)
 }
 
-pub async fn handler_404(OriginalUri(original_uri): OriginalUri) -> impl IntoResponse {
+pub async fn handler_404(OriginalUri(original_uri): OriginalUri, RequestMethod(method): RequestMethod, ConnectInfo(addr): ConnectInfo<SocketAddr>) -> impl IntoResponse {
     let parts = original_uri.into_parts();
     let path_and_query = parts.path_and_query.expect("Missing post path and query");
     log::info!(
-        "{{\"fn\": \"handler_404\", \"method\":\"get\", \"path\":\"{}\"}}",
-        path_and_query
+        "{{\"fn\": \"handler_404\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"{}\"}}",
+        &method,
+        &addr,
+        &path_and_query,
     );
     (
         StatusCode::NOT_FOUND,

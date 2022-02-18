@@ -22,7 +22,7 @@ mod metrics;
 mod state;
 
 use crate::metrics::{setup_metrics_recorder, track_metrics};
-use handlers::{config, echo, get_endpoint, handler_404, health, help, proxy, reload, root};
+use handlers::{config, echo, endpoint, handler_404, health, help, proxy, reload, root};
 use https::create_https_client;
 use state::State;
 
@@ -129,7 +129,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let base = Router::new()
         .route("/config", get(config))
         .route("/reload", post(reload))
-        .route("/:endpoint", any(get_endpoint))
+        .route("/:endpoint", get(endpoint))
         .route("/:endpoint/*path", any(proxy));
 
     // These should NOT be authenticated
@@ -172,7 +172,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     println!("Listening on {}", addr);
     axum::Server::bind(&addr)
-        .serve(app.into_make_service())
+        .serve(app.into_make_service_with_connect_info::<SocketAddr, _>())
         .await?;
 
     Ok(())
