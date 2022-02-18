@@ -1,0 +1,4 @@
+archivelabs:
+  url: https://api.archivelab.org/v1
+inshortsapi:
+  url: https://inshortsapi.vercel.app/news
