@@ -1,0 +1,6 @@
+endpoint_one:
+  url: http://localhost:8080
+  authentication:
+    basic:
+      username: user
+      password: testing
