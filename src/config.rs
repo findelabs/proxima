@@ -12,23 +12,61 @@ use url::Url;
 pub type ConfigHash = HashMap<String, ConfigEntry>;
 type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-#[derive(Hash, Eq, PartialEq, Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct BasicAuth {
+    pub username: String,
+
+    #[serde(skip_serializing)]
+    pub password: String
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct TokenAuth {
+    #[serde(skip_serializing)]
+    pub token: String
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[warn(non_camel_case_types)]
+pub enum EntryAuth {
+    #[allow(non_camel_case_types)]
+    basic(BasicAuth),
+    #[allow(non_camel_case_types)]
+    token(TokenAuth)
+}
+
+impl TokenAuth {
+    pub fn token(&self) -> String {
+        self.token.clone()
+    }
+}
+
+impl BasicAuth {
+    #[allow(dead_code)]
+    pub fn username(&self) -> String {
+        self.username.clone()
+    }
+
+    #[allow(dead_code)]
+    pub fn password(&self) -> String {
+        self.password.clone()
+    }
+
+    pub fn basic(&self) -> String {
+        log::debug!("Generating Basic auth");
+        let user_pass = format!("{}:{}", self.username, self.password);
+        let encoded = base64::encode(user_pass);
+        let basic_auth = format!("Basic {}", encoded);
+        basic_auth
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ConfigEntry {
     pub url: Url,
 
-    #[serde(default)]
-    #[serde(skip_serializing_if = "String::is_empty")]
-    pub username: String,
-
-    #[serde(default)]
-    #[serde(skip_serializing)]
-    //    #[serde(skip_serializing_if = "String::is_empty")]
-    //    #[serde(deserialize_with = "hide_password")]
-    pub password: String,
-
-    #[serde(default)]
-    #[serde(skip_serializing)]
-    pub token: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authentication: Option<EntryAuth>
 }
 
 #[allow(dead_code)]

@@ -18,6 +18,7 @@ use std::error::Error;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+use crate::config::{EntryAuth};
 use crate::create_https_client;
 use crate::error::Error as RestError;
 
@@ -193,30 +194,33 @@ impl State {
                 headers.extend(all_headers.clone());
 
                 // Added Basic Auth if username/password exist
-                if !config_entry.username.is_empty() {
-                    log::debug!("Generating Basic auth");
-                    let user_pass = format!("{}:{}", config_entry.username, config_entry.password);
-                    let encoded = base64::encode(user_pass);
-                    let basic_auth = format!("Basic {}", encoded);
-                    let header_basic_auth = match HeaderValue::from_str(&basic_auth) {
-                        Ok(a) => a,
-                        Err(e) => {
-                            log::error!("{{\"error\":\"{}\"", e);
-                            return Err(RestError::BadUserPasswd);
+                match config_entry.authentication {
+                    Some(authentication) => match authentication {
+                        EntryAuth::basic(auth) => {
+                            let basic_auth = auth.basic();
+                            let header_basic_auth = match HeaderValue::from_str(&basic_auth) {
+                                Ok(a) => a,
+                                Err(e) => {
+                                    log::error!("{{\"error\":\"{}\"", e);
+                                    return Err(RestError::BadUserPasswd);
+                                }
+                            };
+                            headers.insert(AUTHORIZATION, header_basic_auth);
+                        },
+                        EntryAuth::token(auth) => {
+                            log::debug!("Generating Bearer auth");
+                            let basic_auth = format!("Bearer {}", auth.token());
+                            let header_bearer_auth = match HeaderValue::from_str(&basic_auth) {
+                                Ok(a) => a,
+                                Err(e) => {
+                                    log::error!("{{\"error\":\"{}\"", e);
+                                    return Err(RestError::BadToken);
+                                }
+                            };
+                            headers.insert(AUTHORIZATION, header_bearer_auth);
                         }
-                    };
-                    headers.insert(AUTHORIZATION, header_basic_auth);
-                } else if !config_entry.token.is_empty() {
-                    log::debug!("Generating Bearer auth");
-                    let basic_auth = format!("Bearer {}", config_entry.token);
-                    let header_bearer_auth = match HeaderValue::from_str(&basic_auth) {
-                        Ok(a) => a,
-                        Err(e) => {
-                            log::error!("{{\"error\":\"{}\"", e);
-                            return Err(RestError::BadToken);
-                        }
-                    };
-                    headers.insert(AUTHORIZATION, header_bearer_auth);
+                    },
+                    None => log::debug!("No authentication specified for endpoint")
                 };
 
                 match self.client.clone().request(req).await {
