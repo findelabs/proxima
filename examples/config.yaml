@@ -1,4 +1,5 @@
-archivelabs:
-  url: https://api.archivelab.org/v1
-inshortsapi:
-  url: https://inshortsapi.vercel.app/news
+static_config:
+  archivelabs:
+    url: https://api.archivelab.org/v1
+  inshortsapi:
+    url: https://inshortsapi.vercel.app/news

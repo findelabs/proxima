@@ -1,5 +1,5 @@
 use crate::config;
-use crate::config::{ConfigEntry, ConfigHash};
+use crate::config::{ConfigEntry, Config};
 use crate::https::HttpsClient;
 use axum::{
     extract::BodyStream,
@@ -29,7 +29,7 @@ pub struct State {
     pub config_location: String,
     pub config_auth: Option<String>,
     pub config_read: Arc<RwLock<i64>>,
-    pub config: Arc<RwLock<ConfigHash>>,
+    pub config: Arc<RwLock<Config>>,
     pub client: HttpsClient,
 }
 
@@ -75,7 +75,7 @@ impl State {
         self.renew().await;
         log::debug!("Getting {} from ConfigHash", &item);
         let config = self.config.read().await;
-        let entry = config.get(item);
+        let entry = config.static_config.get(item);
         entry.cloned()
     }
 
@@ -207,7 +207,7 @@ impl State {
                             };
                             headers.insert(AUTHORIZATION, header_basic_auth);
                         },
-                        EntryAuth::token(auth) => {
+                        EntryAuth::bearer(auth) => {
                             log::debug!("Generating Bearer auth");
                             let basic_auth = format!("Bearer {}", auth.token());
                             let header_bearer_auth = match HeaderValue::from_str(&basic_auth) {

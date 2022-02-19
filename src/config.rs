@@ -9,20 +9,24 @@ use std::fs::File;
 use std::io::prelude::*;
 use url::Url;
 
-pub type ConfigHash = HashMap<String, ConfigEntry>;
 type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Config {
+	pub static_config: HashMap<String, ConfigEntry>
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BasicAuth {
     pub username: String,
 
-    #[serde(skip_serializing)]
+    #[serde(deserialize_with = "hide_string")]
     pub password: String
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct TokenAuth {
-    #[serde(skip_serializing)]
+pub struct BearerAuth {
+    #[serde(deserialize_with = "hide_string")]
     pub token: String
 }
 
@@ -32,10 +36,10 @@ pub enum EntryAuth {
     #[allow(non_camel_case_types)]
     basic(BasicAuth),
     #[allow(non_camel_case_types)]
-    token(TokenAuth)
+    bearer(BearerAuth)
 }
 
-impl TokenAuth {
+impl BearerAuth {
     pub fn token(&self) -> String {
         self.token.clone()
     }
@@ -59,8 +63,8 @@ impl BasicAuth {
         let basic_auth = format!("Basic {}", encoded);
         basic_auth
     }
-}
 
+}
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ConfigEntry {
     pub url: Url,
@@ -69,19 +73,22 @@ pub struct ConfigEntry {
     pub authentication: Option<EntryAuth>
 }
 
-#[allow(dead_code)]
-fn hide_password<'de, D>(_d: D) -> Result<String, D::Error>
-where
-    D: Deserializer<'de>,
+fn hide_string<'de, D>(d: D) -> Result<String, D::Error>
+	where D: Deserializer<'de>,
 {
-    Ok(String::from("********"))
+   	let s = String::deserialize(d)?;
+	let hidden: String = s.chars().enumerate()
+		.filter(|(i, _)| i < &16)
+		.map(|_| '*')
+		.collect();
+	Ok(hidden)
 }
 
 pub async fn parse(
     client: HttpsClient,
     location: &str,
     config_auth: Option<String>,
-) -> BoxResult<HashMap<String, ConfigEntry>> {
+) -> BoxResult<Config> {
     // Test if config flag is url
     match url::Url::parse(location) {
         Ok(url) => {
