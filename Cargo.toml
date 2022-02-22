@@ -27,3 +27,4 @@ url = { version = "2", features = ["serde"] }
 metrics = "0.18"
 metrics-exporter-prometheus = "0.8"
 axum-extra = "0.1"
+async-recursion = "1.0"

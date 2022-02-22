@@ -1,10 +1,10 @@
 use crate::config;
-use crate::config::{ConfigEntry, Config};
+use crate::config::{Entry, Config};
 use crate::https::HttpsClient;
 use axum::{
     extract::BodyStream,
     http::uri::Uri,
-    http::{Request, Response},
+    http::{StatusCode, Request, Response},
 };
 use chrono::offset::Utc;
 use clap::ArgMatches;
@@ -17,8 +17,9 @@ use std::convert::TryFrom;
 use std::error::Error;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use async_recursion::async_recursion;
 
-use crate::config::{EntryAuth};
+use crate::config::{EndpointAuth, ConfigMap};
 use crate::create_https_client;
 use crate::error::Error as RestError;
 
@@ -71,12 +72,96 @@ impl State {
         })
     }
 
-    pub async fn get_entry(&mut self, item: &str) -> Option<ConfigEntry> {
+	#[async_recursion]
+	pub async fn get_sub_entry(&self, map: ConfigMap, endpoint: &str, remainder: &str) -> Option<(Entry, Option<String>)> {
+
+		// Let's remove any / prefix, to make sure all remainders are the same,
+		// but only if the remainder is more than just /
+//		let mut remainder = match remainder.len() {
+//			x if x > 1 => {
+//				match remainder.chars().nth(0).unwrap_or('e') {
+//					'/' => {
+//						log::info!("Removing / prefix");
+//						let mut rem = remainder.to_string();
+//						rem.remove(0);
+//						rem
+//					},
+//					_ => remainder.to_string()
+//				}
+//			},
+//			_ => {
+//				log::info!("remainder is one, adding slash");
+//				"/".to_string()
+//			}
+//		};
+		let mut remainder = if remainder != "" {
+			match remainder.chars().nth(0).unwrap_or('e') {
+				'/' => {
+					log::info!("Removing / prefix");
+					let mut rem = remainder.to_string();
+					rem.remove(0);
+					rem
+				},
+				_ => remainder.to_string()
+			}
+		} else {
+			remainder.to_string()
+		};
+
+		log::info!("Searching for endpoint: {}, with remainder of {}", endpoint, remainder);
+
+		match map.get(endpoint) {
+			Some(entry) => match entry {
+				Entry::ConfigMap(map) => {
+					log::info!("Found config fork");
+					
+					// Split up remainder, getting next endpoint and remainder. Leave out the first item.
+					let vec: Vec<&str> = remainder.splitn(2, "/").collect();
+
+					log::info!("vec: {:?}, length: {}", vec, vec.len());
+
+					match vec.len() {
+						0 => {
+							log::info!("Nothing passed after fork, returning forked endpaths");
+							Some((config::Entry::ConfigMap(map.clone()), None))
+						},
+						1 => {
+							match vec[0] {
+								"" => {
+									log::info!("Nothing passed after fork, returning forked endpaths");
+									Some((config::Entry::ConfigMap(map.clone()), None))
+								},
+								_ => {
+									log::info!("Found item path in fork, searching for endpoint");
+									self.get_sub_entry(*map.clone(), vec[0], "").await
+								}
+							}
+						},
+						_ => {
+							log::info!("Found item path in fork, searching for endpoint");
+							self.get_sub_entry(*map.clone(), vec[0], vec[1]).await
+						}
+					}
+				},
+				Entry::Endpoint(e) => {
+					// Add in forward slash prefix, if not empty
+					if remainder != "" {
+						log::info!("Adding in forward slash as prefix");
+						remainder.insert(0, '/');
+					};
+					log::info!("Returning endpoint: {}, with remainder of {}", &e.url, remainder);
+					Some((config::Entry::Endpoint(e.clone()), Some(remainder.to_string())))
+				}
+			},
+			None => None
+		}
+	}
+
+    pub async fn get_entry(&mut self, endpoint: &str, remainder: &str) -> Option<(Entry, Option<String>)> {
         self.renew().await;
-        log::debug!("Getting {} from ConfigHash", &item);
+        log::info!("Searching for {} from Config", &endpoint);
         let config = self.config.read().await;
-        let entry = config.static_config.get(item);
-        entry.cloned()
+		self.get_sub_entry(config.static_config.clone(), endpoint, remainder).await
     }
 
     pub async fn config(&mut self) -> Value {
@@ -139,12 +224,47 @@ impl State {
         mut all_headers: HeaderMap,
         payload: Option<BodyStream>,
     ) -> Result<Response<Body>, RestError> {
-        let config_entry = match self.get_entry(endpoint).await {
-            Some(e) => e,
+        let (config_entry, path) = match self.get_entry(endpoint, path).await {
+            Some((e, path)) => match e {
+                Entry::ConfigMap(f) => {
+					let config = serde_json::to_string(&f).expect("Cannot convert to JSON");
+			        let body = Body::from(config);
+			
+			        return Ok(Response::builder()
+			            .status(StatusCode::OK)
+			            .body(body)
+						.unwrap())
+                },
+                Entry::Endpoint(end) => {
+					log::info!("Response fn found endpoint");
+					(end, path)
+				}
+            }
             None => return Err(RestError::UnknownEndpoint),
         };
 
-        let path = path.replace(" ", "%20");
+		// If the path for an endpoint is empty, return the endpoint config instead of hitting the endpoint,
+		// so that fn proxy mirrors the behavior of fn endpoint
+		if let Some(path) = &path {
+			if path == "" {
+				let config = serde_json::to_string(&config_entry).expect("Cannot convert to JSON");
+				let body = Body::from(config);
+				return Ok(Response::builder()
+					.status(StatusCode::OK)
+					.body(body)
+					.unwrap())
+			}
+		};
+
+		// We need to replace any spaces in the url with %20's
+		let path = match path {
+			Some(p) => {
+				p.replace(" ", "%20")
+			},
+			None => "".to_string()
+		};
+		
+		// Clean up url, so that there are no trailing forward slashes
         let url = match config_entry.url.to_string().chars().last() {
             Some(c) => match c {
                 '/' => {
@@ -161,8 +281,8 @@ impl State {
             Some(q) => format!("{}{}?{}", url, path, q),
             None => format!("{}{}", url, path),
         };
-
-        log::debug!("full uri: {}", host_and_path);
+		// Switch this back to debug
+        log::info!("full uri: {}", host_and_path);
 
         match Uri::try_from(host_and_path) {
             Ok(u) => {
@@ -196,7 +316,7 @@ impl State {
                 // Added Basic Auth if username/password exist
                 match config_entry.authentication {
                     Some(authentication) => match authentication {
-                        EntryAuth::basic(auth) => {
+                        EndpointAuth::basic(auth) => {
                             let basic_auth = auth.basic();
                             let header_basic_auth = match HeaderValue::from_str(&basic_auth) {
                                 Ok(a) => a,
@@ -207,7 +327,7 @@ impl State {
                             };
                             headers.insert(AUTHORIZATION, header_basic_auth);
                         },
-                        EntryAuth::bearer(auth) => {
+                        EndpointAuth::bearer(auth) => {
                             log::debug!("Generating Bearer auth");
                             let basic_auth = format!("Bearer {}", auth.token());
                             let header_bearer_auth = match HeaderValue::from_str(&basic_auth) {

@@ -6,3 +6,8 @@ static_config:
   level_two:
     endpoint_three:
       url: http://localhost:8080
+    endpoint_four:
+      url: http://localhost:8080
+    level_three:
+      endpoint_five:
+        url: http://localhost:8080

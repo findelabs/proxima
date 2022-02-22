@@ -67,8 +67,8 @@ pub async fn endpoint(
         &addr,
         &endpoint,
     );
-    match state.get_entry(&endpoint).await {
-        Some(e) => Json(json!(e)),
+    match state.get_entry(&endpoint, "").await {
+        Some((e, _)) => Json(json!(e)),
         None => Json(json!({"error": "unknown endpoint"})),
     }
 }
