@@ -75,25 +75,6 @@ impl State {
 	#[async_recursion]
 	pub async fn get_sub_entry(&self, map: ConfigMap, endpoint: &str, remainder: &str) -> Option<(Entry, Option<String>)> {
 
-		// Let's remove any / prefix, to make sure all remainders are the same,
-		// but only if the remainder is more than just /
-//		let mut remainder = match remainder.len() {
-//			x if x > 1 => {
-//				match remainder.chars().nth(0).unwrap_or('e') {
-//					'/' => {
-//						log::info!("Removing / prefix");
-//						let mut rem = remainder.to_string();
-//						rem.remove(0);
-//						rem
-//					},
-//					_ => remainder.to_string()
-//				}
-//			},
-//			_ => {
-//				log::info!("remainder is one, adding slash");
-//				"/".to_string()
-//			}
-//		};
 		let mut remainder = if remainder != "" {
 			match remainder.chars().nth(0).unwrap_or('e') {
 				'/' => {

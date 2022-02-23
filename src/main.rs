@@ -20,9 +20,10 @@ mod handlers;
 mod https;
 mod metrics;
 mod state;
+mod path;
 
 use crate::metrics::{setup_metrics_recorder, track_metrics};
-use handlers::{config, echo, endpoint, handler_404, health, help, proxy, reload, root};
+use handlers::{config, echo, endpoint, handler_404, health, help, proxy, reload, root, test_proxy};
 use https::create_https_client;
 use state::State;
 
@@ -130,7 +131,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .route("/config", get(config))
         .route("/reload", post(reload))
         .route("/:endpoint", get(endpoint))
-        .route("/:endpoint/*path", any(proxy));
+        .route("/:endpoint/*path", any(test_proxy));
 
     // These should NOT be authenticated
     let standard = Router::new()

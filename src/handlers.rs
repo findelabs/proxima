@@ -15,6 +15,7 @@ use std::convert::Infallible;
 use std::net::SocketAddr;
 
 use crate::error::Error as RestError;
+use crate::path::ProxyPath;
 use crate::State;
 
 // This is required in order to get the method from the request
@@ -33,6 +34,12 @@ where
         Ok(Self(method))
     }
 }
+
+pub async fn test_proxy(path: ProxyPath) -> Json<Value>{
+
+    Json(json!({"path": path.path(), "prefix": path.prefix(), "suffix": path.suffix()}))
+}
+
 
 pub async fn proxy(
     Extension(mut state): Extension<State>,

@@ -15,8 +15,6 @@ type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 pub type ConfigMap = HashMap<String, Entry>;
 
-pub struct ProxyPath(String);
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
 	pub static_config: ConfigMap
