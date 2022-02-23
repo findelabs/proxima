@@ -98,6 +98,20 @@ fn hide_string<'de, D>(d: D) -> Result<String, D::Error>
 	Ok(hidden)
 }
 
+impl Endpoint {
+    pub fn url(&self) -> String {
+        // Clean up url, so that there are no trailing forward slashes
+        match self.url.to_string().chars().last() {
+            Some('/') => {
+                let mut url = self.url.to_string();
+                url.pop();
+                url
+            },
+            _ => self.url.to_string()
+        }
+    }
+}
+
 pub async fn parse(
     client: HttpsClient,
     location: &str,
@@ -141,7 +155,7 @@ pub async fn parse(
                     let contents = hyper::body::to_bytes(response.into_body()).await?;
                     Ok(serde_json::from_slice(&contents)?)
                 }
-                _ => Err(Box::new(RestError::UnkError)),
+                _ => Err(Box::new(RestError::Unknown)),
             }
         }
         Err(e) => {

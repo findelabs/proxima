@@ -22,6 +22,7 @@ use async_recursion::async_recursion;
 use crate::config::{EndpointAuth, ConfigMap};
 use crate::create_https_client;
 use crate::error::Error as RestError;
+use crate::path::ProxyPath;
 
 type BoxResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 
@@ -72,77 +73,47 @@ impl State {
         })
     }
 
+
 	#[async_recursion]
-	pub async fn get_sub_entry(&self, map: ConfigMap, endpoint: &str, remainder: &str) -> Option<(Entry, Option<String>)> {
+	pub async fn get_sub_entry(&self, map: ConfigMap, path: ProxyPath) -> Option<(Entry, ProxyPath)> {
 
-		let mut remainder = if remainder != "" {
-			match remainder.chars().nth(0).unwrap_or('e') {
-				'/' => {
-					log::info!("Removing / prefix");
-					let mut rem = remainder.to_string();
-					rem.remove(0);
-					rem
-				},
-				_ => remainder.to_string()
-			}
-		} else {
-			remainder.to_string()
-		};
+        let prefix = match path.prefix() {
+            Some(pref) => pref,
+            None => return None
+        };
 
-		log::info!("Searching for endpoint: {}, with remainder of {}", endpoint, remainder);
+		log::debug!("Searching for endpoint: {}, with remainder of {}", prefix, path.suffix().unwrap_or_else(|| "None".to_string()));
 
-		match map.get(endpoint) {
+		match map.get(&prefix) {
 			Some(entry) => match entry {
 				Entry::ConfigMap(map) => {
-					log::info!("Found config fork");
+					log::debug!("Found configmap fork");
 					
-					// Split up remainder, getting next endpoint and remainder. Leave out the first item.
-					let vec: Vec<&str> = remainder.splitn(2, "/").collect();
-
-					log::info!("vec: {:?}, length: {}", vec, vec.len());
-
-					match vec.len() {
-						0 => {
-							log::info!("Nothing passed after fork, returning forked endpaths");
-							Some((config::Entry::ConfigMap(map.clone()), None))
-						},
-						1 => {
-							match vec[0] {
-								"" => {
-									log::info!("Nothing passed after fork, returning forked endpaths");
-									Some((config::Entry::ConfigMap(map.clone()), None))
-								},
-								_ => {
-									log::info!("Found item path in fork, searching for endpoint");
-									self.get_sub_entry(*map.clone(), vec[0], "").await
-								}
-							}
-						},
-						_ => {
-							log::info!("Found item path in fork, searching for endpoint");
-							self.get_sub_entry(*map.clone(), vec[0], vec[1]).await
+                    match path.next() {
+                        Some(next) => {
+                            log::debug!("Looks like there is another subfolder specified, calling myself");
+                            self.get_sub_entry(*map.clone(), next).await
+                        },
+                        None => {
+                            log::debug!("No more subfolders specified, returning configmap");
+                            Some((config::Entry::ConfigMap(map.clone()), path))
 						}
 					}
 				},
 				Entry::Endpoint(e) => {
-					// Add in forward slash prefix, if not empty
-					if remainder != "" {
-						log::info!("Adding in forward slash as prefix");
-						remainder.insert(0, '/');
-					};
-					log::info!("Returning endpoint: {}, with remainder of {}", &e.url, remainder);
-					Some((config::Entry::Endpoint(e.clone()), Some(remainder.to_string())))
+					log::debug!("Returning endpoint: {}, with remainder of {}", &e.url, path.suffix().unwrap_or_else(|| "None".to_string()));
+					Some((config::Entry::Endpoint(e.clone()), path.next().unwrap_or_default()))
 				}
 			},
 			None => None
 		}
 	}
 
-    pub async fn get_entry(&mut self, endpoint: &str, remainder: &str) -> Option<(Entry, Option<String>)> {
+    pub async fn get_entry(&mut self, path: ProxyPath) -> Option<(Entry, ProxyPath)> {
         self.renew().await;
-        log::info!("Searching for {} from Config", &endpoint);
+        log::debug!("Getting entry {} in configmap", &path.prefix().unwrap());
         let config = self.config.read().await;
-		self.get_sub_entry(config.static_config.clone(), endpoint, remainder).await
+		self.get_sub_entry(config.static_config.clone(), path).await
     }
 
     pub async fn config(&mut self) -> Value {
@@ -196,74 +167,42 @@ impl State {
         *config_read = config_read_time;
     }
 
+
     pub async fn response(
         &mut self,
         method: Method,
-        endpoint: &str,
-        path: &str,
+        path: ProxyPath,
         query: Option<String>,
         mut all_headers: HeaderMap,
         payload: Option<BodyStream>,
     ) -> Result<Response<Body>, RestError> {
-        let (config_entry, path) = match self.get_entry(endpoint, path).await {
-            Some((e, path)) => match e {
-                Entry::ConfigMap(f) => {
-					let config = serde_json::to_string(&f).expect("Cannot convert to JSON");
-			        let body = Body::from(config);
-			
-			        return Ok(Response::builder()
-			            .status(StatusCode::OK)
-			            .body(body)
-						.unwrap())
-                },
-                Entry::Endpoint(end) => {
-					log::info!("Response fn found endpoint");
-					(end, path)
-				}
-            }
+
+        let (config_entry, path) = match self.get_entry(path.clone()).await {
+            Some((entry, remainder)) => {
+                match entry {
+                    Entry::Endpoint(endpoint) => {
+                        log::debug!("Passing on endpoint {}, with path {}", endpoint.url, remainder.path());
+                        (endpoint, remainder)
+                    },
+                    Entry::ConfigMap(map) => {
+					    let config = serde_json::to_string(&map).expect("Cannot convert to JSON");
+			            let body = Body::from(config);
+			            return Ok(Response::builder()
+			                .status(StatusCode::OK)
+			                .body(body)
+					    	.unwrap())
+                    }
+                }
+            },
             None => return Err(RestError::UnknownEndpoint),
         };
 
-		// If the path for an endpoint is empty, return the endpoint config instead of hitting the endpoint,
-		// so that fn proxy mirrors the behavior of fn endpoint
-		if let Some(path) = &path {
-			if path == "" {
-				let config = serde_json::to_string(&config_entry).expect("Cannot convert to JSON");
-				let body = Body::from(config);
-				return Ok(Response::builder()
-					.status(StatusCode::OK)
-					.body(body)
-					.unwrap())
-			}
-		};
-
-		// We need to replace any spaces in the url with %20's
-		let path = match path {
-			Some(p) => {
-				p.replace(" ", "%20")
-			},
-			None => "".to_string()
-		};
-		
-		// Clean up url, so that there are no trailing forward slashes
-        let url = match config_entry.url.to_string().chars().last() {
-            Some(c) => match c {
-                '/' => {
-                    let mut url = config_entry.url.to_string();
-                    url.pop();
-                    url
-                },
-                _ => config_entry.url.to_string()
-            },
-            None => config_entry.url.to_string()
-        };
-
         let host_and_path = match query {
-            Some(q) => format!("{}{}?{}", url, path, q),
-            None => format!("{}{}", url, path),
+            Some(q) => format!("{}/{}?{}", &config_entry.url(), path.path(), q),
+            None => format!("{}/{}", &config_entry.url(), path.path()),
         };
-		// Switch this back to debug
-        log::info!("full uri: {}", host_and_path);
+
+        log::debug!("full uri: {}", host_and_path);
 
         match Uri::try_from(host_and_path) {
             Ok(u) => {
@@ -328,7 +267,7 @@ impl State {
                     Ok(s) => Ok(s),
                     Err(e) => {
                         log::error!("{{\"error\":\"{}\"", e);
-                        Err(RestError::ConnectionError)
+                        Err(RestError::Connection)
                     }
                 }
             }
