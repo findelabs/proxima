@@ -11,11 +11,11 @@ pub enum Error {
     Forbidden,
     Unauthorized,
     NotFound,
-    UnkError,
+    Unknown,
     BadToken,
     UnknownEndpoint,
     BadUserPasswd,
-    ConnectionError,
+    Connection,
     UnparseableUrl,
 }
 
@@ -27,7 +27,7 @@ impl fmt::Display for Error {
             Error::Forbidden => f.write_str("{\"error\": \"Cannot get config: Forbidden\"}"),
             Error::Unauthorized => f.write_str("{\"error\": \"Cannot get config: Unauthorized\"}"),
             Error::NotFound => f.write_str("{\"error\": \"Cannot get config: Not found\"}"),
-            Error::UnkError => {
+            Error::Unknown=> {
                 f.write_str("{\"error\": \"Cannot get config: Returned bad status code\"}")
             }
             Error::BadToken => f.write_str("{\"error\": \"Unparsable token provided\"}"),
@@ -35,7 +35,7 @@ impl fmt::Display for Error {
                 f.write_str("{\"error\": \"Unparsable username and password provided\"}")
             }
             Error::UnknownEndpoint => f.write_str("{\"error\": \"please specify known endpoint\"}"),
-            Error::ConnectionError => {
+            Error::Connection => {
                 f.write_str("{\"error\": \"Error connecting to rest endpoint\"}")
             }
             Error::UnparseableUrl => f.write_str("{\"error\": \"Error parsing uri\"}"),

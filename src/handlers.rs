@@ -1,7 +1,7 @@
 use axum::extract::BodyStream;
 use axum::{
     async_trait,
-    extract::{Extension, FromRequest, OriginalUri, Path, RawQuery, RequestParts, ConnectInfo},
+    extract::{Extension, FromRequest, OriginalUri, RawQuery, RequestParts, ConnectInfo},
     http::Response,
     http::StatusCode,
     response::IntoResponse,
@@ -15,6 +15,7 @@ use std::convert::Infallible;
 use std::net::SocketAddr;
 
 use crate::error::Error as RestError;
+use crate::path::ProxyPath;
 use crate::State;
 
 // This is required in order to get the method from the request
@@ -37,40 +38,22 @@ where
 pub async fn proxy(
     Extension(mut state): Extension<State>,
     payload: Option<BodyStream>,
-    Path((endpoint, path)): Path<(String, String)>,
+    path: ProxyPath,
     RequestMethod(method): RequestMethod,
     all_headers: HeaderMap,
     RawQuery(query): RawQuery,
     ConnectInfo(addr): ConnectInfo<SocketAddr>
 ) -> Result<Response<Body>, RestError> {
     log::info!(
-        "{{\"fn\": \"proxy\", \"method\": \"{}\", \"addr\":\"{}\", \"endpoint\":\"{}\", \"uri\":\"{}\"}}",
+        "{{\"fn\": \"proxy\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"{}\", \"query\": \"{}\"}}",
         &method.as_str(),
         &addr,
-        &endpoint,
-        &path
+        &path.path(),
+        query.clone().unwrap_or_else(|| "".to_string())
     );
     state
-        .response(method, &endpoint, &path, query, all_headers, payload)
+        .response(method, path, query, all_headers, payload)
         .await
-}
-
-pub async fn endpoint(
-    Path(endpoint): Path<String>,
-    Extension(mut state): Extension<State>,
-    RequestMethod(method): RequestMethod,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>
-) -> Json<Value> {
-    log::info!(
-        "{{\"fn\": \"endpoint\", \"method\": \"{}\", \"addr\":\"{}\", \"endpoint\":\"{}\"}}",
-        &method,
-        &addr,
-        &endpoint,
-    );
-    match state.get_entry(&endpoint).await {
-        Some(e) => Json(json!(e)),
-        None => Json(json!({"error": "unknown endpoint"})),
-    }
 }
 
 pub async fn reload(Extension(mut state): Extension<State>, RequestMethod(method): RequestMethod, ConnectInfo(addr): ConnectInfo<SocketAddr>) {
@@ -127,12 +110,12 @@ pub async fn help(RequestMethod(method): RequestMethod, ConnectInfo(addr): Conne
         &addr,
     );
     let payload = json!({"paths": {
-            "/health": "Get the health of the api",
-            "/config": "Get config of api",
-            "/reload": "Reload the api's config",
-            "/echo": "Echo back json payload (debugging)",
-            "/help": "Show this help message",
-            "/:endpoint": "Show config for specific endpoint",
+            "/-/health": "Get the health of the api",
+            "/-/config": "Get config of api",
+            "/-/reload": "Reload the api's config",
+            "/-/echo": "Echo back json payload (debugging)",
+            "/-/help": "Show this help message",
+            "/:endpoint": "Show config for specific parent",
             "/:endpoint/*path": "Pass through any request to specified endpoint"
         }
     });

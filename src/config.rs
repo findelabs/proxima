@@ -1,6 +1,8 @@
 use crate::error::Error as RestError;
 use crate::https::HttpsClient;
-use axum::http::Request;
+use axum::{
+    http::{Request},
+};
 use hyper::header::{HeaderValue, AUTHORIZATION};
 use hyper::Body;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -11,9 +13,11 @@ use url::Url;
 
 type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
+pub type ConfigMap = HashMap<String, Entry>;
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Config {
-	pub static_config: HashMap<String, ConfigEntry>
+	pub static_config: ConfigMap
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -32,7 +36,17 @@ pub struct BearerAuth {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[warn(non_camel_case_types)]
-pub enum EntryAuth {
+#[serde(untagged)]
+pub enum Entry {
+    #[allow(non_camel_case_types)]
+    ConfigMap(Box<ConfigMap>),
+    #[allow(non_camel_case_types)]
+    Endpoint(Endpoint)
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[warn(non_camel_case_types)]
+pub enum EndpointAuth {
     #[allow(non_camel_case_types)]
     basic(BasicAuth),
     #[allow(non_camel_case_types)]
@@ -66,11 +80,11 @@ impl BasicAuth {
 
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ConfigEntry {
+pub struct Endpoint {
     pub url: Url,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub authentication: Option<EntryAuth>
+    pub authentication: Option<EndpointAuth>
 }
 
 fn hide_string<'de, D>(d: D) -> Result<String, D::Error>
@@ -82,6 +96,20 @@ fn hide_string<'de, D>(d: D) -> Result<String, D::Error>
 		.map(|_| '*')
 		.collect();
 	Ok(hidden)
+}
+
+impl Endpoint {
+    pub fn url(&self) -> String {
+        // Clean up url, so that there are no trailing forward slashes
+        match self.url.to_string().chars().last() {
+            Some('/') => {
+                let mut url = self.url.to_string();
+                url.pop();
+                url
+            },
+            _ => self.url.to_string()
+        }
+    }
 }
 
 pub async fn parse(
@@ -127,7 +155,7 @@ pub async fn parse(
                     let contents = hyper::body::to_bytes(response.into_body()).await?;
                     Ok(serde_json::from_slice(&contents)?)
                 }
-                _ => Err(Box::new(RestError::UnkError)),
+                _ => Err(Box::new(RestError::Unknown)),
             }
         }
         Err(e) => {

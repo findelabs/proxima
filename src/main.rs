@@ -20,9 +20,10 @@ mod handlers;
 mod https;
 mod metrics;
 mod state;
+mod path;
 
 use crate::metrics::{setup_metrics_recorder, track_metrics};
-use handlers::{config, echo, endpoint, handler_404, health, help, proxy, reload, root};
+use handlers::{config, echo, handler_404, health, help, proxy, reload, root};
 use https::create_https_client;
 use state::State;
 
@@ -102,9 +103,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .format(|buf, record| {
             writeln!(
                 buf,
-                "{{\"date\": \"{}\", \"level\": \"{}\", \"log\": {}}}",
+                "{{\"date\": \"{}\", \"level\": \"{}\", \"file\": \"{}\", \"line\": \"{}\", \"log\": {}}}",
                 Local::now().format("%Y-%m-%dT%H:%M:%S:%f"),
                 record.level(),
+                record.file().unwrap_or(""),
+                record.line().unwrap_or(0u32),
                 record.args()
             )
         })
@@ -126,19 +129,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let recorder_handle = setup_metrics_recorder();
 
     // These should be authenticated
-    let base = Router::new()
-        .route("/config", get(config))
-        .route("/reload", post(reload))
-        .route("/:endpoint", get(endpoint))
+    let closed = Router::new()
+        .route("/-/config", get(config))
+        .route("/-/reload", post(reload))
+        .route("/:endpoint", get(proxy))
         .route("/:endpoint/*path", any(proxy));
 
     // These should NOT be authenticated
-    let standard = Router::new()
+    let open = Router::new()
         .route("/", get(root))
-        .route("/health", get(health))
-        .route("/echo", post(echo))
-        .route("/help", get(help))
-        .route("/metrics", get(move || ready(recorder_handle.render())));
+        .route("/-/health", get(health))
+        .route("/-/echo", post(echo))
+        .route("/-/help", get(help))
+        .route("/-/metrics", get(move || ready(recorder_handle.render())));
 
     let app = match opts.is_present("username") {
         true => {
@@ -151,16 +154,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .expect("Missing username")
                 .to_string();
             Router::new()
-                .merge(base)
+                .merge(closed)
                 .layer(RequireAuthorizationLayer::basic(&username, &password))
-                .merge(standard)
+                .merge(open)
                 .layer(TraceLayer::new_for_http())
                 .route_layer(middleware::from_fn(track_metrics))
                 .layer(AddExtensionLayer::new(state))
         }
         false => Router::new()
-            .merge(base)
-            .merge(standard)
+            .merge(closed)
+            .merge(open)
             .layer(TraceLayer::new_for_http())
             .route_layer(middleware::from_fn(track_metrics))
             .layer(AddExtensionLayer::new(state))

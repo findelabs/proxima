@@ -1,10 +1,10 @@
 use crate::config;
-use crate::config::{ConfigEntry, Config};
+use crate::config::{Entry, Config};
 use crate::https::HttpsClient;
 use axum::{
     extract::BodyStream,
     http::uri::Uri,
-    http::{Request, Response},
+    http::{StatusCode, Request, Response},
 };
 use chrono::offset::Utc;
 use clap::ArgMatches;
@@ -17,10 +17,12 @@ use std::convert::TryFrom;
 use std::error::Error;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use async_recursion::async_recursion;
 
-use crate::config::{EntryAuth};
+use crate::config::{EndpointAuth, ConfigMap};
 use crate::create_https_client;
 use crate::error::Error as RestError;
+use crate::path::ProxyPath;
 
 type BoxResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 
@@ -71,12 +73,47 @@ impl State {
         })
     }
 
-    pub async fn get_entry(&mut self, item: &str) -> Option<ConfigEntry> {
+
+	#[async_recursion]
+	pub async fn get_sub_entry(&self, map: ConfigMap, path: ProxyPath) -> Option<(Entry, ProxyPath)> {
+
+        let prefix = match path.prefix() {
+            Some(pref) => pref,
+            None => return None
+        };
+
+		log::debug!("Searching for endpoint: {}, with remainder of {}", prefix, path.suffix().unwrap_or_else(|| "None".to_string()));
+
+		match map.get(&prefix) {
+			Some(entry) => match entry {
+				Entry::ConfigMap(map) => {
+					log::debug!("Found configmap fork");
+					
+                    match path.next() {
+                        Some(next) => {
+                            log::debug!("Looks like there is another subfolder specified, calling myself");
+                            self.get_sub_entry(*map.clone(), next).await
+                        },
+                        None => {
+                            log::debug!("No more subfolders specified, returning configmap");
+                            Some((config::Entry::ConfigMap(map.clone()), path))
+						}
+					}
+				},
+				Entry::Endpoint(e) => {
+					log::debug!("Returning endpoint: {}, with remainder of {}", &e.url, path.suffix().unwrap_or_else(|| "None".to_string()));
+					Some((config::Entry::Endpoint(e.clone()), path.next().unwrap_or_default()))
+				}
+			},
+			None => None
+		}
+	}
+
+    pub async fn get_entry(&mut self, path: ProxyPath) -> Option<(Entry, ProxyPath)> {
         self.renew().await;
-        log::debug!("Getting {} from ConfigHash", &item);
+        log::debug!("Getting entry {} in configmap", &path.prefix().unwrap());
         let config = self.config.read().await;
-        let entry = config.static_config.get(item);
-        entry.cloned()
+		self.get_sub_entry(config.static_config.clone(), path).await
     }
 
     pub async fn config(&mut self) -> Value {
@@ -130,36 +167,39 @@ impl State {
         *config_read = config_read_time;
     }
 
+
     pub async fn response(
         &mut self,
         method: Method,
-        endpoint: &str,
-        path: &str,
+        path: ProxyPath,
         query: Option<String>,
         mut all_headers: HeaderMap,
         payload: Option<BodyStream>,
     ) -> Result<Response<Body>, RestError> {
-        let config_entry = match self.get_entry(endpoint).await {
-            Some(e) => e,
+
+        let (config_entry, path) = match self.get_entry(path.clone()).await {
+            Some((entry, remainder)) => {
+                match entry {
+                    Entry::Endpoint(endpoint) => {
+                        log::debug!("Passing on endpoint {}, with path {}", endpoint.url, remainder.path());
+                        (endpoint, remainder)
+                    },
+                    Entry::ConfigMap(map) => {
+					    let config = serde_json::to_string(&map).expect("Cannot convert to JSON");
+			            let body = Body::from(config);
+			            return Ok(Response::builder()
+			                .status(StatusCode::OK)
+			                .body(body)
+					    	.unwrap())
+                    }
+                }
+            },
             None => return Err(RestError::UnknownEndpoint),
         };
 
-        let path = path.replace(" ", "%20");
-        let url = match config_entry.url.to_string().chars().last() {
-            Some(c) => match c {
-                '/' => {
-                    let mut url = config_entry.url.to_string();
-                    url.pop();
-                    url
-                },
-                _ => config_entry.url.to_string()
-            },
-            None => config_entry.url.to_string()
-        };
-
         let host_and_path = match query {
-            Some(q) => format!("{}{}?{}", url, path, q),
-            None => format!("{}{}", url, path),
+            Some(q) => format!("{}/{}?{}", &config_entry.url(), path.path(), q),
+            None => format!("{}/{}", &config_entry.url(), path.path()),
         };
 
         log::debug!("full uri: {}", host_and_path);
@@ -196,7 +236,7 @@ impl State {
                 // Added Basic Auth if username/password exist
                 match config_entry.authentication {
                     Some(authentication) => match authentication {
-                        EntryAuth::basic(auth) => {
+                        EndpointAuth::basic(auth) => {
                             let basic_auth = auth.basic();
                             let header_basic_auth = match HeaderValue::from_str(&basic_auth) {
                                 Ok(a) => a,
@@ -207,7 +247,7 @@ impl State {
                             };
                             headers.insert(AUTHORIZATION, header_basic_auth);
                         },
-                        EntryAuth::bearer(auth) => {
+                        EndpointAuth::bearer(auth) => {
                             log::debug!("Generating Bearer auth");
                             let basic_auth = format!("Bearer {}", auth.token());
                             let header_bearer_auth = match HeaderValue::from_str(&basic_auth) {
@@ -227,7 +267,7 @@ impl State {
                     Ok(s) => Ok(s),
                     Err(e) => {
                         log::error!("{{\"error\":\"{}\"", e);
-                        Err(RestError::ConnectionError)
+                        Err(RestError::Connection)
                     }
                 }
             }
