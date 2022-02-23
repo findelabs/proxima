@@ -58,11 +58,11 @@ Proxima exposes a series of endpoints you may hit, listed below:
 ```
 {
   "paths": {
-    "/-/config": "Get config of api",
+    "/-/config": "Get config of proxima",
     "/-/echo": "Echo back json payload (debugging)",
-    "/-/health": "Get the health of the api",
+    "/-/health": "Get the health of proxima",
     "/-/help": "Show this help message",
-    "/-/reload": "Reload the api's config",
+    "/-/reload": "Reload proxima's config",
     "/:endpoint": "Show config for specific parent",
     "/:endpoint/*path": "Pass through any request to specified endpoint"
   }
