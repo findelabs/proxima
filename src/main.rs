@@ -19,8 +19,8 @@ mod error;
 mod handlers;
 mod https;
 mod metrics;
-mod state;
 mod path;
+mod state;
 
 use crate::metrics::{setup_metrics_recorder, track_metrics};
 use handlers::{config, echo, handler_404, health, help, proxy, reload, root};
@@ -166,7 +166,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             .merge(open)
             .layer(TraceLayer::new_for_http())
             .route_layer(middleware::from_fn(track_metrics))
-            .layer(AddExtensionLayer::new(state))
+            .layer(AddExtensionLayer::new(state)),
     };
 
     // add a fallback service for handling routes to unknown paths

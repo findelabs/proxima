@@ -1,7 +1,7 @@
 use axum::extract::BodyStream;
 use axum::{
     async_trait,
-    extract::{Extension, FromRequest, OriginalUri, RawQuery, RequestParts, ConnectInfo},
+    extract::{ConnectInfo, Extension, FromRequest, OriginalUri, RawQuery, RequestParts},
     http::Response,
     http::StatusCode,
     response::IntoResponse,
@@ -42,7 +42,7 @@ pub async fn proxy(
     RequestMethod(method): RequestMethod,
     all_headers: HeaderMap,
     RawQuery(query): RawQuery,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Result<Response<Body>, RestError> {
     log::info!(
         "{{\"fn\": \"proxy\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"{}\", \"query\": \"{}\"}}",
@@ -56,7 +56,11 @@ pub async fn proxy(
         .await
 }
 
-pub async fn reload(Extension(mut state): Extension<State>, RequestMethod(method): RequestMethod, ConnectInfo(addr): ConnectInfo<SocketAddr>) {
+pub async fn reload(
+    Extension(mut state): Extension<State>,
+    RequestMethod(method): RequestMethod,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+) {
     log::info!(
         "{{\"fn\": \"reload\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/reload\"}}",
         &method,
@@ -65,7 +69,11 @@ pub async fn reload(Extension(mut state): Extension<State>, RequestMethod(method
     state.reload().await;
 }
 
-pub async fn config(Extension(mut state): Extension<State>, RequestMethod(method): RequestMethod, ConnectInfo(addr): ConnectInfo<SocketAddr>) -> Json<Value> {
+pub async fn config(
+    Extension(mut state): Extension<State>,
+    RequestMethod(method): RequestMethod,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+) -> Json<Value> {
     log::info!(
         "{{\"fn\": \"config\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/config\"}}",
         &method,
@@ -74,7 +82,10 @@ pub async fn config(Extension(mut state): Extension<State>, RequestMethod(method
     Json(state.config().await)
 }
 
-pub async fn health(RequestMethod(method): RequestMethod, ConnectInfo(addr): ConnectInfo<SocketAddr>) -> Json<Value> {
+pub async fn health(
+    RequestMethod(method): RequestMethod,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+) -> Json<Value> {
     log::info!(
         "{{\"fn\": \"health\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/health\"}}",
         &method,
@@ -83,7 +94,10 @@ pub async fn health(RequestMethod(method): RequestMethod, ConnectInfo(addr): Con
     Json(json!({ "msg": "Healthy"}))
 }
 
-pub async fn root(RequestMethod(method): RequestMethod, ConnectInfo(addr): ConnectInfo<SocketAddr>) -> Json<Value> {
+pub async fn root(
+    RequestMethod(method): RequestMethod,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+) -> Json<Value> {
     log::info!(
         "{{\"fn\": \"root\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/\"}}",
         &method,
@@ -94,7 +108,11 @@ pub async fn root(RequestMethod(method): RequestMethod, ConnectInfo(addr): Conne
     )
 }
 
-pub async fn echo(Json(payload): Json<Value>, RequestMethod(method): RequestMethod, ConnectInfo(addr): ConnectInfo<SocketAddr>) -> Json<Value> {
+pub async fn echo(
+    Json(payload): Json<Value>,
+    RequestMethod(method): RequestMethod,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+) -> Json<Value> {
     log::info!(
         "{{\"fn\": \"echo\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/echo\"}}",
         &method,
@@ -103,7 +121,10 @@ pub async fn echo(Json(payload): Json<Value>, RequestMethod(method): RequestMeth
     Json(payload)
 }
 
-pub async fn help(RequestMethod(method): RequestMethod, ConnectInfo(addr): ConnectInfo<SocketAddr>) -> Json<Value> {
+pub async fn help(
+    RequestMethod(method): RequestMethod,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+) -> Json<Value> {
     log::info!(
         "{{\"fn\": \"help\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/help\"}}",
         &method,
@@ -122,7 +143,11 @@ pub async fn help(RequestMethod(method): RequestMethod, ConnectInfo(addr): Conne
     Json(payload)
 }
 
-pub async fn handler_404(OriginalUri(original_uri): OriginalUri, RequestMethod(method): RequestMethod, ConnectInfo(addr): ConnectInfo<SocketAddr>) -> impl IntoResponse {
+pub async fn handler_404(
+    OriginalUri(original_uri): OriginalUri,
+    RequestMethod(method): RequestMethod,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+) -> impl IntoResponse {
     let parts = original_uri.into_parts();
     let path_and_query = parts.path_and_query.expect("Missing post path and query");
     log::info!(

@@ -1,56 +1,57 @@
 use crate::error::Error as RestError;
 use crate::https::HttpsClient;
-use axum::{
-    http::{Request},
-};
+use axum::http::Request;
 use hyper::header::{HeaderValue, AUTHORIZATION};
 use hyper::Body;
 use serde::{Deserialize, Deserializer, Serialize};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::fs::File;
+use std::hash::Hash;
 use std::io::prelude::*;
 use url::Url;
 
 type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
-pub type ConfigMap = HashMap<String, Entry>;
+pub type ConfigMap = BTreeMap<String, Entry>;
+//#[derive(Serialize, Deserialize, Debug, Clone, Hash, Eq, PartialEq)]
+//pub struct ConfigMap(HashMap<String, String>);
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct Config {
-	pub static_config: ConfigMap
+    pub static_config: ConfigMap,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct BasicAuth {
     pub username: String,
 
     #[serde(deserialize_with = "hide_string")]
-    pub password: String
+    pub password: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct BearerAuth {
     #[serde(deserialize_with = "hide_string")]
-    pub token: String
+    pub token: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[warn(non_camel_case_types)]
 #[serde(untagged)]
 pub enum Entry {
     #[allow(non_camel_case_types)]
     ConfigMap(Box<ConfigMap>),
     #[allow(non_camel_case_types)]
-    Endpoint(Endpoint)
+    Endpoint(Endpoint),
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[warn(non_camel_case_types)]
 pub enum EndpointAuth {
     #[allow(non_camel_case_types)]
     basic(BasicAuth),
     #[allow(non_camel_case_types)]
-    bearer(BearerAuth)
+    bearer(BearerAuth),
 }
 
 impl BearerAuth {
@@ -77,27 +78,30 @@ impl BasicAuth {
         let basic_auth = format!("Basic {}", encoded);
         basic_auth
     }
-
 }
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct Endpoint {
     pub url: Url,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub authentication: Option<EndpointAuth>
+    pub authentication: Option<EndpointAuth>,
 }
 
 fn hide_string<'de, D>(d: D) -> Result<String, D::Error>
-	where D: Deserializer<'de>,
+where
+    D: Deserializer<'de>,
 {
-   	let s = String::deserialize(d)?;
-	let hidden: String = s.chars().enumerate()
-		.filter(|(i, _)| i < &16)
-		.map(|_| '*')
-		.collect();
-	Ok(hidden)
+    let s = String::deserialize(d)?;
+    let hidden: String = s
+        .chars()
+        .enumerate()
+        .filter(|(i, _)| i < &16)
+        .map(|_| '*')
+        .collect();
+    Ok(hidden)
 }
 
+// This can probably go away
 impl Endpoint {
     pub fn url(&self) -> String {
         // Clean up url, so that there are no trailing forward slashes
@@ -106,8 +110,8 @@ impl Endpoint {
                 let mut url = self.url.to_string();
                 url.pop();
                 url
-            },
-            _ => self.url.to_string()
+            }
+            _ => self.url.to_string(),
         }
     }
 }

@@ -2,80 +2,92 @@ use axum::{
     async_trait,
     extract::{FromRequest, RequestParts},
 };
+use serde::Serialize;
 use std::convert::Infallible;
-use serde::{Serialize};
 
 #[derive(Debug, Clone, Serialize, Default)]
 pub struct ProxyPath {
-	pub path: String,
-	pub prefix: Option<String>,
-	pub suffix: Option<String>
+    pub path: String,
+    pub prefix: Option<String>,
+    pub suffix: Option<String>,
 }
 
 impl ProxyPath {
     pub fn new(path: &str) -> ProxyPath {
-
         // Remove prefix of /
         #[allow(clippy::iter_nth_zero)]
-		let path = match path.chars().nth(0).unwrap_or('e') {
+        let path = match path.chars().nth(0).unwrap_or('e') {
             '/' => {
-				log::debug!("Removing / prefix from path");
-				let mut rem = path.to_string();
-               	rem.remove(0);
+                log::debug!("Removing / prefix from path");
+                let mut rem = path.to_string();
+                rem.remove(0);
                 rem
-			},
-			_ => {
-				path.to_string()
-			}
-		};
+            }
+            _ => path.to_string(),
+        };
 
         // Remove suffix of /
-		let path = match path.chars().last().unwrap_or('e') {
+        let path = match path.chars().last().unwrap_or('e') {
             '/' => {
-				log::debug!("Removing / suffix from path");
-				let mut rem = path.to_string();
-               	rem.pop();
+                log::debug!("Removing / suffix from path");
+                let mut rem = path.to_string();
+                rem.pop();
                 rem
-			},
-			_ => {
-				path.to_string()
-			}
-		};
+            }
+            _ => path.to_string(),
+        };
 
         let vec: Vec<&str> = path.splitn(2, '/').collect();
-		
-		match vec.len() {
-			0 => {
-				log::debug!("Weird, we have an empty vec...");
-				ProxyPath { path: path.clone(), prefix: None, suffix: None }
-			},
-			1 => {
-				log::debug!("Found one item, setting prefix to {}", &vec[0]);
-				ProxyPath { path: path.clone(), prefix: Some(vec[0].to_string()), suffix: None }
-			},
-			_ => {
-				log::debug!("Found two items, setting prefix to {}, suffix to {}, and path to {}", vec[0], vec[1], &path);
-				ProxyPath { path: path.clone(), prefix: Some(vec[0].to_string()), suffix: Some(vec[1].to_string()) }
-			}
-		}
+
+        match vec.len() {
+            0 => {
+                log::debug!("Weird, we have an empty vec...");
+                ProxyPath {
+                    path: path.clone(),
+                    prefix: None,
+                    suffix: None,
+                }
+            }
+            1 => {
+                log::debug!("Found one item, setting prefix to {}", &vec[0]);
+                ProxyPath {
+                    path: path.clone(),
+                    prefix: Some(vec[0].to_string()),
+                    suffix: None,
+                }
+            }
+            _ => {
+                log::debug!(
+                    "Found two items, setting prefix to {}, suffix to {}, and path to {}",
+                    vec[0],
+                    vec[1],
+                    &path
+                );
+                ProxyPath {
+                    path: path.clone(),
+                    prefix: Some(vec[0].to_string()),
+                    suffix: Some(vec[1].to_string()),
+                }
+            }
+        }
     }
 
     pub fn next(&self) -> Option<ProxyPath> {
         self.suffix.as_ref().map(|s| ProxyPath::new(s))
     }
 
-	pub fn path(&self) -> String {
-		let path = self.path.clone();
+    pub fn path(&self) -> String {
+        let path = self.path.clone();
         path.replace(" ", "%20")
-	}
+    }
 
-	pub fn prefix(&self) -> Option<String> {
-		self.prefix.clone()
-	}
+    pub fn prefix(&self) -> Option<String> {
+        self.prefix.clone()
+    }
 
-	pub fn suffix(&self) -> Option<String> {
-		self.suffix.clone()
-	}
+    pub fn suffix(&self) -> Option<String> {
+        self.suffix.clone()
+    }
 }
 
 #[async_trait]

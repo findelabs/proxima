@@ -1,10 +1,11 @@
 use crate::config;
-use crate::config::{Entry, Config};
+use crate::config::{Config, Entry};
 use crate::https::HttpsClient;
+use async_recursion::async_recursion;
 use axum::{
     extract::BodyStream,
     http::uri::Uri,
-    http::{StatusCode, Request, Response},
+    http::{Request, Response, StatusCode},
 };
 use chrono::offset::Utc;
 use clap::ArgMatches;
@@ -13,13 +14,14 @@ use hyper::{
     Body, HeaderMap, Method,
 };
 use serde_json::Value;
+use std::collections::hash_map::DefaultHasher;
 use std::convert::TryFrom;
 use std::error::Error;
+use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use async_recursion::async_recursion;
 
-use crate::config::{EndpointAuth, ConfigMap};
+use crate::config::{ConfigMap, EndpointAuth};
 use crate::create_https_client;
 use crate::error::Error as RestError;
 use crate::path::ProxyPath;
@@ -33,6 +35,7 @@ pub struct State {
     pub config_read: Arc<RwLock<i64>>,
     pub config: Arc<RwLock<Config>>,
     pub client: HttpsClient,
+    pub config_hash: Arc<RwLock<u64>>,
 }
 
 impl State {
@@ -62,58 +65,75 @@ impl State {
         let client = create_https_client(timeout)?;
         let config_location = opts.value_of("config").unwrap().to_owned();
         let config = config::parse(client.clone(), &config_location, config_auth.clone()).await?;
+        let config_hash = State::calculate_hash(&config);
         let config_read = Utc::now().timestamp();
 
         Ok(State {
-            config_location,
-            config: Arc::new(RwLock::new(config)),
             client,
+            config: Arc::new(RwLock::new(config)),
+            config_location,
             config_auth,
             config_read: Arc::new(RwLock::new(config_read)),
+            config_hash: Arc::new(RwLock::new(config_hash)),
         })
     }
 
-
-	#[async_recursion]
-	pub async fn get_sub_entry(&self, map: ConfigMap, path: ProxyPath) -> Option<(Entry, ProxyPath)> {
-
+    #[async_recursion]
+    pub async fn get_sub_entry(
+        &self,
+        map: ConfigMap,
+        path: ProxyPath,
+    ) -> Option<(Entry, ProxyPath)> {
         let prefix = match path.prefix() {
             Some(pref) => pref,
-            None => return None
+            None => return None,
         };
 
-		log::debug!("Searching for endpoint: {}, with remainder of {}", prefix, path.suffix().unwrap_or_else(|| "None".to_string()));
+        log::debug!(
+            "Searching for endpoint: {}, with remainder of {}",
+            prefix,
+            path.suffix().unwrap_or_else(|| "None".to_string())
+        );
 
-		match map.get(&prefix) {
-			Some(entry) => match entry {
-				Entry::ConfigMap(map) => {
-					log::debug!("Found configmap fork");
-					
-                    match path.next() {
-                        Some(next) => {
-                            log::debug!("Looks like there is another subfolder specified, calling myself");
-                            self.get_sub_entry(*map.clone(), next).await
-                        },
-                        None => {
-                            log::debug!("No more subfolders specified, returning configmap");
-                            Some((config::Entry::ConfigMap(map.clone()), path))
-						}
-					}
-				},
-				Entry::Endpoint(e) => {
-					log::debug!("Returning endpoint: {}, with remainder of {}", &e.url, path.suffix().unwrap_or_else(|| "None".to_string()));
-					Some((config::Entry::Endpoint(e.clone()), path.next().unwrap_or_default()))
-				}
-			},
-			None => None
-		}
-	}
+        match map.get(&prefix) {
+            Some(entry) => {
+                match entry {
+                    Entry::ConfigMap(map) => {
+                        log::debug!("Found configmap fork");
+
+                        match path.next() {
+                            Some(next) => {
+                                log::debug!("Looks like there is another subfolder specified, calling myself");
+                                self.get_sub_entry(*map.clone(), next).await
+                            }
+                            None => {
+                                log::debug!("No more subfolders specified, returning configmap");
+                                Some((config::Entry::ConfigMap(map.clone()), path))
+                            }
+                        }
+                    }
+                    Entry::Endpoint(e) => {
+                        log::debug!(
+                            "Returning endpoint: {}, with remainder of {}",
+                            &e.url,
+                            path.suffix().unwrap_or_else(|| "None".to_string())
+                        );
+                        Some((
+                            config::Entry::Endpoint(e.clone()),
+                            path.next().unwrap_or_default(),
+                        ))
+                    }
+                }
+            }
+            None => None,
+        }
+    }
 
     pub async fn get_entry(&mut self, path: ProxyPath) -> Option<(Entry, ProxyPath)> {
         self.renew().await;
         log::debug!("Getting entry {} in configmap", &path.prefix().unwrap());
         let config = self.config.read().await;
-		self.get_sub_entry(config.static_config.clone(), path).await
+        self.get_sub_entry(config.static_config.clone(), path).await
     }
 
     pub async fn config(&mut self) -> Value {
@@ -140,6 +160,12 @@ impl State {
         }
     }
 
+    pub fn calculate_hash<T: Hash>(t: &T) -> u64 {
+        let mut s = DefaultHasher::new();
+        t.hash(&mut s);
+        s.finish()
+    }
+
     pub async fn reload(&mut self) {
         let config = self.config.read().await;
         let new_config = match config::parse(
@@ -157,16 +183,29 @@ impl State {
         };
 
         let config_read_time = Utc::now().timestamp();
-        
-        // Get mutable handle on config and config_read
-        drop(config);
-        let mut config = self.config.write().await;
-        let mut config_read = self.config_read.write().await;
+        let config_hash_new = State::calculate_hash(&new_config);
+        let config_hash = self.config_hash.read().await;
 
-        *config = new_config;
-        *config_read = config_read_time;
+        if config_hash_new != *config_hash {
+            log::debug!(
+                "Config has been changed, new {} vs old {}",
+                &config_hash_new,
+                &config_hash
+            );
+            drop(config);
+            drop(config_hash);
+            // Get mutable handle on config and config_read
+            let mut config = self.config.write().await;
+            let mut config_read = self.config_read.write().await;
+            let mut config_hash = self.config_hash.write().await;
+
+            *config = new_config;
+            *config_read = config_read_time;
+            *config_hash = config_hash_new;
+        } else {
+            log::debug!("Config has not changed");
+        }
     }
-
 
     pub async fn response(
         &mut self,
@@ -176,22 +215,23 @@ impl State {
         mut all_headers: HeaderMap,
         payload: Option<BodyStream>,
     ) -> Result<Response<Body>, RestError> {
-
         let (config_entry, path) = match self.get_entry(path.clone()).await {
-            Some((entry, remainder)) => {
-                match entry {
-                    Entry::Endpoint(endpoint) => {
-                        log::debug!("Passing on endpoint {}, with path {}", endpoint.url, remainder.path());
-                        (endpoint, remainder)
-                    },
-                    Entry::ConfigMap(map) => {
-					    let config = serde_json::to_string(&map).expect("Cannot convert to JSON");
-			            let body = Body::from(config);
-			            return Ok(Response::builder()
-			                .status(StatusCode::OK)
-			                .body(body)
-					    	.unwrap())
-                    }
+            Some((entry, remainder)) => match entry {
+                Entry::Endpoint(endpoint) => {
+                    log::debug!(
+                        "Passing on endpoint {}, with path {}",
+                        endpoint.url,
+                        remainder.path()
+                    );
+                    (endpoint, remainder)
+                }
+                Entry::ConfigMap(map) => {
+                    let config = serde_json::to_string(&map).expect("Cannot convert to JSON");
+                    let body = Body::from(config);
+                    return Ok(Response::builder()
+                        .status(StatusCode::OK)
+                        .body(body)
+                        .unwrap());
                 }
             },
             None => return Err(RestError::UnknownEndpoint),
@@ -246,7 +286,7 @@ impl State {
                                 }
                             };
                             headers.insert(AUTHORIZATION, header_basic_auth);
-                        },
+                        }
                         EndpointAuth::bearer(auth) => {
                             log::debug!("Generating Bearer auth");
                             let basic_auth = format!("Bearer {}", auth.token());
@@ -260,7 +300,7 @@ impl State {
                             headers.insert(AUTHORIZATION, header_bearer_auth);
                         }
                     },
-                    None => log::debug!("No authentication specified for endpoint")
+                    None => log::debug!("No authentication specified for endpoint"),
                 };
 
                 match self.client.clone().request(req).await {
