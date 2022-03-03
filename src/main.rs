@@ -21,6 +21,7 @@ mod https;
 mod metrics;
 mod path;
 mod state;
+mod cache;
 
 use crate::metrics::{setup_metrics_recorder, track_metrics};
 use handlers::{config, echo, handler_404, health, help, proxy, reload, root};
