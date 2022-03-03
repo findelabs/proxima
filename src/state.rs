@@ -25,6 +25,7 @@ use crate::config::{ConfigMap, EndpointAuth};
 use crate::create_https_client;
 use crate::error::Error as RestError;
 use crate::path::ProxyPath;
+use crate::cache::Cache;
 
 type BoxResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 
@@ -36,6 +37,7 @@ pub struct State {
     pub config: Arc<RwLock<Config>>,
     pub client: HttpsClient,
     pub config_hash: Arc<RwLock<u64>>,
+    pub config_cache: Cache
 }
 
 impl State {
@@ -67,12 +69,14 @@ impl State {
         let config = config::parse(client.clone(), &config_location, config_auth.clone()).await?;
         let config_hash = State::calculate_hash(&config);
         let config_read = Utc::now().timestamp();
+        let config_cache = Cache::default();
 
         Ok(State {
             client,
             config: Arc::new(RwLock::new(config)),
             config_location,
             config_auth,
+            config_cache,
             config_read: Arc::new(RwLock::new(config_read)),
             config_hash: Arc::new(RwLock::new(config_hash)),
         })
@@ -129,11 +133,25 @@ impl State {
         }
     }
 
-    pub async fn get_entry(&mut self, path: ProxyPath) -> Option<(Entry, ProxyPath)> {
+    pub async fn get(&mut self, path: ProxyPath) -> Option<(Entry, ProxyPath)> {
         self.renew().await;
-        log::debug!("Getting entry {} in configmap", &path.prefix().unwrap());
-        let config = self.config.read().await;
-        self.get_sub_entry(config.static_config.clone(), path).await
+        log::debug!("Searching for entry {} in cache", &path.path());
+        match self.config_cache.get(&path.path()).await {
+            Some((entry, remainder)) => Some((config::Entry::Endpoint(entry), remainder)),
+            None => {
+                log::debug!("Searching for entry {} in configmap", &path.prefix().unwrap());
+                let config = self.config.read().await;
+                match self.get_sub_entry(config.static_config.clone(), path.clone()).await {
+                    Some((entry,remainder)) => {
+                        if let Entry::Endpoint(ref hit) = entry {
+                            self.config_cache.set(&path.path(), &remainder, &hit).await;
+                        };
+                        Some((entry,remainder))
+                    },
+                    None => None
+                }
+            }
+        }
     }
 
     pub async fn config(&mut self) -> Value {
@@ -198,6 +216,7 @@ impl State {
             let mut config = self.config.write().await;
             let mut config_read = self.config_read.write().await;
             let mut config_hash = self.config_hash.write().await;
+            self.config_cache.clear().await;
 
             *config = new_config;
             *config_read = config_read_time;
@@ -215,7 +234,7 @@ impl State {
         mut all_headers: HeaderMap,
         payload: Option<BodyStream>,
     ) -> Result<Response<Body>, RestError> {
-        let (config_entry, path) = match self.get_entry(path.clone()).await {
+        let (config_entry, path) = match self.get(path.clone()).await {
             Some((entry, remainder)) => match entry {
                 Entry::Endpoint(endpoint) => {
                     log::debug!(
