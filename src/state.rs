@@ -135,11 +135,11 @@ impl State {
 
     pub async fn get(&mut self, path: ProxyPath) -> Option<(Entry, ProxyPath)> {
         self.renew().await;
-        log::info!("Searching for entry {} in cache", &path.path());
+        log::debug!("Searching for entry {} in cache", &path.path());
         match self.config_cache.get(&path.path()).await {
             Some((entry, remainder)) => Some((config::Entry::Endpoint(entry), remainder)),
             None => {
-                log::info!("Searching for entry {} in configmap", &path.prefix().unwrap());
+                log::debug!("Searching for entry {} in configmap", &path.prefix().unwrap());
                 let config = self.config.read().await;
                 match self.get_sub_entry(config.static_config.clone(), path.clone()).await {
                     Some((entry,remainder)) => {
@@ -152,13 +152,6 @@ impl State {
                 }
             }
         }
-    }
-
-    pub async fn get_entry(&mut self, path: ProxyPath) -> Option<(Entry, ProxyPath)> {
-        self.renew().await;
-        log::debug!("Getting entry {} in configmap", &path.prefix().unwrap());
-        let config = self.config.read().await;
-        self.get_sub_entry(config.static_config.clone(), path).await
     }
 
     pub async fn config(&mut self) -> Value {
