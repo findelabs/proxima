@@ -25,13 +25,13 @@ pub struct Config {
 pub struct BasicAuth {
     pub username: String,
 
-    #[serde(deserialize_with = "hide_string")]
+    #[serde(skip_serializing)]
     pub password: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct BearerAuth {
-    #[serde(deserialize_with = "hide_string")]
+    #[serde(skip_serializing)]
     pub token: String,
 }
 
@@ -87,6 +87,7 @@ pub struct Endpoint {
     pub authentication: Option<EndpointAuth>,
 }
 
+#[allow(dead_code)]
 fn hide_string<'de, D>(d: D) -> Result<String, D::Error>
 where
     D: Deserializer<'de>,
