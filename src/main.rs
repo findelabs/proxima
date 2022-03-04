@@ -24,7 +24,7 @@ mod state;
 mod cache;
 
 use crate::metrics::{setup_metrics_recorder, track_metrics};
-use handlers::{config, echo, handler_404, health, help, proxy, reload, root, cache};
+use handlers::{config, echo, handler_404, health, help, proxy, reload, root, cache, cache_clear};
 use https::create_https_client;
 use state::State;
 
@@ -133,7 +133,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let closed = Router::new()
         .route("/-/config", get(config))
         .route("/-/reload", post(reload))
-        .route("/-/cache", get(cache))
+        .route("/-/cache", get(cache).delete(cache_clear))
         .route("/:endpoint", get(proxy))
         .route("/:endpoint/*path", any(proxy));
 

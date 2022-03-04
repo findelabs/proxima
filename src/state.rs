@@ -20,6 +20,7 @@ use std::error::Error;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use serde_json::json;
 
 use crate::config::{ConfigMap, EndpointAuth};
 use crate::create_https_client;
@@ -163,6 +164,11 @@ impl State {
     pub async fn cache(&mut self) -> Value {
         let cache = self.config_cache.cache().await;
         serde_json::to_value(&cache).expect("Cannot convert to JSON")
+    }
+
+    pub async fn cache_clear(&mut self) -> Value {
+        self.config_cache.clear().await;
+        json!({"msg": "cache has been cleared"})
     }
 
     pub async fn renew(&mut self) {
