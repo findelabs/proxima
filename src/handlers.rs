@@ -82,6 +82,19 @@ pub async fn config(
     Json(state.config().await)
 }
 
+pub async fn cache(
+    Extension(mut state): Extension<State>,
+    RequestMethod(method): RequestMethod,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+) -> Json<Value> {
+    log::info!(
+        "{{\"fn\": \"cache\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/cache\"}}",
+        &method,
+        &addr,
+    );
+    Json(state.cache().await)
+}
+
 pub async fn health(
     RequestMethod(method): RequestMethod,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,

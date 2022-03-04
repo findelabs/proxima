@@ -3,6 +3,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use crate::config::Endpoint;
 use crate::path::ProxyPath;
+use serde_json::map::Map;
+use serde_json::Value;
 
 pub type CacheMap = Arc<RwLock<HashMap<String, (Endpoint, ProxyPath)>>>;
 
@@ -26,6 +28,17 @@ impl Cache {
         log::debug!("Searching for {} in cache", key);
         let cache = self.cache.read().await;
         cache.get(key).cloned()
+    }
+
+    pub async fn cache(&self) -> Map<String, Value> {
+        log::debug!("Generating cache");
+        let mut map = Map::new();
+        let cache = self.cache.read().await;
+        for (key,(endpoint, proxypath)) in &*cache {
+            let value = format!("{}/{}", endpoint.url(), proxypath.path());
+            map.insert(key.to_string(), serde_json::Value::String(value));
+        }
+        map
     }
 
     pub async fn set(&self, key: &str, remainder: &ProxyPath, value: &Endpoint) {

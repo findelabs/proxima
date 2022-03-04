@@ -160,6 +160,11 @@ impl State {
         serde_json::to_value(&*config).expect("Cannot convert to JSON")
     }
 
+    pub async fn cache(&mut self) -> Value {
+        let cache = self.config_cache.cache().await;
+        serde_json::to_value(&cache).expect("Cannot convert to JSON")
+    }
+
     pub async fn renew(&mut self) {
         let config_read = self.config_read.read().await;
         let diff = Utc::now().timestamp() - *config_read;
