@@ -56,15 +56,30 @@ OPTIONS:
 
 Proxima exposes a series of endpoints you may hit, listed below:
 ```
-{
-  "paths": {
-    "/-/config": "Get config of proxima",
-    "/-/echo": "Echo back json payload (debugging)",
-    "/-/health": "Get the health of proxima",
-    "/-/help": "Show this help message",
-    "/-/reload": "Reload proxima's config",
-    "/:endpoint": "Show config for specific parent",
-    "/:endpoint/*path": "Pass through any request to specified endpoint"
-  }
-}
+"/-/cache":
+  methods:
+    delete: Delete proxima cache
+    get: Get proxima cache
+"/-/config":
+  methods:
+    get: Get proxima configuration
+"/-/echo":
+  methods:
+    get: Echo back json payload (debugging)
+"/-/health":
+  methods:
+    get: Get the health of the api
+"/-/help":
+  methods:
+    get: Show this help message
+"/-/reload":
+  methods:
+    get: Reload the api's config
+"/:endpoint":
+  methods:
+    get: Show config for specific parent
+"/:endpoint/*path":
+  methods:
+    get: Pass through any request to specified endpoint
+
 ```
