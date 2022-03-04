@@ -156,16 +156,7 @@ pub async fn help(
         &method,
         &addr,
     );
-    let payload = json!({"paths": {
-            "/-/health": "Get the health of the api",
-            "/-/config": "Get config of api",
-            "/-/reload": "Reload the api's config",
-            "/-/echo": "Echo back json payload (debugging)",
-            "/-/help": "Show this help message",
-            "/:endpoint": "Show config for specific parent",
-            "/:endpoint/*path": "Pass through any request to specified endpoint"
-        }
-    });
+    let payload = json!({"/-/cache":{"methods":{"get":"Get proxima cache","delete":"Delete proxima cache"}},"/-/config":{"methods":{"get":"Get proxima configuration"}},"/-/echo":{"methods":{"get":"Echo back json payload (debugging)"}},"/-/health":{"methods":{"get":"Get the health of proxima"}},"/-/help":{"methods":{"get":"Show this help message"}},"/-/reload":{"methods":{"get":"Reload proxima's config"}},"/:endpoint":{"methods":{"get":"Show config for specific parent"}},"/:endpoint/*path":{"methods":{"get":"Pass through any request to specified endpoint"}}});
     Json(payload)
 }
 
