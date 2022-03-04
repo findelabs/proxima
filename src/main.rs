@@ -104,10 +104,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .format(|buf, record| {
             writeln!(
                 buf,
-                "{{\"date\": \"{}\", \"level\": \"{}\", \"file\": \"{}\", \"line\": \"{}\", \"log\": {}}}",
+                "{{\"date\": \"{}\", \"level\": \"{}\", \"module\": \"{}\", \"line\": \"{}\", \"log\": {}}}",
                 Local::now().format("%Y-%m-%dT%H:%M:%S:%f"),
                 record.level(),
-                record.file().unwrap_or(""),
+                record.module_path().unwrap_or(""),
                 record.line().unwrap_or(0u32),
                 record.args()
             )

@@ -11,10 +11,7 @@ use std::io::prelude::*;
 use url::Url;
 
 type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
-
 pub type ConfigMap = BTreeMap<String, Entry>;
-//#[derive(Serialize, Deserialize, Debug, Clone, Hash, Eq, PartialEq)]
-//pub struct ConfigMap(HashMap<String, String>);
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct Config {
