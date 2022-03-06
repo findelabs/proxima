@@ -3,7 +3,7 @@
 Ultra fast, simple, http proxy.
 
 ### What is Proxima
-Proxima is a simple L7 proxy, and is used for stitching together multiple http endpoints behind a single proxima proxy. Proxima supports connecting to backend endpoints over http, or https.
+Proxima is a simple L7 proxy, used for stitching together multiple http endpoints behind a single endpoint. Proxima supports connecting to backend endpoints over http, or https.
 
 ### How do I configure Proxima
 Currently, you configure the endpoints behind proxima using either a static configuration file, or by pointing Proxima at a http endpoint, where the config can be scraped. There are example configs under examples, but the general shape should look something like:
