@@ -106,8 +106,8 @@ impl State {
         };
 
         let host_and_path = match query {
-            Some(q) => format!("{}/{}?{}", &config_entry.url(), path.path(), q),
-            None => format!("{}/{}", &config_entry.url(), path.path()),
+            Some(q) => format!("{}{}?{}", &config_entry.url, path.path(), q),
+            None => format!("{}{}", &config_entry.url, path.path()),
         };
 
         log::debug!("full uri: {}", host_and_path);

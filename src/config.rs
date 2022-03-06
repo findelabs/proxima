@@ -1,18 +1,14 @@
-use crate::error::Error as RestError;
-use crate::https::HttpsClient;
 use async_recursion::async_recursion;
 use axum::http::Request;
 use chrono::Utc;
 use hyper::header::{HeaderValue, AUTHORIZATION};
 use hyper::Body;
-use serde::{Deserialize, Deserializer, Serialize};
-use serde_json::json;
-use serde_json::{Map, Value};
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Map, Value};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::BTreeMap;
 use std::fs::File;
-use std::hash::Hash;
-use std::hash::Hasher;
+use std::hash::{Hash, Hasher};
 use std::io::prelude::*;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -20,6 +16,8 @@ use url::Url;
 
 use crate::cache::Cache;
 use crate::create_https_client;
+use crate::error::Error as RestError;
+use crate::https::HttpsClient;
 use crate::path::ProxyPath;
 
 type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
@@ -74,6 +72,14 @@ pub enum EndpointAuth {
     bearer(BearerAuth),
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+pub struct Endpoint {
+    pub url: Url,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authentication: Option<EndpointAuth>,
+}
+
 impl BearerAuth {
     pub fn token(&self) -> String {
         self.token.clone()
@@ -98,43 +104,6 @@ impl BasicAuth {
         let basic_auth = format!("Basic {}", encoded);
         log::debug!("Using {}", &basic_auth);
         basic_auth
-    }
-}
-#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
-pub struct Endpoint {
-    pub url: Url,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub authentication: Option<EndpointAuth>,
-}
-
-#[allow(dead_code)]
-fn hide_string<'de, D>(d: D) -> Result<String, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s = String::deserialize(d)?;
-    let hidden: String = s
-        .chars()
-        .enumerate()
-        .filter(|(i, _)| i < &16)
-        .map(|_| '*')
-        .collect();
-    Ok(hidden)
-}
-
-// This can probably go away
-impl Endpoint {
-    pub fn url(&self) -> String {
-        // Clean up url, so that there are no trailing forward slashes
-        match self.url.to_string().chars().last() {
-            Some('/') => {
-                let mut url = self.url.to_string();
-                url.pop();
-                url
-            }
-            _ => self.url.to_string(),
-        }
     }
 }
 

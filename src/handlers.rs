@@ -62,7 +62,7 @@ pub async fn reload(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) {
     log::info!(
-        "{{\"fn\": \"reload\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/reload\"}}",
+        "{{\"fn\": \"reload\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/reload\"}}",
         &method,
         &addr,
     );
@@ -75,7 +75,7 @@ pub async fn config(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Json<Value> {
     log::info!(
-        "{{\"fn\": \"config\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/config\"}}",
+        "{{\"fn\": \"config\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/config\"}}",
         &method,
         &addr,
     );
@@ -88,7 +88,7 @@ pub async fn get_cache(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Json<Value> {
     log::info!(
-        "{{\"fn\": \"cache\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/cache\"}}",
+        "{{\"fn\": \"cache\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/cache\"}}",
         &method,
         &addr,
     );
@@ -101,7 +101,7 @@ pub async fn clear_cache(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Json<Value> {
     log::info!(
-        "{{\"fn\": \"cache\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/cache\"}}",
+        "{{\"fn\": \"cache\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/cache\"}}",
         &method,
         &addr,
     );
@@ -113,7 +113,7 @@ pub async fn health(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Json<Value> {
     log::info!(
-        "{{\"fn\": \"health\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/health\"}}",
+        "{{\"fn\": \"health\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/health\"}}",
         &method,
         &addr,
     );
@@ -140,7 +140,7 @@ pub async fn echo(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Json<Value> {
     log::info!(
-        "{{\"fn\": \"echo\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/echo\"}}",
+        "{{\"fn\": \"echo\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/echo\"}}",
         &method,
         &addr,
     );
@@ -152,7 +152,7 @@ pub async fn help(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Json<Value> {
     log::info!(
-        "{{\"fn\": \"help\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/help\"}}",
+        "{{\"fn\": \"help\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/help\"}}",
         &method,
         &addr,
     );
