@@ -11,12 +11,12 @@ use hyper::{
     header::{HeaderValue, AUTHORIZATION, CONTENT_TYPE},
     Body, HeaderMap, Method,
 };
+use serde_json::json;
 use serde_json::Value;
 use std::convert::TryFrom;
 use std::error::Error;
-use serde_json::json;
 
-use crate::config::{EndpointAuth};
+use crate::config::EndpointAuth;
 use crate::create_https_client;
 use crate::error::Error as RestError;
 use crate::path::ProxyPath;
@@ -58,21 +58,16 @@ impl State {
         let mut config = config::Config::new(&config_location, config_auth.clone());
         config.update().await?;
 
-        Ok(State {
-            client,
-            config 
-        })
+        Ok(State { client, config })
     }
 
     pub async fn config(&mut self) -> Value {
         let _ = self.config.update().await;
-        let config = self.config.configmap().await;
-        serde_json::to_value(&config.static_config).expect("Cannot convert to JSON")
+        json!(self.config.config_file().await.static_config)
     }
 
     pub async fn get_cache(&mut self) -> Value {
-        let cache = self.config.get_cache().await;
-        serde_json::to_value(&cache).expect("Cannot convert to JSON")
+        json!(self.config.get_cache().await)
     }
 
     pub async fn clear_cache(&mut self) -> Value {

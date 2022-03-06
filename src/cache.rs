@@ -1,21 +1,23 @@
-use std::collections::HashMap;
-use std::sync::Arc;
-use tokio::sync::RwLock;
 use crate::config::Endpoint;
 use crate::path::ProxyPath;
 use serde_json::map::Map;
 use serde_json::Value;
+use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 pub type CacheMap = Arc<RwLock<HashMap<String, (Endpoint, ProxyPath)>>>;
 
 #[derive(Debug, Clone)]
 pub struct Cache {
-    pub cache: CacheMap
+    pub cache: CacheMap,
 }
 
 impl Cache {
     pub fn default() -> Cache {
-        Cache { cache: Arc::new(RwLock::new(HashMap::new())) }
+        Cache {
+            cache: Arc::new(RwLock::new(HashMap::new())),
+        }
     }
 
     pub async fn clear(&mut self) {
@@ -34,7 +36,7 @@ impl Cache {
         log::debug!("Generating cache");
         let mut map = Map::new();
         let cache = self.cache.read().await;
-        for (key,(endpoint, proxypath)) in &*cache {
+        for (key, (endpoint, proxypath)) in &*cache {
             let value = format!("{}/{}", endpoint.url(), proxypath.path());
             map.insert(key.to_string(), serde_json::Value::String(value));
         }
@@ -42,7 +44,11 @@ impl Cache {
     }
 
     pub async fn set(&self, key: &str, remainder: &ProxyPath, value: &Endpoint) {
-        log::debug!("Adding {} to cache with remainder of {}", key, remainder.path());
+        log::debug!(
+            "Adding {} to cache with remainder of {}",
+            key,
+            remainder.path()
+        );
         let mut cache = self.cache.write().await;
         cache.insert(key.to_string(), (value.clone(), remainder.clone()));
     }

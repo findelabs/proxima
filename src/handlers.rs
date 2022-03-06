@@ -95,7 +95,7 @@ pub async fn get_cache(
     Json(state.get_cache().await)
 }
 
-pub async fn clear_cache (
+pub async fn clear_cache(
     Extension(mut state): Extension<State>,
     RequestMethod(method): RequestMethod,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,

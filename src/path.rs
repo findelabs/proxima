@@ -78,7 +78,7 @@ impl ProxyPath {
 
     pub fn path(&self) -> String {
         let path = self.path.clone();
-        path.replace(" ", "%20")
+        path.replace(' ', "%20")
     }
 
     pub fn prefix(&self) -> Option<String> {

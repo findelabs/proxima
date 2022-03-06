@@ -14,6 +14,7 @@ use std::net::SocketAddr;
 use tower_http::auth::RequireAuthorizationLayer;
 use tower_http::trace::TraceLayer;
 
+mod cache;
 mod config;
 mod error;
 mod handlers;
@@ -21,10 +22,11 @@ mod https;
 mod metrics;
 mod path;
 mod state;
-mod cache;
 
 use crate::metrics::{setup_metrics_recorder, track_metrics};
-use handlers::{config, echo, handler_404, health, help, proxy, reload, root, get_cache, clear_cache};
+use handlers::{
+    clear_cache, config, echo, get_cache, handler_404, health, help, proxy, reload, root,
+};
 use https::create_https_client;
 use state::State;
 
