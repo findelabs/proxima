@@ -8,7 +8,6 @@ use axum::{
 };
 use clap::ArgMatches;
 use hyper::{
-    header::{HeaderValue, AUTHORIZATION, CONTENT_TYPE},
     Body, HeaderMap, Method,
 };
 use serde_json::json;
@@ -16,10 +15,10 @@ use serde_json::Value;
 use std::convert::TryFrom;
 use std::error::Error;
 
-use crate::config::EndpointAuth;
 use crate::create_https_client;
 use crate::error::Error as RestError;
 use crate::path::ProxyPath;
+use crate::config::{BasicAuth, EndpointAuth};
 
 type BoxResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 
@@ -45,9 +44,7 @@ impl State {
             Some(config_username) => {
                 log::debug!("Generating Basic auth for config endpoint");
                 let config_password = opts.value_of("config_password").unwrap();
-                let user_pass = format!("{}:{}", config_username, config_password);
-                let encoded = base64::encode(user_pass);
-                let basic_auth = format!("Basic {}", encoded);
+                let basic_auth = EndpointAuth::basic(BasicAuth{ username: config_username.to_string(), password: config_password.to_string() });
                 Some(basic_auth)
             }
             None => None,
@@ -63,7 +60,7 @@ impl State {
 
     pub async fn config(&mut self) -> Value {
         let _ = self.config.update().await;
-        json!(self.config.config_file().await.static_config)
+        json!(self.config.config_file().await)
     }
 
     pub async fn get_cache(&mut self) -> Value {
@@ -80,10 +77,13 @@ impl State {
         method: Method,
         path: ProxyPath,
         query: Option<String>,
-        mut all_headers: HeaderMap,
+        mut request_headers: HeaderMap,
         payload: Option<BodyStream>,
     ) -> Result<Response<Body>, RestError> {
         let (config_entry, path) = match self.config.get(path.clone()).await {
+
+            // If we receive an entry, forward request.
+            // If we receive a ConfigMap, return as json to client
             Some((entry, remainder)) => match entry {
                 Entry::Endpoint(endpoint) => {
                     log::debug!(
@@ -94,6 +94,14 @@ impl State {
                     (endpoint, remainder)
                 }
                 Entry::ConfigMap(map) => {
+                    let config = serde_json::to_string(&map).expect("Cannot convert to JSON");
+                    let body = Body::from(config);
+                    return Ok(Response::builder()
+                        .status(StatusCode::OK)
+                        .body(body)
+                        .unwrap());
+                }
+                Entry::HttpConfig(map) => {
                     let config = serde_json::to_string(&map).expect("Cannot convert to JSON");
                     let body = Body::from(config);
                     return Ok(Response::builder()
@@ -132,44 +140,15 @@ impl State {
                     .expect("request builder");
 
                 // Append to request the headers passed by client
-                all_headers.remove(hyper::header::HOST);
-                all_headers.remove(hyper::header::USER_AGENT);
-                if !all_headers.contains_key(CONTENT_TYPE) {
-                    log::debug!("\"Adding content-type: application/json\"");
-                    all_headers.insert(CONTENT_TYPE, HeaderValue::from_static("application/json"));
-                };
+                request_headers.remove(hyper::header::HOST);
+                request_headers.remove(hyper::header::USER_AGENT);
                 let headers = req.headers_mut();
-                headers.extend(all_headers.clone());
+                headers.extend(request_headers.clone());
 
                 // Added Basic Auth if username/password exist
-                match config_entry.authentication {
-                    Some(authentication) => match authentication {
-                        EndpointAuth::basic(auth) => {
-                            let basic_auth = auth.basic();
-                            let header_basic_auth = match HeaderValue::from_str(&basic_auth) {
-                                Ok(a) => a,
-                                Err(e) => {
-                                    log::error!("{{\"error\":\"{}\"", e);
-                                    return Err(RestError::BadUserPasswd);
-                                }
-                            };
-                            headers.insert(AUTHORIZATION, header_basic_auth);
-                        }
-                        EndpointAuth::bearer(auth) => {
-                            log::debug!("Generating Bearer auth");
-                            let basic_auth = format!("Bearer {}", auth.token());
-                            let header_bearer_auth = match HeaderValue::from_str(&basic_auth) {
-                                Ok(a) => a,
-                                Err(e) => {
-                                    log::error!("{{\"error\":\"{}\"", e);
-                                    return Err(RestError::BadToken);
-                                }
-                            };
-                            headers.insert(AUTHORIZATION, header_bearer_auth);
-                        }
-                    },
-                    None => log::debug!("No authentication specified for endpoint"),
-                };
+                if let Some(authentication) = config_entry.authentication {
+                    authentication.headers(headers)?;
+                }
 
                 match self.client.clone().request(req).await {
                     Ok(s) => Ok(s),

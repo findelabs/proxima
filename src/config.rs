@@ -2,7 +2,7 @@ use async_recursion::async_recursion;
 use axum::http::Request;
 use chrono::Utc;
 use hyper::header::{HeaderValue, AUTHORIZATION};
-use hyper::Body;
+use hyper::{HeaderMap, Body};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use std::collections::hash_map::DefaultHasher;
@@ -32,7 +32,7 @@ pub struct ConfigFile {
 pub struct Config {
     pub config_file: Arc<RwLock<ConfigFile>>,
     pub location: String,
-    pub authentication: Option<String>,
+    pub authentication: Option<EndpointAuth>,
     pub last_read: Arc<RwLock<i64>>,
     pub hash: Arc<RwLock<u64>>,
     pub cache: Cache,
@@ -42,7 +42,6 @@ pub struct Config {
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct BasicAuth {
     pub username: String,
-
     #[serde(skip_serializing)]
     pub password: String,
 }
@@ -61,6 +60,15 @@ pub enum Entry {
     ConfigMap(Box<ConfigMap>),
     #[allow(non_camel_case_types)]
     Endpoint(Endpoint),
+    #[allow(non_camel_case_types)]
+    HttpConfig(HttpConfig),
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+pub struct HttpConfig {
+    pub remote: Url,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authentication: Option<EndpointAuth>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -75,9 +83,41 @@ pub enum EndpointAuth {
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct Endpoint {
     pub url: Url,
-
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authentication: Option<EndpointAuth>,
+}
+
+impl<'a> EndpointAuth {
+    pub fn headers(&self, headers: &'a mut HeaderMap) -> Result<&'a mut HeaderMap, RestError> {
+		match self {
+            EndpointAuth::basic(auth) => {
+                log::debug!("Generating Basic auth headers");
+                let basic_auth = auth.basic();
+                let header_basic_auth = match HeaderValue::from_str(&basic_auth) {
+                    Ok(a) => a,
+                    Err(e) => {
+                        log::error!("{{\"error\":\"{}\"", e);
+                        return Err(RestError::BadUserPasswd);
+                    }
+                };
+                headers.insert(AUTHORIZATION, header_basic_auth);
+                Ok(headers)
+            }
+            EndpointAuth::bearer(auth) => {
+                log::debug!("Generating Bearer auth headers");
+                let bearer_auth = format!("Bearer {}", auth.token());
+                let header_bearer_auth = match HeaderValue::from_str(&bearer_auth) {
+                    Ok(a) => a,
+                    Err(e) => {
+                        log::error!("{{\"error\":\"{}\"", e);
+                        return Err(RestError::BadToken);
+                    }
+                };
+                headers.insert(AUTHORIZATION, header_bearer_auth);
+                Ok(headers)
+            }
+        }
+    }
 }
 
 impl BearerAuth {
@@ -140,7 +180,7 @@ impl Config {
         }
     }
 
-    pub fn new(location: &str, authentication: Option<String>) -> Config {
+    pub fn new(location: &str, authentication: Option<EndpointAuth>) -> Config {
         Config {
             config_file: Arc::new(RwLock::new(ConfigFile {
                 static_config: BTreeMap::new(),
@@ -176,7 +216,6 @@ impl Config {
                 match entry {
                     Entry::ConfigMap(map) => {
                         log::debug!("Found configmap fork");
-
                         match path.next() {
                             Some(next) => {
                                 log::debug!("Looks like there is another subfolder specified, calling myself");
@@ -185,6 +224,20 @@ impl Config {
                             None => {
                                 log::debug!("No more subfolders specified, returning configmap");
                                 Some((Entry::ConfigMap(map.clone()), path))
+                            }
+                        }
+                    }
+                    Entry::HttpConfig(entry) => {
+                        log::debug!("Found http config fork");
+                        let config_file = self.parse(Some(entry.remote.clone()), entry.authentication.clone()).await.ok()?;
+                        match path.next() {
+                            Some(next) => {
+                                log::debug!("Sub folder specified for httpconfig, calling self");
+                                self.get_sub_entry(config_file.static_config, next).await
+                            }
+                            None => {
+                                log::debug!("No more subfolders specified for httpconfig, returning httpconfig");
+                                Some((Entry::ConfigMap(Box::new(config_file.static_config)), path))
                             }
                         }
                     }
@@ -242,7 +295,7 @@ impl Config {
     }
 
     pub async fn update(&mut self) -> BoxResult<()> {
-        let new_config = self.parse().await?;
+        let new_config = self.parse(None, self.authentication.clone()).await?;
         let current_config = self.config_file().await;
         let now = Utc::now().timestamp();
         let new_config_hash = Config::calculate_hash(&new_config);
@@ -270,9 +323,15 @@ impl Config {
         Ok(())
     }
 
-    pub async fn parse(&mut self) -> BoxResult<ConfigFile> {
+    pub async fn parse(&self, remote: Option<Url>, authentication: Option<EndpointAuth>) -> BoxResult<ConfigFile> {
+
+        let location = match remote {
+            Some(url) => url.to_string(),
+            None => self.location.clone()
+        };
+
         // Test if config flag is url
-        match url::Url::parse(&self.location) {
+        match url::Url::parse(&location) {
             Ok(url) => {
                 log::debug!("config location is url: {}", &url);
 
@@ -285,12 +344,10 @@ impl Config {
 
                 // Add in basic auth if required
                 let headers = req.headers_mut();
-                if self.authentication.is_some() {
-                    log::debug!("Inserting basic auth for config endpoint");
-                    let header_basic_auth =
-                        HeaderValue::from_str(self.authentication.as_ref().unwrap())?;
-                    headers.insert(AUTHORIZATION, header_basic_auth);
-                };
+                if let Some(authentication) = authentication {
+                    log::debug!("Inserting auth for config endpoint");
+                    authentication.headers(headers)?;
+                }
 
                 // Send request
                 let response = match self.client.request(req).await {

@@ -1,0 +1,6 @@
+static_config:
+  endpoint:
+    url: http://localhost:8080
+  httpconfig:
+    remote: http://localhost:8080/-/config
+
