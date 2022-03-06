@@ -66,7 +66,7 @@ pub async fn reload(
         &method,
         &addr,
     );
-    state.reload().await;
+    state.config.reload().await;
 }
 
 pub async fn config(
@@ -82,7 +82,7 @@ pub async fn config(
     Json(state.config().await)
 }
 
-pub async fn cache(
+pub async fn get_cache(
     Extension(mut state): Extension<State>,
     RequestMethod(method): RequestMethod,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
@@ -92,10 +92,10 @@ pub async fn cache(
         &method,
         &addr,
     );
-    Json(state.cache().await)
+    Json(state.get_cache().await)
 }
 
-pub async fn cache_clear(
+pub async fn clear_cache (
     Extension(mut state): Extension<State>,
     RequestMethod(method): RequestMethod,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
@@ -105,7 +105,7 @@ pub async fn cache_clear(
         &method,
         &addr,
     );
-    Json(state.cache_clear().await)
+    Json(state.clear_cache().await)
 }
 
 pub async fn health(
