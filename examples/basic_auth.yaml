@@ -5,3 +5,7 @@ static_config:
       basic:
         username: user
         password: testing
+    lock:
+      basic:
+        username: user
+        password: testing

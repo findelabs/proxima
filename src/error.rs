@@ -17,6 +17,7 @@ pub enum Error {
     BadUserPasswd,
     Connection,
     UnparseableUrl,
+    UnauthorizedUser,
     Hyper(hyper::Error),
     SerdeJson(serde_json::Error),
     SerdeYaml(serde_yaml::Error),
@@ -40,6 +41,7 @@ impl fmt::Display for Error {
             Error::UnknownEndpoint => f.write_str("{\"error\": \"unknown endpoint\"}"),
             Error::Connection => f.write_str("{\"error\": \"Error connecting to rest endpoint\"}"),
             Error::UnparseableUrl => f.write_str("{\"error\": \"Error parsing uri\"}"),
+            Error::UnauthorizedUser => f.write_str("{\"error\": \"Unauthorized\"}"),
             Error::Hyper(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::SerdeJson(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::SerdeYaml(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
@@ -55,7 +57,7 @@ impl IntoResponse for Error {
         let status_code = match self {
             Error::UnknownEndpoint => StatusCode::NOT_FOUND,
             Error::Forbidden => StatusCode::FORBIDDEN,
-            Error::Unauthorized => StatusCode::UNAUTHORIZED,
+            Error::Unauthorized | Error::UnauthorizedUser => StatusCode::UNAUTHORIZED,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
 

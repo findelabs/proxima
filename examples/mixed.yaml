@@ -19,6 +19,10 @@ static_config:
       url: http://localhost:8080
     endpoint_two:
       url: http://localhost:8080
+      lock:
+        basic:
+          username: user
+          password: testing
     level_three:
       endpoint_four:
         url: http://localhost:8080

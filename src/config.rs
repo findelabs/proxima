@@ -85,9 +85,37 @@ pub struct Endpoint {
     pub url: Url,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authentication: Option<EndpointAuth>,
+    #[serde(skip_serializing)]
+    pub lock: Option<EndpointAuth>,
 }
 
 impl<'a> EndpointAuth {
+    pub fn authorize(&self, header: &HeaderValue) -> Result<(), RestError> {
+        let authorization = match header.to_str() {
+            Ok(h) => h,
+            Err(e) => {
+                log::error!(
+                    "Could not parse client authentication header: {}",
+                    e.to_string()
+                );
+                return Err(RestError::UnauthorizedUser);
+            }
+        };
+        match self {
+            EndpointAuth::basic(auth) => {
+                if auth.basic() != authorization {
+                    return Err(RestError::UnauthorizedUser);
+                }
+            }
+            EndpointAuth::bearer(auth) => {
+                if auth.token() != authorization {
+                    return Err(RestError::UnauthorizedUser);
+                }
+            }
+        }
+        Ok(())
+    }
+
     pub fn headers(&self, headers: &'a mut HeaderMap) -> Result<&'a mut HeaderMap, RestError> {
         match self {
             EndpointAuth::basic(auth) => {
