@@ -90,28 +90,16 @@ pub struct Endpoint {
 }
 
 impl<'a> EndpointAuth {
-    pub fn authorize(&self, header: &HeaderValue) -> Result<(), RestError> {
-        let authorization = match header.to_str() {
-            Ok(h) => h,
-            Err(e) => {
-                log::error!(
-                    "Could not parse client authentication header: {}",
-                    e.to_string()
-                );
-                return Err(RestError::UnauthorizedUser);
-            }
-        };
+    pub fn header_value(&self) -> HeaderValue {
         match self {
-            EndpointAuth::basic(auth) => {
-                if auth.basic() != authorization {
-                    return Err(RestError::UnauthorizedUser);
-                }
-            }
-            EndpointAuth::bearer(auth) => {
-                if auth.token() != authorization {
-                    return Err(RestError::UnauthorizedUser);
-                }
-            }
+            EndpointAuth::basic(auth) => HeaderValue::from_str(&auth.basic()).unwrap(),
+            EndpointAuth::bearer(auth) => HeaderValue::from_str(&auth.token()).unwrap(),
+        }
+    }
+
+    pub fn authorize(&self, header: &HeaderValue) -> Result<(), RestError> {
+        if self.header_value() != header {
+            return Err(RestError::UnauthorizedUser);
         }
         Ok(())
     }
