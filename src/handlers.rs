@@ -1,6 +1,8 @@
 use axum::{
     async_trait,
-    extract::{BodyStream, ConnectInfo, Extension, FromRequest, OriginalUri, RawQuery, RequestParts},
+    extract::{
+        BodyStream, ConnectInfo, Extension, FromRequest, OriginalUri, RawQuery, RequestParts,
+    },
     http::Response,
     http::StatusCode,
     response::IntoResponse,
@@ -8,7 +10,7 @@ use axum::{
 };
 use clap::{crate_description, crate_name, crate_version};
 use hyper::{Body, HeaderMap};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::convert::Infallible;
 use std::net::SocketAddr;
 

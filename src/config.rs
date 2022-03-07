@@ -2,7 +2,7 @@ use async_recursion::async_recursion;
 use axum::http::Request;
 use chrono::Utc;
 use hyper::header::{HeaderValue, AUTHORIZATION};
-use hyper::{HeaderMap, Body};
+use hyper::{Body, HeaderMap};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use std::collections::hash_map::DefaultHasher;
@@ -89,7 +89,7 @@ pub struct Endpoint {
 
 impl<'a> EndpointAuth {
     pub fn headers(&self, headers: &'a mut HeaderMap) -> Result<&'a mut HeaderMap, RestError> {
-		match self {
+        match self {
             EndpointAuth::basic(auth) => {
                 log::debug!("Generating Basic auth headers");
                 let basic_auth = auth.basic();
@@ -199,10 +199,10 @@ impl Config {
         &self,
         map: ConfigMap,
         path: ProxyPath,
-    ) -> Option<(Entry, ProxyPath)> {
+    ) -> Result<(Entry, ProxyPath), RestError> {
         let prefix = match path.prefix() {
             Some(pref) => pref,
-            None => return None,
+            None => return Err(RestError::UnknownEndpoint),
         };
 
         log::debug!(
@@ -223,13 +223,22 @@ impl Config {
                             }
                             None => {
                                 log::debug!("No more subfolders specified, returning configmap");
-                                Some((Entry::ConfigMap(map.clone()), path))
+                                Ok((Entry::ConfigMap(map.clone()), path))
                             }
                         }
                     }
                     Entry::HttpConfig(entry) => {
                         log::debug!("Found http config fork");
-                        let config_file = self.parse(Some(entry.remote.clone()), entry.authentication.clone()).await.ok()?;
+                        let config_file = match self
+                            .parse(Some(entry.remote.clone()), entry.authentication.clone())
+                            .await
+                        {
+                            Ok(c) => c,
+                            Err(e) => {
+                                log::error!("Error parsing remote config: {}", e.to_string());
+                                return Err(e);
+                            }
+                        };
                         match path.next() {
                             Some(next) => {
                                 log::debug!("Sub folder specified for httpconfig, calling self");
@@ -237,7 +246,7 @@ impl Config {
                             }
                             None => {
                                 log::debug!("No more subfolders specified for httpconfig, returning httpconfig");
-                                Some((Entry::ConfigMap(Box::new(config_file.static_config)), path))
+                                Ok((Entry::ConfigMap(Box::new(config_file.static_config)), path))
                             }
                         }
                     }
@@ -247,19 +256,19 @@ impl Config {
                             &e.url,
                             path.suffix().unwrap_or_else(|| "None".to_string())
                         );
-                        Some((Entry::Endpoint(e.clone()), path.next().unwrap_or_default()))
+                        Ok((Entry::Endpoint(e.clone()), path.next().unwrap_or_default()))
                     }
                 }
             }
-            None => None,
+            None => Err(RestError::UnknownEndpoint),
         }
     }
 
-    pub async fn get(&mut self, path: ProxyPath) -> Option<(Entry, ProxyPath)> {
+    pub async fn get(&mut self, path: ProxyPath) -> Result<(Entry, ProxyPath), RestError> {
         self.renew().await;
         log::debug!("Searching for entry {} in cache", &path.path());
         match self.cache.get(&path.path()).await {
-            Some((entry, remainder)) => Some((Entry::Endpoint(entry), remainder)),
+            Some((entry, remainder)) => Ok((Entry::Endpoint(entry), remainder)),
             None => {
                 log::debug!(
                     "Searching for entry {} in configmap",
@@ -269,13 +278,13 @@ impl Config {
                     .get_sub_entry(self.config_file().await.static_config, path.clone())
                     .await
                 {
-                    Some((entry, remainder)) => {
+                    Ok((entry, remainder)) => {
                         if let Entry::Endpoint(ref hit) = entry {
                             self.cache.set(&path.path(), &remainder, hit).await;
                         };
-                        Some((entry, remainder))
+                        Ok((entry, remainder))
                     }
-                    None => None,
+                    Err(e) => Err(e),
                 }
             }
         }
@@ -310,24 +319,29 @@ impl Config {
 
             // Get mutable handle on config and config_read
             let mut config_file = self.config_file.write().await;
-            let mut last_read = self.last_read.write().await;
             let mut hash = self.hash.write().await;
             self.cache.clear().await;
 
             *config_file = new_config;
-            *last_read = now;
             *hash = new_config_hash;
         } else {
             log::debug!("Config has not changed");
         };
+
+        let mut last_read = self.last_read.write().await;
+        *last_read = now;
+
         Ok(())
     }
 
-    pub async fn parse(&self, remote: Option<Url>, authentication: Option<EndpointAuth>) -> BoxResult<ConfigFile> {
-
+    pub async fn parse(
+        &self,
+        remote: Option<Url>,
+        authentication: Option<EndpointAuth>,
+    ) -> Result<ConfigFile, RestError> {
         let location = match remote {
             Some(url) => url.to_string(),
-            None => self.location.clone()
+            None => self.location.clone(),
         };
 
         // Test if config flag is url
@@ -354,20 +368,27 @@ impl Config {
                     Ok(s) => s,
                     Err(e) => {
                         log::error!("{{\"error\":\"{}\"", e);
-                        return Err(Box::new(e));
+                        return Err(RestError::Hyper(e));
                     }
                 };
 
                 // Error if status code is not 200
                 match response.status().as_u16() {
-                    404 => Err(Box::new(RestError::NotFound)),
-                    403 => Err(Box::new(RestError::Forbidden)),
-                    401 => Err(Box::new(RestError::Unauthorized)),
+                    404 => Err(RestError::NotFound),
+                    403 => Err(RestError::Forbidden),
+                    401 => Err(RestError::Unauthorized),
                     200 => {
                         let contents = hyper::body::to_bytes(response.into_body()).await?;
-                        Ok(serde_json::from_slice(&contents)?)
+                        let body = serde_json::from_slice(&contents)?;
+                        Ok(body)
                     }
-                    _ => Err(Box::new(RestError::Unknown)),
+                    _ => {
+                        log::error!(
+                            "Got bad status code getting config: {}",
+                            response.status().as_u16()
+                        );
+                        Err(RestError::Unknown)
+                    }
                 }
             }
             Err(e) => {

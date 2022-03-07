@@ -7,18 +7,16 @@ use axum::{
     http::{Request, Response, StatusCode},
 };
 use clap::ArgMatches;
-use hyper::{
-    Body, HeaderMap, Method,
-};
+use hyper::{Body, HeaderMap, Method};
 use serde_json::json;
 use serde_json::Value;
 use std::convert::TryFrom;
 use std::error::Error;
 
+use crate::config::{BasicAuth, EndpointAuth};
 use crate::create_https_client;
 use crate::error::Error as RestError;
 use crate::path::ProxyPath;
-use crate::config::{BasicAuth, EndpointAuth};
 
 type BoxResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 
@@ -44,7 +42,10 @@ impl State {
             Some(config_username) => {
                 log::debug!("Generating Basic auth for config endpoint");
                 let config_password = opts.value_of("config_password").unwrap();
-                let basic_auth = EndpointAuth::basic(BasicAuth{ username: config_username.to_string(), password: config_password.to_string() });
+                let basic_auth = EndpointAuth::basic(BasicAuth {
+                    username: config_username.to_string(),
+                    password: config_password.to_string(),
+                });
                 Some(basic_auth)
             }
             None => None,
@@ -81,10 +82,9 @@ impl State {
         payload: Option<BodyStream>,
     ) -> Result<Response<Body>, RestError> {
         let (config_entry, path) = match self.config.get(path.clone()).await {
-
             // If we receive an entry, forward request.
             // If we receive a ConfigMap, return as json to client
-            Some((entry, remainder)) => match entry {
+            Ok((entry, remainder)) => match entry {
                 Entry::Endpoint(endpoint) => {
                     log::debug!(
                         "Passing on endpoint {}, with path {}",
@@ -110,7 +110,7 @@ impl State {
                         .unwrap());
                 }
             },
-            None => return Err(RestError::UnknownEndpoint),
+            Err(e) => return Err(e),
         };
 
         let host_and_path = match query {

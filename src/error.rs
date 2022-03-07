@@ -17,6 +17,9 @@ pub enum Error {
     BadUserPasswd,
     Connection,
     UnparseableUrl,
+    Hyper(hyper::Error),
+    SerdeJson(serde_json::Error),
+    SerdeYaml(serde_yaml::Error),
 }
 
 impl std::error::Error for Error {}
@@ -34,9 +37,12 @@ impl fmt::Display for Error {
             Error::BadUserPasswd => {
                 f.write_str("{\"error\": \"Unparsable username and password provided\"}")
             }
-            Error::UnknownEndpoint => f.write_str("{\"error\": \"please specify known endpoint\"}"),
+            Error::UnknownEndpoint => f.write_str("{\"error\": \"unknown endpoint\"}"),
             Error::Connection => f.write_str("{\"error\": \"Error connecting to rest endpoint\"}"),
             Error::UnparseableUrl => f.write_str("{\"error\": \"Error parsing uri\"}"),
+            Error::Hyper(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
+            Error::SerdeJson(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
+            Error::SerdeYaml(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
         }
     }
 }
@@ -46,9 +52,31 @@ impl IntoResponse for Error {
         let payload = self.to_string();
         let body = body::boxed(body::Full::from(payload));
 
-        Response::builder()
-            .status(StatusCode::INTERNAL_SERVER_ERROR)
-            .body(body)
-            .unwrap()
+        let status_code = match self {
+            Error::UnknownEndpoint => StatusCode::NOT_FOUND,
+            Error::Forbidden => StatusCode::FORBIDDEN,
+            Error::Unauthorized => StatusCode::UNAUTHORIZED,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+
+        Response::builder().status(status_code).body(body).unwrap()
+    }
+}
+
+impl From<hyper::Error> for Error {
+    fn from(err: hyper::Error) -> Error {
+        Error::Hyper(err)
+    }
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(err: serde_json::Error) -> Error {
+        Error::SerdeJson(err)
+    }
+}
+
+impl From<serde_yaml::Error> for Error {
+    fn from(err: serde_yaml::Error) -> Error {
+        Error::SerdeYaml(err)
     }
 }
