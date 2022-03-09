@@ -152,6 +152,7 @@ impl State {
                 request_headers.remove(hyper::header::HOST);
                 request_headers.remove(hyper::header::USER_AGENT);
                 let headers = req.headers_mut();
+                headers.remove(hyper::header::CONTENT_TYPE);
                 headers.extend(request_headers.clone());
 
                 // Added Basic Auth if username/password exist
