@@ -13,7 +13,7 @@ pub struct Cache {
     pub cache: CacheMap,
 }
 
-impl Cache {
+impl<'a> Cache {
     pub fn default() -> Cache {
         Cache {
             cache: Arc::new(RwLock::new(HashMap::new())),
@@ -30,6 +30,17 @@ impl Cache {
         log::debug!("Searching for {} in cache", key);
         let cache = self.cache.read().await;
         cache.get(key).cloned()
+    }
+
+    pub async fn remove(&self, path: ProxyPath) -> Option<String> {
+        let url = path.path();
+        log::debug!("Removing {} from cache", &url);
+        let mut cache = self.cache.write().await;
+        if let Some(_) = cache.remove(&url) {
+            Some(url)
+        } else { 
+            None
+        }
     }
 
     pub async fn cache(&self) -> Map<String, Value> {

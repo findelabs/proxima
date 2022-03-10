@@ -73,6 +73,13 @@ impl State {
         json!({"msg": "cache has been cleared"})
     }
 
+    pub async fn remove_cache(&mut self, path: ProxyPath) -> Value {
+        match self.config.cache.remove(path).await {
+            Some(e) => json!({"msg": "entry remove from cache", "entry": e}),
+            None => json!({"msg": "entry not found in cache"})
+        }
+    }
+
     pub async fn response(
         &mut self,
         method: Method,

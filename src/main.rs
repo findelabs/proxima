@@ -1,6 +1,6 @@
 use axum::{
     handler::Handler,
-    routing::{any, get, post},
+    routing::{any, get, post, delete},
     AddExtensionLayer, Router,
 };
 use axum_extra::middleware;
@@ -25,7 +25,7 @@ mod state;
 
 use crate::metrics::{setup_metrics_recorder, track_metrics};
 use handlers::{
-    clear_cache, config, echo, get_cache, handler_404, health, help, proxy, reload, root,
+    clear_cache, config, echo, get_cache, handler_404, health, help, proxy, reload, root, remove_cache
 };
 use https::create_https_client;
 use state::State;
@@ -136,7 +136,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .route("/-/config", get(config))
         .route("/-/reload", post(reload))
         .route("/-/cache", get(get_cache).delete(clear_cache))
-        .route("/:endpoint", get(proxy))
+        .route("/-/cache/*entry", delete(remove_cache))
+        .route("/:endpoint", any(proxy))
         .route("/:endpoint/*path", any(proxy));
 
     // These should NOT be authenticated

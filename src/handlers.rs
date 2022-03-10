@@ -1,7 +1,7 @@
 use axum::{
     async_trait,
     extract::{
-        BodyStream, ConnectInfo, Extension, FromRequest, OriginalUri, RawQuery, RequestParts,
+        BodyStream, ConnectInfo, Extension, FromRequest, OriginalUri, RawQuery, RequestParts, Path
     },
     http::Response,
     http::StatusCode,
@@ -93,6 +93,21 @@ pub async fn get_cache(
         &addr,
     );
     Json(state.get_cache().await)
+}
+
+pub async fn remove_cache(
+    Extension(mut state): Extension<State>,
+    Path(entry): Path<String>,
+    RequestMethod(method): RequestMethod,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+) -> Json<Value> {
+    log::info!(
+        "{{\"fn\": \"cache\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/cache/{}\"}}",
+        &method,
+        &addr,
+        &entry
+    );
+    Json(state.remove_cache(ProxyPath::new(&entry)).await)
 }
 
 pub async fn clear_cache(
