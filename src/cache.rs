@@ -38,7 +38,7 @@ impl<'a> Cache {
         let mut cache = self.cache.write().await;
         if let Some(_) = cache.remove(&url) {
             Some(url)
-        } else { 
+        } else {
             None
         }
     }

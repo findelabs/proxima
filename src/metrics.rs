@@ -1,4 +1,4 @@
-use axum::http::header::{HeaderValue, USER_AGENT, FORWARDED};
+use axum::http::header::{HeaderValue, FORWARDED, USER_AGENT};
 use axum::{http::Request, response::IntoResponse};
 use axum_extra::middleware::Next;
 use metrics_exporter_prometheus::{Matcher, PrometheusBuilder, PrometheusHandle};

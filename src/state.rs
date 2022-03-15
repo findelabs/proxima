@@ -76,7 +76,7 @@ impl State {
     pub async fn remove_cache(&mut self, path: ProxyPath) -> Value {
         match self.config.cache.remove(path).await {
             Some(e) => json!({"msg": "entry remove from cache", "entry": e}),
-            None => json!({"msg": "entry not found in cache"})
+            None => json!({"msg": "entry not found in cache"}),
         }
     }
 
@@ -129,9 +129,25 @@ impl State {
             }
         };
 
+        let optional_forward_slash = match &config_entry.url.path() {
+            &"/" => "",
+            _ => "/",
+        };
+
         let host_and_path = match query {
-            Some(q) => format!("{}{}?{}", &config_entry.url, path.path(), q),
-            None => format!("{}{}", &config_entry.url, path.path()),
+            Some(q) => format!(
+                "{}{}{}?{}",
+                &config_entry.url,
+                optional_forward_slash,
+                path.path(),
+                q
+            ),
+            None => format!(
+                "{}{}{}",
+                &config_entry.url,
+                optional_forward_slash,
+                path.path()
+            ),
         };
 
         log::debug!("full uri: {}", host_and_path);

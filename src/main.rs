@@ -1,6 +1,6 @@
 use axum::{
     handler::Handler,
-    routing::{any, get, post, delete},
+    routing::{any, delete, get, post},
     AddExtensionLayer, Router,
 };
 use axum_extra::middleware;
@@ -25,7 +25,8 @@ mod state;
 
 use crate::metrics::{setup_metrics_recorder, track_metrics};
 use handlers::{
-    clear_cache, config, echo, get_cache, handler_404, health, help, proxy, reload, root, remove_cache
+    clear_cache, config, echo, get_cache, handler_404, health, help, proxy, reload, remove_cache,
+    root,
 };
 use https::create_https_client;
 use state::State;

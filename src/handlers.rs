@@ -1,7 +1,7 @@
 use axum::{
     async_trait,
     extract::{
-        BodyStream, ConnectInfo, Extension, FromRequest, OriginalUri, RawQuery, RequestParts, Path
+        BodyStream, ConnectInfo, Extension, FromRequest, OriginalUri, Path, RawQuery, RequestParts,
     },
     http::Response,
     http::StatusCode,
