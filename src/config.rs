@@ -1,8 +1,9 @@
 use async_recursion::async_recursion;
 use axum::http::Request;
 use chrono::Utc;
+use digest_auth::AuthContext;
 use hyper::header::{HeaderValue, AUTHORIZATION};
-use hyper::{Body, HeaderMap};
+use hyper::{Body, HeaderMap, Uri};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use std::collections::hash_map::DefaultHasher;
@@ -47,6 +48,13 @@ pub struct BasicAuth {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+pub struct DigestAuth {
+    pub username: String,
+    #[serde(skip_serializing)]
+    pub password: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct BearerAuth {
     #[serde(skip_serializing)]
     pub token: String,
@@ -78,6 +86,8 @@ pub enum EndpointAuth {
     basic(BasicAuth),
     #[allow(non_camel_case_types)]
     bearer(BearerAuth),
+    #[allow(non_camel_case_types)]
+    digest(DigestAuth),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -94,6 +104,7 @@ impl<'a> EndpointAuth {
         match self {
             EndpointAuth::basic(auth) => HeaderValue::from_str(&auth.basic()).unwrap(),
             EndpointAuth::bearer(auth) => HeaderValue::from_str(&auth.token()).unwrap(),
+            EndpointAuth::digest(_auth) => HeaderValue::from_str("digest").unwrap(),
         }
     }
 
@@ -104,7 +115,11 @@ impl<'a> EndpointAuth {
         Ok(())
     }
 
-    pub fn headers(&self, headers: &'a mut HeaderMap) -> Result<&'a mut HeaderMap, RestError> {
+    pub async fn headers(
+        &self,
+        headers: &'a mut HeaderMap,
+        uri: &Uri,
+    ) -> Result<&'a mut HeaderMap, RestError> {
         match self {
             EndpointAuth::basic(auth) => {
                 log::debug!("Generating Basic auth headers");
@@ -130,6 +145,67 @@ impl<'a> EndpointAuth {
                     }
                 };
                 headers.insert(AUTHORIZATION, header_bearer_auth);
+                Ok(headers)
+            }
+            EndpointAuth::digest(auth) => {
+                log::debug!("Generating Digest auth headers");
+
+                let req = Request::builder()
+                    .method("GET")
+                    .uri(uri)
+                    .body(Body::empty())
+                    .expect("request builder");
+
+                let client = create_https_client(60u64).expect("Can not build client");
+
+                // Send initial request
+                let response = match client.request(req).await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        log::error!("{{\"error\":\"{}\"", e);
+                        return Err(RestError::Hyper(e));
+                    }
+                };
+
+                // Error if status code is not 200
+                let mut prompt = match response.status().as_u16() {
+                    401 => match response.headers().get("WWW-Authenticate") {
+                        Some(www_authenticate) => {
+                            match digest_auth::parse(www_authenticate.to_str().unwrap_or("error")) {
+                                Ok(p) => p,
+                                Err(e) => {
+                                    log::error!("error parsing www-authenticate header: {}", e);
+                                    return Ok(headers);
+                                }
+                            }
+                        }
+                        None => {
+                            log::error!("Inital request did not yield www-authenticate header");
+                            return Ok(headers);
+                        }
+                    },
+                    _ => return Ok(headers),
+                };
+
+                // Generate Digest Header
+                let context =
+                    AuthContext::new(auth.username.clone(), auth.password.clone(), uri.path());
+                let answer = match prompt.respond(&context) {
+                    Ok(auth_header) => auth_header.to_string(),
+                    Err(e) => {
+                        log::error!("error computing header: {}", e);
+                        return Ok(headers);
+                    }
+                };
+
+                let header_digest_auth = match HeaderValue::from_str(&answer) {
+                    Ok(a) => a,
+                    Err(e) => {
+                        log::error!("{{\"error\":\"{}\"", e);
+                        return Err(RestError::BadToken);
+                    }
+                };
+                headers.insert(AUTHORIZATION, header_digest_auth);
                 Ok(headers)
             }
         }
@@ -365,10 +441,12 @@ impl Config {
             Ok(url) => {
                 log::debug!("config location is url: {}", &url);
 
+                let uri = &location.parse::<Uri>().expect("could not parse url to uri");
+
                 // Create new get request
                 let mut req = Request::builder()
                     .method("GET")
-                    .uri(url.to_string())
+                    .uri(location)
                     .body(Body::empty())
                     .expect("request builder");
 
@@ -376,7 +454,7 @@ impl Config {
                 let headers = req.headers_mut();
                 if let Some(authentication) = authentication {
                     log::debug!("Inserting auth for config endpoint");
-                    authentication.headers(headers)?;
+                    authentication.headers(headers, uri).await?;
                 }
 
                 // Send request

@@ -36,7 +36,7 @@ impl<'a> Cache {
         let url = path.path();
         log::debug!("Removing {} from cache", &url);
         let mut cache = self.cache.write().await;
-        if let Some(_) = cache.remove(&url) {
+        if cache.remove(&url).is_some() {
             Some(url)
         } else {
             None

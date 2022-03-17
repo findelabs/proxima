@@ -167,7 +167,7 @@ impl State {
 
                 let mut req = Request::builder()
                     .method(method)
-                    .uri(u)
+                    .uri(&u)
                     .body(body)
                     .expect("request builder");
 
@@ -179,7 +179,7 @@ impl State {
 
                 // Added Basic Auth if username/password exist
                 if let Some(authentication) = config_entry.authentication {
-                    authentication.headers(headers)?;
+                    authentication.headers(headers, &u).await?;
                 }
 
                 match self.client.clone().request(req).await {

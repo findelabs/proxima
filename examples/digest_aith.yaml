@@ -1,0 +1,11 @@
+static_config:
+  endpoint_one:
+    url: http://localhost:8080
+    authentication:
+      digest:
+        username: user
+        password: testing
+    lock:
+      basic:
+        username: user
+        password: testing
