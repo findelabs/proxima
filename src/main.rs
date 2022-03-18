@@ -9,7 +9,6 @@ use chrono::Local;
 use clap::{crate_name, crate_version, App, Arg};
 use env_logger::{Builder, Target};
 use log::LevelFilter;
-use std::future::ready;
 use std::io::Write;
 use std::net::SocketAddr;
 use tower_http::auth::RequireAuthorizationLayer;
@@ -27,7 +26,7 @@ mod state;
 use crate::metrics::{setup_metrics_recorder, track_metrics};
 use handlers::{
     clear_cache, config, echo, get_cache, handler_404, health, help, proxy, reload, remove_cache,
-    root,
+    root, metrics
 };
 use https::create_https_client;
 use state::State;
@@ -148,7 +147,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .route("/-/health", get(health))
         .route("/-/echo", post(echo))
         .route("/-/help", get(help))
-        .route("/-/metrics", get(move || ready(recorder_handle.render())));
+        .route("/-/metrics", get(metrics));
 
     let app = match opts.is_present("username") {
         true => {
@@ -167,13 +166,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .layer(TraceLayer::new_for_http())
                 .route_layer(middleware::from_fn(track_metrics))
                 .layer(Extension(state))
+            .layer(Extension(recorder_handle))
         }
         false => Router::new()
             .merge(closed)
             .merge(open)
             .layer(TraceLayer::new_for_http())
             .route_layer(middleware::from_fn(track_metrics))
-            .layer(Extension(state)),
+            .layer(Extension(state))
+            .layer(Extension(recorder_handle))
     };
 
     // add a fallback service for handling routes to unknown paths

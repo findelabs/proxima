@@ -13,6 +13,7 @@ use hyper::{Body, HeaderMap};
 use serde_json::{json, Value};
 use std::convert::Infallible;
 use std::net::SocketAddr;
+use metrics_exporter_prometheus::PrometheusHandle;
 
 use crate::error::Error as RestError;
 use crate::path::ProxyPath;
@@ -33,6 +34,11 @@ where
         let method = req.method().to_owned();
         Ok(Self(method))
     }
+}
+
+pub async fn metrics(Extension(recorder_handle): Extension<PrometheusHandle>) -> Result<String, RestError> {
+    log::info!("{{\"fn\": \"metrics\", \"method\":\"get\"}}");
+    Ok(recorder_handle.render())
 }
 
 pub async fn proxy(

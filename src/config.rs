@@ -109,7 +109,9 @@ impl<'a> EndpointAuth {
     }
 
     pub fn authorize(&self, header: &HeaderValue) -> Result<(), RestError> {
+        metrics::increment_counter!("proxima_endpoint_authentication_total");
         if self.header_value() != header {
+            metrics::increment_counter!("proxima_endpoint_authentication_failed_total");
             return Err(RestError::UnauthorizedUser);
         }
         Ok(())
@@ -257,6 +259,7 @@ impl Config {
         let diff = Utc::now().timestamp() - *last_read;
         if diff >= 30 {
             log::debug!("cache has expired, kicking off config reload");
+            metrics::increment_counter!("proxima_config_renew_total");
             drop(last_read);
 
             // Kick off background thread to update config
@@ -264,6 +267,7 @@ impl Config {
             tokio::spawn(async move {
                 log::debug!("Kicking off background thread to reload config");
                 if let Err(e) = me.update().await {
+                    metrics::increment_counter!("proxima_config_renew_failed_total");
                     log::error!("Error updating config: {}", e);
                 }
             });
@@ -359,8 +363,12 @@ impl Config {
     pub async fn get(&mut self, path: ProxyPath) -> Result<(Entry, ProxyPath), RestError> {
         self.renew().await;
         log::debug!("Searching for entry {} in cache", &path.path());
+        metrics::increment_counter!("proxima_cache_attempts_total");
         match self.cache.get(&path.path()).await {
-            Some((entry, remainder)) => Ok((Entry::Endpoint(entry), remainder)),
+            Some((entry, remainder)) => {
+                metrics::increment_counter!("proxima_cache_hit_total");
+                Ok((Entry::Endpoint(entry), remainder))
+            },
             None => {
                 log::debug!(
                     "Searching for entry {} in configmap",
@@ -487,11 +495,10 @@ impl Config {
             }
             Err(e) => {
                 log::debug!("\"config location {} is not Url: {}\"", &self.location, e);
-                let mut file = File::open(self.location.clone()).expect("Unable to open config");
+                let mut file = File::open(self.location.clone())?;
                 let mut contents = String::new();
 
-                file.read_to_string(&mut contents)
-                    .expect("Unable to read config");
+                file.read_to_string(&mut contents)?;
 
                 Ok(serde_yaml::from_str(&contents)?)
             }
