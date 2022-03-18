@@ -16,6 +16,12 @@ static_config:
       basic:
         username: user
         password: testing
+  endpoint_requiring_digest:
+    url: http://localhost:8080
+    authentication:
+      digest:
+        username: user
+        password: testing
   endpoint_requiring_bearer:
     url: http://localhost:8080
     authentication:
