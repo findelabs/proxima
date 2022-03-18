@@ -267,9 +267,9 @@ impl Config {
             tokio::spawn(async move {
                 log::debug!("Kicking off background thread to reload config");
                 if let Err(e) = me.update().await {
-                    metrics::increment_counter!("proxima_config_renew_failed_total");
                     log::error!("Error updating config: {}", e);
                 }
+                metrics::increment_counter!("proxima_config_renew_success_total");
             });
         } else {
             log::debug!("\"cache has not expired, current age is {} seconds\"", diff);
