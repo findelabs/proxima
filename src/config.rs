@@ -102,13 +102,13 @@ pub struct Endpoint {
 impl<'a> Endpoint {
     pub async fn url(&self) -> String {
         match self.url.path() {
-            "/" => {
-                log::debug!("Removing / suffix from path");
-                let mut rem = self.url.to_string();
-                rem.pop();
-                rem
+            "/" => self.url.to_string(),
+            _ => {
+                log::debug!("Adding / suffix to path");
+                let mut path = self.url.to_string();
+                path.push('/');
+                path
             }
-            _ => self.url.to_string(),
         }
     }
 }
