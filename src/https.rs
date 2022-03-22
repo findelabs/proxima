@@ -20,6 +20,7 @@ pub fn create_https_client(timeout: u64) -> BoxResult<HttpsClient> {
     // Create timeout Duration
     let timeout = Duration::new(timeout, 0);
     http.set_connect_timeout(Some(timeout));
+    http.set_nodelay(true);
 
     http.enforce_http(false);
     let https: hyper_tls::HttpsConnector<hyper::client::HttpConnector> =

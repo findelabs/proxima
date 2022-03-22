@@ -48,7 +48,7 @@ impl<'a> Cache {
         let mut map = Map::new();
         let cache = self.cache.read().await;
         for (key, (endpoint, proxypath)) in &*cache {
-            let value = format!("{}{}", endpoint.url, proxypath.path());
+            let value = format!("{}{}", endpoint.url().await, proxypath.path());
             map.insert(key.to_string(), serde_json::Value::String(value));
         }
         map

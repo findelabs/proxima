@@ -99,6 +99,20 @@ pub struct Endpoint {
     pub lock: Option<EndpointAuth>,
 }
 
+impl<'a> Endpoint {
+    pub async fn url(&self) -> String {
+        match self.url.path() {
+            "/" => {
+                log::debug!("Removing / suffix from path");
+                let mut rem = self.url.to_string();
+                rem.pop();
+                rem
+            }
+            _ => self.url.to_string(),
+        }
+    }
+}
+
 impl<'a> EndpointAuth {
     pub fn header_value(&self) -> HeaderValue {
         match self {

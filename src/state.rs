@@ -95,7 +95,7 @@ impl State {
                 Entry::Endpoint(endpoint) => {
                     log::debug!(
                         "Found on endpoint {}, with path {}",
-                        endpoint.url,
+                        endpoint.url().await,
                         remainder.path()
                     );
                     (endpoint, remainder)
@@ -121,7 +121,7 @@ impl State {
         };
 
         // If endpoint is locked down, verify credentials
-        if let Some(lock) = config_entry.lock {
+        if let Some(ref lock) = config_entry.lock {
             log::debug!("Endpoint is locked");
             match request_headers.get("AUTHORIZATION") {
                 Some(header) => lock.authorize(header)?,
@@ -129,23 +129,16 @@ impl State {
             }
         };
 
-        let optional_forward_slash = match &config_entry.url.path() {
-            &"/" => "",
-            _ => "/",
-        };
-
         let host_and_path = match query {
             Some(q) => format!(
-                "{}{}{}?{}",
-                &config_entry.url,
-                optional_forward_slash,
+                "{}{}?{}",
+                &config_entry.url().await,
                 path.path(),
                 q
             ),
             None => format!(
-                "{}{}{}",
-                &config_entry.url,
-                optional_forward_slash,
+                "{}{}",
+                &config_entry.url().await,
                 path.path()
             ),
         };
