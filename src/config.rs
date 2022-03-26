@@ -1,9 +1,7 @@
 use async_recursion::async_recursion;
 use axum::http::Request;
 use chrono::Utc;
-use digest_auth::AuthContext;
-use hyper::header::{HeaderValue, AUTHORIZATION};
-use hyper::{Body, HeaderMap, Uri};
+use hyper::{Body, Uri};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use std::collections::hash_map::DefaultHasher;
@@ -20,6 +18,7 @@ use crate::create_https_client;
 use crate::error::Error as RestError;
 use crate::https::HttpsClient;
 use crate::path::ProxyPath;
+use crate::auth::EndpointAuth;
 
 type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 pub type ConfigMap = BTreeMap<String, Entry>;
@@ -38,26 +37,6 @@ pub struct Config {
     pub hash: Arc<RwLock<u64>>,
     pub cache: Cache,
     pub client: HttpsClient,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
-pub struct BasicAuth {
-    pub username: String,
-    #[serde(skip_serializing)]
-    pub password: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
-pub struct DigestAuth {
-    pub username: String,
-    #[serde(skip_serializing)]
-    pub password: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
-pub struct BearerAuth {
-    #[serde(skip_serializing)]
-    pub token: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -80,17 +59,6 @@ pub struct HttpConfig {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
-#[warn(non_camel_case_types)]
-pub enum EndpointAuth {
-    #[allow(non_camel_case_types)]
-    basic(BasicAuth),
-    #[allow(non_camel_case_types)]
-    bearer(BearerAuth),
-    #[allow(non_camel_case_types)]
-    digest(DigestAuth),
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct Endpoint {
     pub url: Url,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -110,148 +78,6 @@ impl<'a> Endpoint {
                 path
             }
         }
-    }
-}
-
-impl<'a> EndpointAuth {
-    pub fn header_value(&self) -> HeaderValue {
-        match self {
-            EndpointAuth::basic(auth) => HeaderValue::from_str(&auth.basic()).unwrap(),
-            EndpointAuth::bearer(auth) => HeaderValue::from_str(&auth.token()).unwrap(),
-            EndpointAuth::digest(_auth) => HeaderValue::from_str("digest").unwrap(),
-        }
-    }
-
-    pub fn authorize(&self, header: &HeaderValue) -> Result<(), RestError> {
-        metrics::increment_counter!("proxima_endpoint_authentication_total");
-        if self.header_value() != header {
-            metrics::increment_counter!("proxima_endpoint_authentication_failed_total");
-            return Err(RestError::UnauthorizedUser);
-        }
-        Ok(())
-    }
-
-    pub async fn headers(
-        &self,
-        headers: &'a mut HeaderMap,
-        uri: &Uri,
-    ) -> Result<&'a mut HeaderMap, RestError> {
-        match self {
-            EndpointAuth::basic(auth) => {
-                log::debug!("Generating Basic auth headers");
-                let basic_auth = auth.basic();
-                let header_basic_auth = match HeaderValue::from_str(&basic_auth) {
-                    Ok(a) => a,
-                    Err(e) => {
-                        log::error!("{{\"error\":\"{}\"", e);
-                        return Err(RestError::BadUserPasswd);
-                    }
-                };
-                headers.insert(AUTHORIZATION, header_basic_auth);
-                Ok(headers)
-            }
-            EndpointAuth::bearer(auth) => {
-                log::debug!("Generating Bearer auth headers");
-                let bearer_auth = format!("Bearer {}", auth.token());
-                let header_bearer_auth = match HeaderValue::from_str(&bearer_auth) {
-                    Ok(a) => a,
-                    Err(e) => {
-                        log::error!("{{\"error\":\"{}\"", e);
-                        return Err(RestError::BadToken);
-                    }
-                };
-                headers.insert(AUTHORIZATION, header_bearer_auth);
-                Ok(headers)
-            }
-            EndpointAuth::digest(auth) => {
-                log::debug!("Generating Digest auth headers");
-
-                let req = Request::builder()
-                    .method("GET")
-                    .uri(uri)
-                    .body(Body::empty())
-                    .expect("request builder");
-
-                let client = create_https_client(60u64).expect("Can not build client");
-
-                // Send initial request
-                let response = match client.request(req).await {
-                    Ok(s) => s,
-                    Err(e) => {
-                        log::error!("{{\"error\":\"{}\"", e);
-                        return Err(RestError::Hyper(e));
-                    }
-                };
-
-                // Error if status code is not 200
-                let mut prompt = match response.status().as_u16() {
-                    401 => match response.headers().get("WWW-Authenticate") {
-                        Some(www_authenticate) => {
-                            match digest_auth::parse(www_authenticate.to_str().unwrap_or("error")) {
-                                Ok(p) => p,
-                                Err(e) => {
-                                    log::error!("error parsing www-authenticate header: {}", e);
-                                    return Ok(headers);
-                                }
-                            }
-                        }
-                        None => {
-                            log::error!("Inital request did not yield www-authenticate header");
-                            return Ok(headers);
-                        }
-                    },
-                    _ => return Ok(headers),
-                };
-
-                // Generate Digest Header
-                let context =
-                    AuthContext::new(auth.username.clone(), auth.password.clone(), uri.path());
-                let answer = match prompt.respond(&context) {
-                    Ok(auth_header) => auth_header.to_string(),
-                    Err(e) => {
-                        log::error!("error computing header: {}", e);
-                        return Ok(headers);
-                    }
-                };
-
-                let header_digest_auth = match HeaderValue::from_str(&answer) {
-                    Ok(a) => a,
-                    Err(e) => {
-                        log::error!("{{\"error\":\"{}\"", e);
-                        return Err(RestError::BadToken);
-                    }
-                };
-                headers.insert(AUTHORIZATION, header_digest_auth);
-                Ok(headers)
-            }
-        }
-    }
-}
-
-impl BearerAuth {
-    pub fn token(&self) -> String {
-        self.token.clone()
-    }
-}
-
-impl BasicAuth {
-    #[allow(dead_code)]
-    pub fn username(&self) -> String {
-        self.username.clone()
-    }
-
-    #[allow(dead_code)]
-    pub fn password(&self) -> String {
-        self.password.clone()
-    }
-
-    pub fn basic(&self) -> String {
-        log::debug!("Generating Basic auth");
-        let user_pass = format!("{}:{}", self.username, self.password);
-        let encoded = base64::encode(user_pass);
-        let basic_auth = format!("Basic {}", encoded);
-        log::debug!("Using {}", &basic_auth);
-        basic_auth
     }
 }
 

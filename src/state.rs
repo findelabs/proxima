@@ -13,7 +13,7 @@ use serde_json::Value;
 use std::convert::TryFrom;
 use std::error::Error;
 
-use crate::config::{BasicAuth, EndpointAuth};
+use crate::auth::{BasicAuth, EndpointAuth};
 use crate::create_https_client;
 use crate::error::Error as RestError;
 use crate::path::ProxyPath;
