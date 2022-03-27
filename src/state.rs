@@ -57,7 +57,7 @@ impl State {
 
         let client = create_https_client(timeout)?;
         let config_location = opts.value_of("config").unwrap().to_owned();
-        let mut config = config::Config::new(&config_location, config_auth.clone());
+        let mut config = config::Config::new(&config_location, config_auth.clone(), opts.is_present("username"));
         config.update().await?;
 
         Ok(State { client, config })
@@ -127,14 +127,19 @@ impl State {
         // If endpoint is locked down, verify credentials
         if let Some(ref lock) = config_entry.lock {
             log::debug!("Endpoint is locked");
-            match request_headers.get("AUTHORIZATION") {
-                Some(header) => lock.authorize(header)?,
-                None => {
-					match config_entry.lock {
-						Some(EndpointAuth::digest(_)) => return Err(RestError::UnauthorizedDigestUser),
-						_ => return Err(RestError::UnauthorizedUser)
-					}
-				}
+            match self.config.global_authentication {
+                true => log::info!("Endpoint is locked, but proxima is using global authentication"),
+                false => {
+                    match request_headers.get("AUTHORIZATION") {
+                        Some(header) => lock.authorize(header)?,
+                        None => {
+			        		match config_entry.lock {
+			        			Some(EndpointAuth::digest(_)) => return Err(RestError::UnauthorizedDigestUser),
+			        			_ => return Err(RestError::UnauthorizedUser)
+			        		}
+			        	}
+                    }
+                }
             }
         };
 

@@ -7,3 +7,7 @@ static_config:
     timeout: 5000
   local:
     url: http://localhost:8082
+    lock:
+      digest:
+        username: user
+        password: mypassword

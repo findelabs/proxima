@@ -32,7 +32,8 @@ pub struct ConfigFile {
 pub struct Config {
     pub config_file: Arc<RwLock<ConfigFile>>,
     pub location: String,
-    pub authentication: Option<EndpointAuth>,
+    pub global_authentication: bool,
+    pub config_authentication: Option<EndpointAuth>,
     pub last_read: Arc<RwLock<i64>>,
     pub hash: Arc<RwLock<u64>>,
     pub cache: Cache,
@@ -118,13 +119,14 @@ impl Config {
         }
     }
 
-    pub fn new(location: &str, authentication: Option<EndpointAuth>) -> Config {
+    pub fn new(location: &str, config_authentication: Option<EndpointAuth>, global_authentication: bool) -> Config {
         Config {
             config_file: Arc::new(RwLock::new(ConfigFile {
                 static_config: BTreeMap::new(),
             })),
             location: location.to_string(),
-            authentication,
+            global_authentication,
+            config_authentication,
             last_read: Arc::new(RwLock::new(i64::default())),
             hash: Arc::new(RwLock::new(u64::default())),
             cache: Cache::default(),
@@ -246,7 +248,7 @@ impl Config {
     }
 
     pub async fn update(&mut self) -> BoxResult<()> {
-        let new_config = self.parse(None, self.authentication.clone()).await?;
+        let new_config = self.parse(None, self.config_authentication.clone()).await?;
         let current_config = self.config_file().await;
         let now = Utc::now().timestamp();
         let new_config_hash = Config::calculate_hash(&new_config);
@@ -279,7 +281,7 @@ impl Config {
     pub async fn parse(
         &self,
         remote: Option<Url>,
-        authentication: Option<EndpointAuth>,
+        config_authentication: Option<EndpointAuth>,
     ) -> Result<ConfigFile, RestError> {
         let location = match remote {
             Some(url) => url.to_string(),
@@ -302,7 +304,7 @@ impl Config {
 
                 // Add in basic auth if required
                 let headers = req.headers_mut();
-                if let Some(authentication) = authentication {
+                if let Some(authentication) = config_authentication {
                     log::debug!("Inserting auth for config endpoint");
                     authentication.headers(headers, uri).await?;
                 }

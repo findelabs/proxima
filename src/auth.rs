@@ -56,7 +56,14 @@ impl<'a> EndpointAuth {
                 }
             },
             EndpointAuth::digest(auth) => {
-                let client_authorization_header = AuthorizationHeader::parse(header.to_str().unwrap()).expect("Error parsing auth");
+                let client_authorization_header = match AuthorizationHeader::parse(header.to_str().unwrap()) {
+                    Ok(c) => c,
+                    Err(e) => {
+                        log::error!("Error converting client authorization header: {}", e);
+                        return Err(RestError::UnauthorizedDigestUser)
+                    }
+                };
+
                 let context = AuthContext::new(auth.username.clone(), auth.password.clone(), &client_authorization_header.uri);
                 let mut server_authorization_header = client_authorization_header.clone();
                 server_authorization_header.digest(&context);
