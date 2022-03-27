@@ -45,13 +45,13 @@ impl<'a> EndpointAuth {
         match self {
             EndpointAuth::basic(auth) => {
                 if HeaderValue::from_str(&auth.basic()).unwrap() != header {
-                    metrics::increment_counter!("proxima_endpoint_authentication_failed_total");
+                    metrics::increment_counter!("proxima_endpoint_authentication_basic_failed_total");
                     return Err(RestError::UnauthorizedUser);
                 }
             },
             EndpointAuth::bearer(auth) => {
                 if HeaderValue::from_str(&auth.token()).unwrap() != header {
-                    metrics::increment_counter!("proxima_endpoint_authentication_failed_total");
+                    metrics::increment_counter!("proxima_endpoint_authentication_bearer_failed_total");
                     return Err(RestError::UnauthorizedUser);
                 }
             },
@@ -69,7 +69,7 @@ impl<'a> EndpointAuth {
                 server_authorization_header.digest(&context);
 
                 if server_authorization_header != client_authorization_header {
-                    metrics::increment_counter!("proxima_endpoint_authentication_failed_total");
+                    metrics::increment_counter!("proxima_endpoint_authentication_digest_failed_total");
                     return Err(RestError::UnauthorizedDigestUser);
                 }
             }
