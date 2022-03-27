@@ -102,7 +102,7 @@ impl Config {
         let diff = Utc::now().timestamp() - *last_read;
         if diff >= 30 {
             log::debug!("cache has expired, kicking off config reload");
-            metrics::increment_counter!("proxima_config_renew_total");
+            metrics::increment_counter!("proxima_config_renew_attempts_total");
             drop(last_read);
 
             // Kick off background thread to update config

@@ -90,7 +90,7 @@ impl State {
         path: ProxyPath,
         query: Option<String>,
         mut request_headers: HeaderMap,
-        payload: Option<BodyStream>,
+        payload: Option<BodyStream>
     ) -> Result<Response<Body>, RestError> {
         let (config_entry, path) = match self.config.get(path.clone()).await {
             // If we receive an entry, forward request.
