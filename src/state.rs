@@ -129,7 +129,12 @@ impl State {
             log::debug!("Endpoint is locked");
             match request_headers.get("AUTHORIZATION") {
                 Some(header) => lock.authorize(header)?,
-                None => return Err(RestError::UnauthorizedUser),
+                None => {
+					match config_entry.lock {
+						Some(EndpointAuth::digest(_)) => return Err(RestError::UnauthorizedDigestUser),
+						_ => return Err(RestError::UnauthorizedUser)
+					}
+				}
             }
         };
 

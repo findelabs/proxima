@@ -987,6 +987,7 @@ dependencies = [
  "metrics",
  "metrics-exporter-prometheus",
  "native-tls",
+ "rand",
  "reqwest",
  "serde",
  "serde_json",

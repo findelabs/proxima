@@ -1,12 +1,11 @@
 use serde::{Deserialize, Serialize};
 use hyper::header::{HeaderValue, AUTHORIZATION};
 use crate::create_https_client;
-use digest_auth::AuthContext;
+use digest_auth::{AuthContext, AuthorizationHeader};
 use hyper::{Body, HeaderMap, Uri};
 use axum::http::Request;
 
 use crate::error::Error as RestError;
-
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[warn(non_camel_case_types)]
@@ -40,19 +39,33 @@ pub struct BearerAuth {
 }
 
 impl<'a> EndpointAuth {
-    pub fn header_value(&self) -> HeaderValue {
-        match self {
-            EndpointAuth::basic(auth) => HeaderValue::from_str(&auth.basic()).unwrap(),
-            EndpointAuth::bearer(auth) => HeaderValue::from_str(&auth.token()).unwrap(),
-            EndpointAuth::digest(_auth) => HeaderValue::from_str("digest").unwrap(),
-        }
-    }
-
     pub fn authorize(&self, header: &HeaderValue) -> Result<(), RestError> {
         metrics::increment_counter!("proxima_endpoint_authentication_total");
-        if self.header_value() != header {
-            metrics::increment_counter!("proxima_endpoint_authentication_failed_total");
-            return Err(RestError::UnauthorizedUser);
+
+        match self {
+            EndpointAuth::basic(auth) => {
+                if HeaderValue::from_str(&auth.basic()).unwrap() != header {
+                    metrics::increment_counter!("proxima_endpoint_authentication_failed_total");
+                    return Err(RestError::UnauthorizedUser);
+                }
+            },
+            EndpointAuth::bearer(auth) => {
+                if HeaderValue::from_str(&auth.token()).unwrap() != header {
+                    metrics::increment_counter!("proxima_endpoint_authentication_failed_total");
+                    return Err(RestError::UnauthorizedUser);
+                }
+            },
+            EndpointAuth::digest(auth) => {
+                let client_authorization_header = AuthorizationHeader::parse(header.to_str().unwrap()).expect("Error parsing auth");
+                let context = AuthContext::new(auth.username.clone(), auth.password.clone(), &client_authorization_header.uri);
+                let mut server_authorization_header = client_authorization_header.clone();
+                server_authorization_header.digest(&context);
+
+                if server_authorization_header != client_authorization_header {
+                    metrics::increment_counter!("proxima_endpoint_authentication_failed_total");
+                    return Err(RestError::UnauthorizedDigestUser);
+                }
+            }
         }
         Ok(())
     }
