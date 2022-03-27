@@ -63,6 +63,8 @@ pub struct Endpoint {
     pub url: Url,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authentication: Option<EndpointAuth>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeout: Option<u64>,
     #[serde(skip_serializing)]
     pub lock: Option<EndpointAuth>,
 }

@@ -12,6 +12,7 @@ use serde_json::json;
 use serde_json::Value;
 use std::convert::TryFrom;
 use std::error::Error;
+use std::time::Duration;
 
 use crate::auth::{BasicAuth, EndpointAuth};
 use crate::create_https_client;
@@ -19,6 +20,9 @@ use crate::error::Error as RestError;
 use crate::path::ProxyPath;
 
 type BoxResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
+
+// Set default timeout
+const TIMEOUT_DEFAULT: u64 = 10000;
 
 #[derive(Clone, Debug)]
 pub struct State {
@@ -175,13 +179,22 @@ impl State {
                     authentication.headers(headers, &u).await?;
                 }
 
-                match self.client.clone().request(req).await {
-                    Ok(s) => Ok(s),
-                    Err(e) => {
-                        log::error!("{{\"error\":\"{}\"", e);
-                        Err(RestError::Connection)
-                    }
-                }
+                let work = self.client.clone().request(req);
+				let timeout = match config_entry.timeout {
+					Some(duration) => duration,
+					None => TIMEOUT_DEFAULT
+				};
+
+				match tokio::time::timeout(Duration::from_millis(timeout), work).await {
+			        Ok(result) => match result {
+			            Ok(response) => Ok(response),
+                    	Err(e) => {
+                    	    log::error!("{{\"error\":\"{}\"", e);
+                    	    Err(RestError::Connection)
+                    	}
+			        },
+			        Err(_) => Err(RestError::ConnectionTimeout)
+			    }
             }
             Err(e) => {
                 log::error!("{{\"error\": \"{}\"}}", e);
