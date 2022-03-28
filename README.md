@@ -36,6 +36,7 @@ static_config:
   # This remote endpoint requires basic authentication, which will be handled by proxima
   endpoint_requiring_basic:
     url: http://localhost:8080
+    timeout: 5000   # Timeout after 5 seconds
     authentication:
       basic:
         username: user
