@@ -1,9 +1,9 @@
-use serde::{Deserialize, Serialize};
-use hyper::header::{HeaderValue, AUTHORIZATION};
 use crate::create_https_client;
-use digest_auth::{AuthContext, AuthorizationHeader};
-use hyper::{Body, HeaderMap, Uri};
 use axum::http::Request;
+use digest_auth::{AuthContext, AuthorizationHeader};
+use hyper::header::{HeaderValue, AUTHORIZATION};
+use hyper::{Body, HeaderMap, Uri};
+use serde::{Deserialize, Serialize};
 
 use crate::error::Error as RestError;
 
@@ -45,31 +45,42 @@ impl<'a> EndpointAuth {
         match self {
             EndpointAuth::basic(auth) => {
                 if HeaderValue::from_str(&auth.basic()).unwrap() != header {
-                    metrics::increment_counter!("proxima_endpoint_authentication_basic_failed_total");
+                    metrics::increment_counter!(
+                        "proxima_endpoint_authentication_basic_failed_total"
+                    );
                     return Err(RestError::UnauthorizedUser);
                 }
-            },
+            }
             EndpointAuth::bearer(auth) => {
                 if HeaderValue::from_str(&auth.token()).unwrap() != header {
-                    metrics::increment_counter!("proxima_endpoint_authentication_bearer_failed_total");
+                    metrics::increment_counter!(
+                        "proxima_endpoint_authentication_bearer_failed_total"
+                    );
                     return Err(RestError::UnauthorizedUser);
                 }
-            },
+            }
             EndpointAuth::digest(auth) => {
-                let client_authorization_header = match AuthorizationHeader::parse(header.to_str().unwrap()) {
-                    Ok(c) => c,
-                    Err(e) => {
-                        log::error!("Error converting client authorization header: {}", e);
-                        return Err(RestError::UnauthorizedDigestUser)
-                    }
-                };
+                let client_authorization_header =
+                    match AuthorizationHeader::parse(header.to_str().unwrap()) {
+                        Ok(c) => c,
+                        Err(e) => {
+                            log::error!("Error converting client authorization header: {}", e);
+                            return Err(RestError::UnauthorizedDigestUser);
+                        }
+                    };
 
-                let context = AuthContext::new(auth.username.clone(), auth.password.clone(), &client_authorization_header.uri);
+                let context = AuthContext::new(
+                    auth.username.clone(),
+                    auth.password.clone(),
+                    &client_authorization_header.uri,
+                );
                 let mut server_authorization_header = client_authorization_header.clone();
                 server_authorization_header.digest(&context);
 
                 if server_authorization_header != client_authorization_header {
-                    metrics::increment_counter!("proxima_endpoint_authentication_digest_failed_total");
+                    metrics::increment_counter!(
+                        "proxima_endpoint_authentication_digest_failed_total"
+                    );
                     return Err(RestError::UnauthorizedDigestUser);
                 }
             }

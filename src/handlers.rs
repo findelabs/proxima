@@ -10,10 +10,10 @@ use axum::{
 };
 use clap::{crate_description, crate_name, crate_version};
 use hyper::{Body, HeaderMap};
+use metrics_exporter_prometheus::PrometheusHandle;
 use serde_json::{json, Value};
 use std::convert::Infallible;
 use std::net::SocketAddr;
-use metrics_exporter_prometheus::PrometheusHandle;
 
 use crate::error::Error as RestError;
 use crate::path::ProxyPath;
@@ -36,7 +36,9 @@ where
     }
 }
 
-pub async fn metrics(Extension(recorder_handle): Extension<PrometheusHandle>) -> Result<String, RestError> {
+pub async fn metrics(
+    Extension(recorder_handle): Extension<PrometheusHandle>,
+) -> Result<String, RestError> {
     log::info!("{{\"fn\": \"metrics\", \"method\":\"get\"}}");
     Ok(recorder_handle.render())
 }

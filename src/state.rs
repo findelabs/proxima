@@ -22,7 +22,7 @@ use crate::path::ProxyPath;
 type BoxResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 
 // Set default timeout
-const TIMEOUT_DEFAULT: u64 = 10000;
+const TIMEOUT_DEFAULT: u64 = 60000;
 
 #[derive(Clone, Debug)]
 pub struct State {
@@ -55,9 +55,18 @@ impl State {
             None => None,
         };
 
-        let client = create_https_client(timeout, opts.is_present("nodelay"), opts.is_present("enforce_http"), opts.is_present("set_reuse_address"))?;
+        let client = create_https_client(
+            timeout,
+            opts.is_present("nodelay"),
+            opts.is_present("enforce_http"),
+            opts.is_present("set_reuse_address"),
+        )?;
         let config_location = opts.value_of("config").unwrap().to_owned();
-        let mut config = config::Config::new(&config_location, config_auth.clone(), opts.is_present("username"));
+        let mut config = config::Config::new(
+            &config_location,
+            config_auth.clone(),
+            opts.is_present("username"),
+        );
         config.update().await?;
 
         Ok(State { client, config })
@@ -90,7 +99,7 @@ impl State {
         path: ProxyPath,
         query: Option<String>,
         mut request_headers: HeaderMap,
-        payload: Option<BodyStream>
+        payload: Option<BodyStream>,
     ) -> Result<Response<Body>, RestError> {
         let (config_entry, path) = match self.config.get(path.clone()).await {
             // If we receive an entry, forward request.
@@ -128,33 +137,24 @@ impl State {
         if let Some(ref lock) = config_entry.lock {
             log::debug!("Endpoint is locked");
             match self.config.global_authentication {
-                true => log::info!("Endpoint is locked, but proxima is using global authentication"),
-                false => {
-                    match request_headers.get("AUTHORIZATION") {
-                        Some(header) => lock.authorize(header)?,
-                        None => {
-			        		match config_entry.lock {
-			        			Some(EndpointAuth::digest(_)) => return Err(RestError::UnauthorizedDigestUser),
-			        			_ => return Err(RestError::UnauthorizedUser)
-			        		}
-			        	}
-                    }
+                true => {
+                    log::info!("Endpoint is locked, but proxima is using global authentication")
                 }
+                false => match request_headers.get("AUTHORIZATION") {
+                    Some(header) => lock.authorize(header)?,
+                    None => match config_entry.lock {
+                        Some(EndpointAuth::digest(_)) => {
+                            return Err(RestError::UnauthorizedDigestUser)
+                        }
+                        _ => return Err(RestError::UnauthorizedUser),
+                    },
+                },
             }
         };
 
         let host_and_path = match query {
-            Some(q) => format!(
-                "{}{}?{}",
-                &config_entry.url().await,
-                path.path(),
-                q
-            ),
-            None => format!(
-                "{}{}",
-                &config_entry.url().await,
-                path.path()
-            ),
+            Some(q) => format!("{}{}?{}", &config_entry.url().await, path.path(), q),
+            None => format!("{}{}", &config_entry.url().await, path.path()),
         };
 
         log::debug!("full uri: {}", host_and_path);
@@ -190,21 +190,21 @@ impl State {
                 }
 
                 let work = self.client.clone().request(req);
-				let timeout = match config_entry.timeout {
-					Some(duration) => duration,
-					None => TIMEOUT_DEFAULT
-				};
+                let timeout = match config_entry.timeout {
+                    Some(duration) => duration,
+                    None => TIMEOUT_DEFAULT,
+                };
 
-				match tokio::time::timeout(Duration::from_millis(timeout), work).await {
-			        Ok(result) => match result {
-			            Ok(response) => Ok(response),
-                    	Err(e) => {
-                    	    log::error!("{{\"error\":\"{}\"", e);
-                    	    Err(RestError::Connection)
-                    	}
-			        },
-			        Err(_) => Err(RestError::ConnectionTimeout)
-			    }
+                match tokio::time::timeout(Duration::from_millis(timeout), work).await {
+                    Ok(result) => match result {
+                        Ok(response) => Ok(response),
+                        Err(e) => {
+                            log::error!("{{\"error\":\"{}\"", e);
+                            Err(RestError::Connection)
+                        }
+                    },
+                    Err(_) => Err(RestError::ConnectionTimeout),
+                }
             }
             Err(e) => {
                 log::error!("{{\"error\": \"{}\"}}", e);

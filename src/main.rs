@@ -1,7 +1,7 @@
 use axum::{
-    middleware::self,
     extract::Extension,
     handler::Handler,
+    middleware,
     routing::{any, delete, get, post},
     Router,
 };
@@ -14,6 +14,7 @@ use std::net::SocketAddr;
 use tower_http::auth::RequireAuthorizationLayer;
 use tower_http::trace::TraceLayer;
 
+mod auth;
 mod cache;
 mod config;
 mod error;
@@ -22,12 +23,11 @@ mod https;
 mod metrics;
 mod path;
 mod state;
-mod auth;
 
 use crate::metrics::{setup_metrics_recorder, track_metrics};
 use handlers::{
-    clear_cache, config, echo, get_cache, handler_404, health, help, proxy, reload, remove_cache,
-    root, metrics
+    clear_cache, config, echo, get_cache, handler_404, health, help, metrics, proxy, reload,
+    remove_cache, root,
 };
 use https::create_https_client;
 use state::State;
@@ -188,7 +188,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .layer(TraceLayer::new_for_http())
                 .route_layer(middleware::from_fn(track_metrics))
                 .layer(Extension(state))
-            .layer(Extension(recorder_handle))
+                .layer(Extension(recorder_handle))
         }
         false => Router::new()
             .merge(closed)
@@ -196,7 +196,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             .layer(TraceLayer::new_for_http())
             .route_layer(middleware::from_fn(track_metrics))
             .layer(Extension(state))
-            .layer(Extension(recorder_handle))
+            .layer(Extension(recorder_handle)),
     };
 
     // add a fallback service for handling routes to unknown paths

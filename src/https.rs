@@ -8,7 +8,12 @@ use std::error::Error;
 pub type HttpsClient = hyper::client::Client<HttpsConnector<HttpConnector>, Body>;
 type BoxResult<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
-pub fn create_https_client(timeout: u64, set_nodelay: bool, enforce_http: bool, set_reuse_address: bool) -> BoxResult<HttpsClient> {
+pub fn create_https_client(
+    timeout: u64,
+    set_nodelay: bool,
+    enforce_http: bool,
+    set_reuse_address: bool,
+) -> BoxResult<HttpsClient> {
     // All this junk is needed to ensure that we can connect to an endpoint with bad certs/hostname
     let tls = TlsConnector::builder()
         .danger_accept_invalid_hostnames(true)

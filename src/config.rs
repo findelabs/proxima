@@ -13,12 +13,12 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use url::Url;
 
+use crate::auth::EndpointAuth;
 use crate::cache::Cache;
 use crate::create_https_client;
 use crate::error::Error as RestError;
 use crate::https::HttpsClient;
 use crate::path::ProxyPath;
-use crate::auth::EndpointAuth;
 
 type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 pub type ConfigMap = BTreeMap<String, Entry>;
@@ -119,7 +119,11 @@ impl Config {
         }
     }
 
-    pub fn new(location: &str, config_authentication: Option<EndpointAuth>, global_authentication: bool) -> Config {
+    pub fn new(
+        location: &str,
+        config_authentication: Option<EndpointAuth>,
+        global_authentication: bool,
+    ) -> Config {
         Config {
             config_file: Arc::new(RwLock::new(ConfigFile {
                 static_config: BTreeMap::new(),
@@ -212,7 +216,7 @@ impl Config {
             Some((entry, remainder)) => {
                 metrics::increment_counter!("proxima_cache_hit_total");
                 Ok((Entry::Endpoint(entry), remainder))
-            },
+            }
             None => {
                 log::debug!(
                     "Searching for entry {} in configmap",
