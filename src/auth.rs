@@ -118,7 +118,7 @@ impl<'a> EndpointAuth {
                     .body(Body::empty())
                     .expect("request builder");
 
-                let client = create_https_client(60u64).expect("Can not build client");
+                let client = create_https_client(60u64, false, false, false).unwrap();
 
                 // Send initial request
                 let response = match client.request(req).await {

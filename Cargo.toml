@@ -1,6 +1,6 @@
 [package]
 name = "proxima"
-version = "0.5.26"
+version = "0.5.27"
 description = "ultra fast, simple, http proxy"
 edition = "2021"
 
@@ -9,7 +9,7 @@ hyper = { version = "0.14", features = ["full"] }
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 tracing-subscriber = { version="0.3", features = ["env-filter"] }
-axum = "0.4"
+axum = "0.5"
 serde = { version = "1.0", features = ["derive", "rc"]}
 serde_json = "1.0"
 serde_yaml = "0.8"
@@ -25,8 +25,7 @@ native-tls = "0.2"
 base64 = "0.13"
 url = { version = "2", features = ["serde"] }
 metrics = "0.18"
-metrics-exporter-prometheus = "0.8"
-axum-extra = "0.1"
+metrics-exporter-prometheus = "0.9"
 async-recursion = "1.0"
 digest_auth = "0.3"
 rand = "0.8"

@@ -1,10 +1,10 @@
 use axum::{
+    middleware::self,
     extract::Extension,
     handler::Handler,
     routing::{any, delete, get, post},
     Router,
 };
-use axum_extra::middleware;
 use chrono::Local;
 use clap::{crate_name, crate_version, App, Arg};
 use env_logger::{Builder, Target};
@@ -101,6 +101,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .help("Config file")
                 .takes_value(true),
         )
+        .arg(
+            Arg::with_name("set_nodelay")
+                .long("nodelay")
+                .required(false)
+                .help("Set socket nodelay")
+                .takes_value(false),
+        )
+        .arg(
+            Arg::with_name("enforce_http")
+                .long("enforce_http")
+                .required(false)
+                .help("Enforce http protocol for remote endpoints")
+                .takes_value(false),
+        )
+        .arg(
+            Arg::with_name("set_reuse_address")
+                .long("reuse_address")
+                .required(false)
+                .help("Enable socket reuse")
+                .takes_value(false),
+        )
         .get_matches();
 
     // Initialize log Builder
@@ -184,7 +205,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     println!("Listening on {}", addr);
     axum::Server::bind(&addr)
-        .serve(app.into_make_service_with_connect_info::<SocketAddr, _>())
+        .serve(app.into_make_service_with_connect_info::<SocketAddr>())
         .await?;
 
     Ok(())

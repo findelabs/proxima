@@ -55,7 +55,7 @@ impl State {
             None => None,
         };
 
-        let client = create_https_client(timeout)?;
+        let client = create_https_client(timeout, opts.is_present("nodelay"), opts.is_present("enforce_http"), opts.is_present("set_reuse_address"))?;
         let config_location = opts.value_of("config").unwrap().to_owned();
         let mut config = config::Config::new(&config_location, config_auth.clone(), opts.is_present("username"));
         config.update().await?;

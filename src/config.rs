@@ -130,7 +130,7 @@ impl Config {
             last_read: Arc::new(RwLock::new(i64::default())),
             hash: Arc::new(RwLock::new(u64::default())),
             cache: Cache::default(),
-            client: create_https_client(60u64).unwrap(),
+            client: create_https_client(60u64, false, false, false).unwrap(),
         }
     }
 
