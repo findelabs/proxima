@@ -72,21 +72,28 @@ You can also pull a config from a remote https endpoint by specifying a url with
 
 ### Proxima Usage
 ```
+proxima 0.5.27
+Daniel F. <Verticaleap>
+proxima
+
 USAGE:
-    proxima [OPTIONS] --config <config>
+    proxima [FLAGS] [OPTIONS] --config <config>
 
 FLAGS:
-    -h, --help       Prints help information
-    -V, --version    Prints version information
+        --enforce_http     Enforce http protocol for remote endpoints
+    -h, --help             Prints help information
+        --nodelay          Set socket nodelay
+        --reuse_address    Enable socket reuse
+    -V, --version          Prints version information
 
 OPTIONS:
     -c, --config <config>                      Config file [env: PROXIMA_CONFIG=]
     -p, --config_password <config_password>    Set required password for config endpoint [env: PROXIMA_AUTH_PASSWORD=]
     -u, --config_username <config_username>    Set required username for config endpoint [env: PROXIMA_AUTH_USERNAME=]
-    -u, --username <username>                  Set required client username [env: PROXIMA_CLIENT_USERNAME=]
     -p, --password <password>                  Set required client password [env: PROXIMA_CLIENT_PASSWORD=]
     -p, --port <port>                          Set port to listen on [env: PROXIMA_LISTEN_PORT=]  [default: 8080]
     -t, --timeout <timeout>                    Set default global timeout [env: PROXIMA_TIMEOUT=]  [default: 60]
+    -u, --username <username>                  Set required client username [env: PROXIMA_CLIENT_USERNAME=]
 ```
 
 ### Promima Metrics
