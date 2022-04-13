@@ -1,0 +1,16 @@
+[book]
+authors = []
+language = "en"
+multilingual = false
+src = "src"
+
+[build]
+create-missing = true
+
+[output.html.fold]
+enable = true
+level = 0
+
+[output.html]
+git-repository-url = "https://github.com/findelabs/proxima"
+edit-url-template = "https://github.com/findelabs/proxima/edit/master/docs/{path}"

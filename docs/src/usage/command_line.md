@@ -1,0 +1,50 @@
+# Command Line Arguments
+
+## Quick Start
+Basic usage to start Proxima is 
+```bash
+proxima --config config.yaml
+```
+
+## Flags
+
+Flags are optional to start Proxima.
+
+#### --enforce_http
+Using `--enforce_http` causes Proxima to error if any endpoints specify non-http urls.
+
+#### --help
+Print out help information with either `--help` or `-h`.
+
+#### --nodelay
+Enable socket nodelay with `--nodelay`, read about this [here](https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_for_real_time/7/html/tuning_guide/tcp_nodelay_and_small_buffer_writes).
+
+#### --reuse_address
+Proxima will reuse socket if possible when `--reuse_address` is specified.
+
+#### --version
+Print Proxima version with `--version` or `-v`
+
+
+## Options
+
+#### --config
+Specify a yaml config file with `--config` or `-c`. This configuration can either be a file, or an http endpoint.
+
+#### --config_password
+If you config file is an http endpoint that requires authentication, specify a password with `--config_password`.
+
+#### --config_username
+If you config file is an http endpoint that requires authentication, specify a username with `--config_username`.
+
+#### --port
+Set the port on which to listen with `--port` or `-p`
+
+#### --username
+Force all clients hitting Proxima to authenticate with Basic creds, with `--username` or `-u` specifying the username.
+
+#### -password
+Force all clients hitting Proxima to authenticate with Basic creds, with `--password` or `-p` specifying the password.
+
+#### --timeout
+Set a global connection timeout with `--timeout`, default is 60 seconds.
