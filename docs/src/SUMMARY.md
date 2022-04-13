@@ -2,7 +2,11 @@
 
 - [Installation](./installation.md)
 - [Usage](./usage.md)
+  - [Proxy](./usage/proxy.md)
   - [Docker](./usage/docker.md)
   - [Arguments](./usage/arguments.md)
-- [Configuration]()
-
+- [Configuration](./configuration.md)
+  - [Syntax](./configuration/syntax.md)
+  - [Authentication](./configuration/authentication.md)
+- [REST API](./rest.md)
+- [Metrics](./metrics.md)
