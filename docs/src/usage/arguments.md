@@ -28,23 +28,23 @@ Print Proxima version with `--version` or `-v`
 
 ## Options
 
-#### --config
+#### --config [env: PROXIMA_CONFIG]
 Specify a yaml config file with `--config` or `-c`. This configuration can either be a file, or an http endpoint.
 
-#### --config_password
-If you config file is an http endpoint that requires authentication, specify a password with `--config_password`.
-
-#### --config_username
+#### --config_username [env: PROXIMA_AUTH_USERNAME]
 If you config file is an http endpoint that requires authentication, specify a username with `--config_username`.
 
-#### --port
-Set the port on which to listen with `--port` or `-p`
+#### --config_password [env: PROXIMA_AUTH_PASSWORD]
+If you config file is an http endpoint that requires authentication, specify a password with `--config_password`.
 
-#### --username
+#### --port [env: PROXIMA_LISTEN_PORT]
+Set the port on which to listen with `--port` or `-p`, default of 8080.
+
+#### --username [env: PROXIMA_CLIENT_USERNAME]
 Force all clients hitting Proxima to authenticate with Basic creds, with `--username` or `-u` specifying the username.
 
-#### -password
+#### -password [env: PROXIMA_CLIENT_PASSWORD]
 Force all clients hitting Proxima to authenticate with Basic creds, with `--password` or `-p` specifying the password.
 
-#### --timeout
+#### --timeout [env: PROXIMA_TIMEOUT]
 Set a global connection timeout with `--timeout`, default is 60 seconds.
