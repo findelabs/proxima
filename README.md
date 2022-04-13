@@ -3,7 +3,7 @@
 Ultra fast, simple, http proxy.
 
 ### What is Proxima
-Proxima is a simple L7 proxy, used for stitching together multiple http endpoints behind a single endpoint. Proxima supports connecting to backend endpoints over http, or https.
+Proxima is a simple L7 proxy, used for stitching together multiple http endpoints behind a single endpoint. Proxima supports connecting to backend endpoints over http, or https. View the docs [here](https://findelabs.github.io/proxima/installation.html)!
 
 ### How do I configure Proxima
 
