@@ -19,6 +19,7 @@ use crate::create_https_client;
 use crate::error::Error as RestError;
 use crate::https::HttpsClient;
 use crate::path::ProxyPath;
+use crate::urls::Urls;
 
 type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 pub type ConfigMap = BTreeMap<String, Entry>;
@@ -61,7 +62,7 @@ pub struct HttpConfig {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct Endpoint {
-    pub url: Url,
+    pub url: Urls,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authentication: Option<EndpointAuth>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -72,7 +73,7 @@ pub struct Endpoint {
 
 impl<'a> Endpoint {
     pub async fn url(&self) -> String {
-        match self.url.path() {
+        match self.url.path().await {
             "/" => self.url.to_string(),
             _ => {
                 log::debug!("Adding / suffix to path");
