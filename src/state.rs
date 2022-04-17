@@ -1,28 +1,23 @@
-use crate::config;
-use crate::config::{Config, Entry};
-use crate::https::HttpsClient;
 use axum::{
     extract::BodyStream,
-    http::uri::Uri,
-    http::{Request, Response, StatusCode},
+    http::{Response, StatusCode},
 };
 use clap::ArgMatches;
 use hyper::{Body, HeaderMap, Method};
 use serde_json::json;
 use serde_json::Value;
-use std::convert::TryFrom;
 use std::error::Error;
-use std::time::Duration;
 
+use crate::config;
+use crate::config::{Config, Entry};
+use crate::https::HttpsClient;
 use crate::auth::{BasicAuth, EndpointAuth};
 use crate::create_https_client;
 use crate::error::Error as RestError;
 use crate::path::ProxyPath;
+use crate::requests::ProxyRequest;
 
 type BoxResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
-
-// Set default timeout
-const TIMEOUT_DEFAULT: u64 = 60000;
 
 #[derive(Clone, Debug)]
 pub struct State {
@@ -98,7 +93,7 @@ impl State {
         method: Method,
         path: ProxyPath,
         query: Option<String>,
-        mut request_headers: HeaderMap,
+        request_headers: HeaderMap,
         payload: Option<BodyStream>,
     ) -> Result<Response<Body>, RestError> {
         let (config_entry, path) = match self.config.get(path.clone()).await {
@@ -152,64 +147,27 @@ impl State {
             }
         };
 
-        let host_and_path = match query {
-            Some(q) => format!("{}{}?{}", &config_entry.url().await, path.path(), q),
-            None => format!("{}{}", &config_entry.url().await, path.path()),
+        // Wrap Body if there is one
+        let body = match payload {
+            Some(p) => {
+                log::debug!("Received body: {:#?}", &p);
+                Body::wrap_stream(p)
+            }
+            None => {
+                log::debug!("Did not receive a body");
+                Body::empty()
+            }
         };
 
-        log::debug!("full uri: {}", host_and_path);
-
-        match Uri::try_from(host_and_path) {
-            Ok(u) => {
-                let body = match payload {
-                    Some(p) => {
-                        log::debug!("Received body: {:#?}", &p);
-                        Body::wrap_stream(p)
-                    }
-                    None => {
-                        log::debug!("Did not receive a body");
-                        Body::empty()
-                    }
-                };
-
-                let mut req = Request::builder()
-                    .method(method)
-                    .uri(&u)
-                    .body(body)
-                    .expect("request builder");
-
-                // Append to request the headers passed by client
-                request_headers.remove(hyper::header::HOST);
-                request_headers.remove(hyper::header::USER_AGENT);
-                let headers = req.headers_mut();
-                headers.extend(request_headers.clone());
-
-                // Added Basic Auth if username/password exist
-                if let Some(authentication) = config_entry.authentication {
-                    authentication.headers(headers, &u).await?;
-                }
-
-                let work = self.client.clone().request(req);
-                let timeout = match config_entry.timeout {
-                    Some(duration) => duration,
-                    None => TIMEOUT_DEFAULT,
-                };
-
-                match tokio::time::timeout(Duration::from_millis(timeout), work).await {
-                    Ok(result) => match result {
-                        Ok(response) => Ok(response),
-                        Err(e) => {
-                            log::error!("{{\"error\":\"{}\"", e);
-                            Err(RestError::Connection)
-                        }
-                    },
-                    Err(_) => Err(RestError::ConnectionTimeout),
-                }
-            }
-            Err(e) => {
-                log::error!("{{\"error\": \"{}\"}}", e);
-                Err(RestError::UnparseableUrl)
-            }
-        }
+        let request = ProxyRequest {
+            client: self.client.clone(),
+            endpoint: config_entry,
+            method,
+            path,
+            body,
+            request_headers,
+            query
+        };
+        request.go().await
     }
 }

@@ -11,49 +11,49 @@ type UrlList = Vec<Url>;
 #[serde(untagged)]
 pub enum Urls {
     Url(Url),
-    UrlLB(UrlLB)
+    UrlFailover(UrlFailover)
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct UrlLB {
+pub struct UrlFailover {
     #[serde(default)]
     #[serde(skip_serializing)]
     next: Arc<Mutex<usize>>,
-    members: Vec<Url>
+    failover: Vec<Url>
 }
 
-impl Hash for UrlLB {
+impl Hash for UrlFailover {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        let next= self.next.lock().unwrap();
+        let next = self.next.lock().unwrap();
         next.hash(state);
-        self.members.hash(state);
+        self.failover.hash(state);
     }
 }
 
-impl From<UrlList> for UrlLB {
+impl From<UrlList> for UrlFailover {
     fn from(item: UrlList) -> Self {
-        UrlLB { 
+        UrlFailover { 
             next: Arc::new(Mutex::new(0)),
-            members: item.clone()
+            failover: item.clone()
         }
     }
 }
 
-impl From<Url> for UrlLB {
+impl From<Url> for UrlFailover {
     fn from(item: Url) -> Self {
         let mut vec = Vec::new();
         vec.push(item);
-        UrlLB { 
+        UrlFailover { 
             next: Arc::new(Mutex::new(0)),
-            members: vec
+            failover: vec
         }
     }
 }
 
-impl<'a> UrlLB {
+impl<'a> UrlFailover {
     pub fn next(&'a self) -> &'a Url {
         let mut current = self.next.lock().unwrap();
-        let len = self.members.len();
+        let len = self.failover.len();
         let next = match current {
             mut x if *x == len - 1 => {
                 *x = 0;
@@ -64,19 +64,20 @@ impl<'a> UrlLB {
                 *current
             }
         };
-        let url = self.members.get(next).unwrap();
+        let url = self.failover.get(next).unwrap();
         url
     }
 
     pub fn url(&'a self) -> &'a Url {
         let current = self.next.lock().unwrap();
-        let url = self.members.get(*current).unwrap();
+        log::debug!("UrlFailover getting current url: {}", current);
+        let url = self.failover.get(*current).unwrap();
         url
     }
 
     pub fn path(&self) -> &str {
-        let url = self.url();
-        url.path()
+        log::debug!("UrlFailover getting path");
+        self.url().path()
     }
 }
 
@@ -84,24 +85,24 @@ impl Urls {
     pub async fn path(&self) -> &str {
         match self {
             Urls::Url(url) => url.path(),
-            Urls::UrlLB(urls) => urls.path()
+            Urls::UrlFailover(urlfailover) => urlfailover.path()
         }
     }
 }
 
-impl fmt::Display for UrlLB {
+impl fmt::Display for UrlFailover {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        log::debug!("Printing out UrlLB");
-        write!(f, "{}", self.next())
+        log::debug!("Printing out UrlFailover");
+        write!(f, "{}", self.url())
     }
 }
 
 impl fmt::Display for Urls {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        log::debug!("Printing out Urls");
+        log::debug!("Printing out enum Urls");
         match self {
             Urls::Url(url) => write!(f, "{}", url),
-            Urls::UrlLB(urls) => write!(f, "{}", urls)
+            Urls::UrlFailover(urlfailover) => write!(f, "{}", urlfailover)
         }
     }
 }
