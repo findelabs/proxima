@@ -34,7 +34,7 @@ impl ProxyRequest {
             "{}{}{}",
             url,
             self.path.path(),
-            queries.unwrap_or_else(||"".to_string())
+            queries.unwrap_or_else(|| "".to_string())
         );
         let uri = match Uri::try_from(host_and_path) {
             Ok(u) => u,

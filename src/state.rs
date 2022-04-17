@@ -10,7 +10,7 @@ use std::error::Error;
 
 use crate::auth::{BasicAuth, EndpointAuth};
 use crate::config;
-use crate::config::{Config, Entry};
+use crate::config::{Config, Endpoint, Entry};
 use crate::create_https_client;
 use crate::error::Error as RestError;
 use crate::https::HttpsClient;
@@ -88,6 +88,56 @@ impl State {
         }
     }
 
+    pub async fn whitelist(
+        &mut self,
+        endpoint: &Endpoint,
+        method: &Method,
+    ) -> Result<(), RestError> {
+        // If endpoint has a method whitelock, verify
+        if let Some(ref whitelist) = endpoint.whitelist {
+            log::debug!("Found whitelist");
+            if let Some(ref methods) = whitelist.methods {
+                log::debug!("Endpoint is configured with a method whitelist");
+                match methods.binary_search(&method.to_string()) {
+                    Ok(_) => {
+                        log::debug!("{} is in whitelist", &method);
+                    }
+                    _ => {
+                        log::info!("Blocked {} method", &method);
+                        return Err(RestError::Forbidden);
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn authorize_client(
+        &mut self,
+        endpoint: &Endpoint,
+        headers: &HeaderMap,
+    ) -> Result<(), RestError> {
+        // If endpoint is locked down, verify credentials
+        if let Some(ref lock) = endpoint.lock {
+            log::debug!("Endpoint is locked");
+            match self.config.global_authentication {
+                true => {
+                    log::info!("Endpoint is locked, but proxima is using global authentication");
+                }
+                false => match headers.get("AUTHORIZATION") {
+                    Some(header) => lock.authorize(header)?,
+                    None => match endpoint.lock {
+                        Some(EndpointAuth::digest(_)) => {
+                            return Err(RestError::UnauthorizedDigestUser)
+                        }
+                        _ => return Err(RestError::UnauthorizedUser),
+                    },
+                },
+            }
+        }
+        Ok(())
+    }
+
     pub async fn response(
         &mut self,
         method: Method,
@@ -128,41 +178,12 @@ impl State {
             Err(e) => return Err(e),
         };
 
-        // If endpoint is locked down, verify credentials
-        if let Some(ref lock) = config_entry.lock {
-            log::debug!("Endpoint is locked");
-            match self.config.global_authentication {
-                true => {
-                    log::info!("Endpoint is locked, but proxima is using global authentication")
-                }
-                false => match request_headers.get("AUTHORIZATION") {
-                    Some(header) => lock.authorize(header)?,
-                    None => match config_entry.lock {
-                        Some(EndpointAuth::digest(_)) => {
-                            return Err(RestError::UnauthorizedDigestUser)
-                        }
-                        _ => return Err(RestError::UnauthorizedUser),
-                    },
-                },
-            }
-        };
+        // Authorize clients
+        self.authorize_client(&config_entry, &request_headers)
+            .await?;
 
-        // If endpoint has a method whitelock, verify
-        if let Some(ref whitelist) = config_entry.whitelist {
-            log::debug!("Found whitelist");
-            if let Some(ref methods) = whitelist.methods {
-                log::debug!("Endpoint is configured with a method whitelist");
-                match methods.binary_search(&method.to_string()) {
-                    Ok(_) => {
-                        log::debug!("{} is in whitelist", &method);
-                    }
-                    _ => {
-                        log::info!("Blocked {} method", &method);
-                        return Err(RestError::Forbidden);
-                    }
-                };
-            };
-        };
+        // Verify Whitelists
+        self.whitelist(&config_entry, &method).await?;
 
         // Wrap Body if there is one
         let body = match payload {
