@@ -8,6 +8,7 @@
 - [Configuration](./configuration.md)
   - [Syntax](./configuration/syntax.md)
   - [Authentication](./configuration/authentication.md)
-  - [Whitelist](./configuration/whitelist.md)
+  - [Security](./configuration/security.md)
+    - [Methods](./configuration/methods.md)
 - [REST API](./rest.md)
 - [Metrics](./metrics.md)
