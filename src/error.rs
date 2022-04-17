@@ -33,12 +33,10 @@ impl std::error::Error for Error {}
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Error::Forbidden => f.write_str("{\"error\": \"Cannot get config: Forbidden\"}"),
-            Error::Unauthorized => f.write_str("{\"error\": \"Cannot get config: Unauthorized\"}"),
-            Error::NotFound => f.write_str("{\"error\": \"Cannot get config: Not found\"}"),
-            Error::Unknown => {
-                f.write_str("{\"error\": \"Cannot get config: Returned bad status code\"}")
-            }
+            Error::Forbidden => f.write_str("{\"error\": \"Forbidden\"}"),
+            Error::Unauthorized => f.write_str("{\"error\": \"Unauthorized\"}"),
+            Error::NotFound => f.write_str("{\"error\": \"Not found\"}"),
+            Error::Unknown => f.write_str("{\"error\": \"Bad status code\"}"),
             Error::BadToken => f.write_str("{\"error\": \"Unparsable token provided\"}"),
             Error::BadUserPasswd => {
                 f.write_str("{\"error\": \"Unparsable username and password provided\"}")

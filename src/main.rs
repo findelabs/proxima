@@ -22,9 +22,9 @@ mod handlers;
 mod https;
 mod metrics;
 mod path;
+mod requests;
 mod state;
 mod urls;
-mod requests;
 
 use crate::metrics::{setup_metrics_recorder, track_metrics};
 use handlers::{

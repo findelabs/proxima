@@ -61,12 +61,19 @@ pub struct HttpConfig {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+pub struct Whitelist {
+    pub methods: Option<Vec<String>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct Endpoint {
     pub url: Urls,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authentication: Option<EndpointAuth>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timeout: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub whitelist: Option<Whitelist>,
     #[serde(skip_serializing)]
     pub lock: Option<EndpointAuth>,
 }

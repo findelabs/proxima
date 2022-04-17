@@ -6,10 +6,10 @@ use hyper::{Body, HeaderMap, Method};
 use std::time::Duration;
 
 use crate::config::Endpoint;
+use crate::error::Error as RestError;
 use crate::https::HttpsClient;
 use crate::path::ProxyPath;
 use crate::urls::Urls;
-use crate::error::Error as RestError;
 
 pub struct ProxyRequest {
     pub client: HttpsClient,
@@ -18,21 +18,29 @@ pub struct ProxyRequest {
     pub path: ProxyPath,
     pub body: Body,
     pub request_headers: HeaderMap,
-    pub query: Option<String>
+    pub query: Option<String>,
 }
 
 // Default endpoint connection timeout of 5 seconds
 const TIMEOUT_DEFAULT: u64 = 5000;
 
 impl ProxyRequest {
-    pub async fn single(self, url: String, queries: Option<String>) -> Result<Response<Body>, RestError> {
-
-        let host_and_path = format!("{}{}{}", url, self.path.path(), queries.unwrap_or("".to_string()));
+    pub async fn single(
+        self,
+        url: String,
+        queries: Option<String>,
+    ) -> Result<Response<Body>, RestError> {
+        let host_and_path = format!(
+            "{}{}{}",
+            url,
+            self.path.path(),
+            queries.unwrap_or_else(||"".to_string())
+        );
         let uri = match Uri::try_from(host_and_path) {
             Ok(u) => u,
             Err(e) => {
                 log::error!("{{\"error\": \"{}\"}}", e);
-                return Err(RestError::UnparseableUrl)
+                return Err(RestError::UnparseableUrl);
             }
         };
 
@@ -69,32 +77,27 @@ impl ProxyRequest {
             },
             Err(_) => Err(RestError::ConnectionTimeout),
         }
-
     }
 
     pub async fn go(self) -> Result<Response<Body>, RestError> {
-
         // Prepare queries for appending
-        let queries = match self.query {
-            Some(ref q) => Some(format!("?{}", q)),
-            None => None
-        };
+        let queries = self.query.as_ref().map(|q| format!("?{}", q));
 
         match self.endpoint.url.clone() {
             Urls::Url(_) => {
-                log::info!("Got a single url");
+                log::debug!("Got a single url");
                 let url = self.endpoint.url().await;
                 self.single(url, queries).await
-            },
+            }
             Urls::UrlFailover(urlfailover) => {
                 log::debug!("Got a failover url");
                 let url = urlfailover.url().to_string();
                 match self.single(url, queries).await {
-                    Ok(response) => return Ok(response),
+                    Ok(response) => Ok(response),
                     Err(e) => {
                         log::error!("Error connecting to member, failing over member");
                         let _ = urlfailover.next();
-                        return Err(e)
+                        Err(e)
                     }
                 }
             }

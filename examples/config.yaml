@@ -2,6 +2,9 @@ static_config:
   archivelabs:
     url: https://api.archivelab.org/v1
     timeout: 5000
+    whitelist:
+      methods:
+      - GET
   inshortsapi:
     url: https://inshortsapi.vercel.app/news
     timeout: 5000

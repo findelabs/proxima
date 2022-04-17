@@ -8,12 +8,12 @@ use serde_json::json;
 use serde_json::Value;
 use std::error::Error;
 
+use crate::auth::{BasicAuth, EndpointAuth};
 use crate::config;
 use crate::config::{Config, Entry};
-use crate::https::HttpsClient;
-use crate::auth::{BasicAuth, EndpointAuth};
 use crate::create_https_client;
 use crate::error::Error as RestError;
+use crate::https::HttpsClient;
 use crate::path::ProxyPath;
 use crate::requests::ProxyRequest;
 
@@ -147,6 +147,23 @@ impl State {
             }
         };
 
+        // If endpoint has a method whitelock, verify
+        if let Some(ref whitelist) = config_entry.whitelist {
+            log::debug!("Found whitelist");
+            if let Some(ref methods) = whitelist.methods {
+                log::debug!("Endpoint is configured with a method whitelist");
+                match methods.binary_search(&method.to_string()) {
+                    Ok(_) => {
+                        log::debug!("{} is in whitelist", &method);
+                    }
+                    _ => {
+                        log::info!("Blocked {} method", &method);
+                        return Err(RestError::Forbidden);
+                    }
+                };
+            };
+        };
+
         // Wrap Body if there is one
         let body = match payload {
             Some(p) => {
@@ -166,7 +183,7 @@ impl State {
             path,
             body,
             request_headers,
-            query
+            query,
         };
         request.go().await
     }
