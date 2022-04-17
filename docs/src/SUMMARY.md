@@ -9,6 +9,6 @@
   - [Syntax](./configuration/syntax.md)
   - [Authentication](./configuration/authentication.md)
   - [Security](./configuration/security.md)
-    - [Methods](./configuration/methods.md)
+    - [Whitelisting Methods](./configuration/methods.md)
 - [REST API](./rest.md)
 - [Metrics](./metrics.md)
