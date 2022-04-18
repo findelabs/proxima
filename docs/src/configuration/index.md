@@ -2,7 +2,7 @@
 
 Proxima is configured via a yaml config file, which currently specifies just the subfolders, endpoints, and various endpoint options which Proxima will serve. 
 
-In the future, we will be including many more configration options within this config.
+In the future, we will be including many more configuration options within this config.
 
 ### Configuration Syntax
 
