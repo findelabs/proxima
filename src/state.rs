@@ -97,12 +97,12 @@ impl State {
         if let Some(ref whitelist) = endpoint.whitelist {
             log::debug!("Found whitelist");
             if let Some(ref methods) = whitelist.methods {
-                log::debug!("Endpoint is configured with a method whitelist");
-                match methods.binary_search(&method.to_string()) {
-                    Ok(_) => {
+                log::debug!("Endpoint is configured with a method whitelist that allows: {:?}", whitelist.methods);
+                match methods.contains(&method.to_string()) {
+                    true => {
                         log::debug!("{} is in whitelist", &method);
                     }
-                    _ => {
+                    false => {
                         log::info!("Blocked {} method", &method);
                         return Err(RestError::Forbidden);
                     }
