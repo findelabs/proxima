@@ -26,7 +26,7 @@ const TIMEOUT_DEFAULT: u64 = 5000;
 
 impl ProxyRequest {
     pub async fn single(
-        self,
+        mut self,
         url: String,
         queries: Option<String>,
     ) -> Result<Response<Body>, RestError> {
@@ -51,6 +51,10 @@ impl ProxyRequest {
             .uri(&uri)
             .body(self.body)
             .expect("request builder");
+
+        // Remove HOST and USER_AGENT headers
+        self.request_headers.remove(hyper::header::HOST);
+        self.request_headers.remove(hyper::header::USER_AGENT);
 
         // Append to request the headers passed by client
         let headers = req.headers_mut();
