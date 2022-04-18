@@ -1,6 +1,6 @@
 ### Method Whitelisting
 
-If a remote endpoint requires authentication, for example Basic, simply specify a new authentication block within the endpoint yaml:
+You can whitelist specific methods for an endpoint, as shown below:
 
 ```yaml
 static_config:
@@ -11,3 +11,15 @@ static_config:
       - GET
       - POST
 ```
+
+The following methods can currently be whitelisted:
+
+- Options
+- Get
+- Post
+- Put
+- Delete
+- Head
+- Trace
+- Connect
+- Patch

@@ -5,21 +5,7 @@ Proxima can both connect to remote endpoints using the following authentication 
 - Bearer  
 - Digest
 
-### Remote Endpoint Authentication
-
-If a remote endpoint requires authentication, for example Basic, simply specify a new authentication block within the endpoint yaml:
-
-```yaml
-static_config:
-  endpoint_basic:
-    url: http://myurl.net
-    authentication:
-      basic:
-        username: myusername
-        password: mypassword
-```
-
-### Client Endpoint Authentication
+### Client Authentication
 
 If you would like to require that all incoming clients to Proxima authentication with Basic creds, simply create a new lock block within the endpoint yaml:
 
@@ -33,7 +19,21 @@ static_config:
         password: mypassword
 ```
 
-### Authentication Types
+### Remote URL Authentication
+
+If a remote endpoint requires authentication, for example Basic, simply specify a new authentication block within the endpoint yaml:
+
+```yaml
+static_config:
+  endpoint_basic:
+    url: http://myurl.net
+    authentication:
+      basic:
+        username: myusername
+        password: mypassword
+```
+
+### Authentication Configuration
 
 Proxima currently supports Basic and Digest for username/password authentication, as well as Bearer token authentication. 
 
