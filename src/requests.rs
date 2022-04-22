@@ -95,7 +95,7 @@ impl ProxyRequest {
             }
             Urls::UrlFailover(urlfailover) => {
                 log::debug!("Got a failover url");
-                let url = urlfailover.url().to_string();
+                let url = self.endpoint.url().await;
                 match self.single(url, queries).await {
                     Ok(response) => Ok(response),
                     Err(e) => {
