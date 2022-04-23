@@ -33,13 +33,13 @@ impl<'a> Cache {
     }
 
     pub async fn remove(&self, path: ProxyPath) -> Option<String> {
-        let url = path.path();
-        log::debug!("Removing {} from cache", &url);
-        let mut cache = self.cache.write().await;
-        if cache.remove(&url).is_some() {
-            Some(url)
-        } else {
-            None
+        match path.path() {
+            Some(path_key) => {
+                log::debug!("Removing {} from cache", &path_key);
+                let mut cache = self.cache.write().await;
+                cache.remove_entry(path_key).map(|(key, _)| key)
+            }
+            None => None,
         }
     }
 
@@ -48,7 +48,11 @@ impl<'a> Cache {
         let mut map = Map::new();
         let cache = self.cache.read().await;
         for (key, (endpoint, proxypath)) in &*cache {
-            let value = format!("{}{}", endpoint.url().await, proxypath.path());
+            let value = format!(
+                "{}{}",
+                endpoint.url().await,
+                proxypath.path().unwrap_or("")
+            );
             map.insert(key.to_string(), serde_json::Value::String(value));
         }
         map
@@ -58,7 +62,7 @@ impl<'a> Cache {
         log::debug!(
             "Adding {} to cache with remainder of {}",
             key,
-            remainder.path()
+            remainder.path().unwrap_or("")
         );
         let mut cache = self.cache.write().await;
         cache.insert(key.to_string(), (value.clone(), remainder.clone()));

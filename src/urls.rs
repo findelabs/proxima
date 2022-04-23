@@ -22,8 +22,6 @@ pub struct UrlFailover {
 
 impl Hash for UrlFailover {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        let next = self.next.lock().unwrap();
-        next.hash(state);
         self.failover.hash(state);
     }
 }

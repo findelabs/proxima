@@ -218,16 +218,24 @@ impl Config {
 
     pub async fn get(&mut self, path: ProxyPath) -> Result<(Entry, ProxyPath), RestError> {
         self.renew().await;
-        log::debug!("Searching for entry {} in cache", &path.path());
+
+        let proxy_path = match path.path() {
+            Some(p) => p,
+            None => return Err(RestError::UnknownEndpoint),
+        };
+
+        log::debug!("Searching for entry {} in cache", &proxy_path);
         metrics::increment_counter!("proxima_cache_attempts_total");
-        match self.cache.get(&path.path()).await {
+        match self.cache.get(proxy_path).await {
             Some((entry, remainder)) => {
                 metrics::increment_counter!("proxima_cache_hit_total");
+                log::debug!("Found {} in cache", proxy_path);
                 Ok((Entry::Endpoint(entry), remainder))
             }
             None => {
                 log::debug!(
-                    "Searching for entry {} in configmap",
+                    "{} not found in cache, searching for entry {} in configmap",
+                    &proxy_path,
                     &path.prefix().unwrap()
                 );
                 match self
@@ -236,7 +244,7 @@ impl Config {
                 {
                     Ok((entry, remainder)) => {
                         if let Entry::Endpoint(ref hit) = entry {
-                            self.cache.set(&path.path(), &remainder, hit).await;
+                            self.cache.set(proxy_path, &remainder, hit).await;
                         };
                         Ok((entry, remainder))
                     }

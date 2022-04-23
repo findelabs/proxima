@@ -76,9 +76,11 @@ impl ProxyPath {
         self.suffix.as_ref().map(|s| ProxyPath::new(s))
     }
 
-    pub fn path(&self) -> String {
-        let path = self.path.clone();
-        path.replace(' ', "%20")
+    pub fn path(&self) -> Option<&str> {
+        match self.path.as_str() {
+            "" => None,
+            _ => Some(&self.path),
+        }
     }
 
     pub fn prefix(&self) -> Option<String> {

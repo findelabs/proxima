@@ -97,7 +97,10 @@ impl State {
         if let Some(ref whitelist) = endpoint.whitelist {
             log::debug!("Found whitelist");
             if let Some(ref methods) = whitelist.methods {
-                log::debug!("Endpoint is configured with a method whitelist that allows: {:?}", whitelist.methods);
+                log::debug!(
+                    "Endpoint is configured with a method whitelist that allows: {:?}",
+                    whitelist.methods
+                );
                 match methods.contains(&method.to_string()) {
                     true => {
                         log::debug!("{} is in whitelist", &method);
@@ -154,7 +157,7 @@ impl State {
                     log::debug!(
                         "Found on endpoint {}, with path {}",
                         endpoint.url().await,
-                        remainder.path()
+                        remainder.path().unwrap_or("None")
                     );
                     (endpoint, remainder)
                 }
