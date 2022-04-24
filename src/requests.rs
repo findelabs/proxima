@@ -87,6 +87,7 @@ impl ProxyRequest {
         // Prepare queries for appending
         let queries = self.query.as_ref().map(|q| format!("?{}", q));
 
+        // Tried improving this, may take some more work
         match self.endpoint.url.clone() {
             Urls::Url(_) => {
                 log::debug!("Got a single url");

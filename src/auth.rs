@@ -41,7 +41,6 @@ pub struct BearerAuth {
 impl<'a> EndpointAuth {
     pub fn authorize(&self, header: &HeaderValue) -> Result<(), RestError> {
         metrics::increment_counter!("proxima_endpoint_authentication_total");
-
         match self {
             EndpointAuth::basic(auth) => {
                 if HeaderValue::from_str(&auth.basic()).unwrap() != header {

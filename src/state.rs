@@ -155,7 +155,7 @@ impl State {
             Ok((entry, remainder)) => match entry {
                 Entry::Endpoint(endpoint) => {
                     log::debug!(
-                        "Found on endpoint {}, with path {}",
+                        "Found an endpoint {}, with path {}",
                         endpoint.url().await,
                         remainder.path().unwrap_or("None")
                     );

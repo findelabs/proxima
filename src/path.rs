@@ -14,27 +14,21 @@ pub struct ProxyPath {
 
 impl ProxyPath {
     pub fn new(path: &str) -> ProxyPath {
+
+        // Create String so that we can manipulate it
+        let mut path = path.to_string();
+
         // Remove prefix of /
         #[allow(clippy::iter_nth_zero)]
-        let path = match path.chars().nth(0).unwrap_or('e') {
-            '/' => {
-                log::debug!("Removing / prefix from path");
-                let mut rem = path.to_string();
-                rem.remove(0);
-                rem
-            }
-            _ => path.to_string(),
+        if let Some('/') = path.chars().nth(0) {
+            log::debug!("Removing / prefix from path");
+            path.remove(0);
         };
 
         // Remove suffix of /
-        let path = match path.chars().last().unwrap_or('e') {
-            '/' => {
-                log::debug!("Removing / suffix from path");
-                let mut rem = path.to_string();
-                rem.pop();
-                rem
-            }
-            _ => path.to_string(),
+        if let Some('/') = path.chars().last() {
+            log::debug!("Removing / prefix from path");
+            path.remove(0);
         };
 
         let vec: Vec<&str> = path.splitn(2, '/').collect();
@@ -52,7 +46,7 @@ impl ProxyPath {
                 log::debug!("Found one item, setting prefix to {}", &vec[0]);
                 ProxyPath {
                     path: path.clone(),
-                    prefix: Some(vec[0].to_string()),
+                    prefix: Some(vec[0].to_owned()),
                     suffix: None,
                 }
             }
@@ -65,8 +59,8 @@ impl ProxyPath {
                 );
                 ProxyPath {
                     path: path.clone(),
-                    prefix: Some(vec[0].to_string()),
-                    suffix: Some(vec[1].to_string()),
+                    prefix: Some(vec[0].to_owned()),
+                    suffix: Some(vec[1].to_owned()),
                 }
             }
         }
