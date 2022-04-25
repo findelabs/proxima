@@ -217,8 +217,6 @@ impl Config {
     }
 
     pub async fn get(&mut self, path: ProxyPath) -> Result<(Entry, ProxyPath), RestError> {
-        self.renew().await;
-
         let proxy_path = match path.path() {
             Some(p) => p,
             None => return Err(RestError::UnknownEndpoint),
@@ -275,6 +273,7 @@ impl Config {
         let current_config_hash = Config::calculate_hash(&current_config);
 
         if current_config_hash != new_config_hash {
+            log::info!("Config has been updated");
             log::debug!(
                 "Config has been changed, new {} vs old {}",
                 &new_config_hash,
