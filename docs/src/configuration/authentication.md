@@ -31,7 +31,7 @@ static_config:
   endpoint_basic:
     url: http://myurl.net
     authentication:
-    - basic:
+      basic:
         username: myusername
         password: mypassword
 ```
@@ -40,19 +40,19 @@ static_config:
 
 Proxima currently supports Basic and Digest for username/password authentication, as well as Bearer token authentication. 
 
-Here are some examples on how to specify each of these authentication types, for an endpoint:
+Here are some examples on how to specify each of these authentication types, for an endpoint. Keep in mind that the authentication block only supports one type of authentication for an endpoint:
 ```yaml
 static_config:
   endpoint_test:
     url: http://myurl.net
     authentication:
-    - basic:                  # Authenticate with remote endpoint with Basic
+      basic:                  # Authenticate with remote endpoint with Basic
         username: client
         password: mypassword
-    - digest:                 # Authenticate with remote endpoint with Digest
+      digest:                 # Authenticate with remote endpoint with Digest
         username: client
         password: mypassword
-    - token:                  # Authenticate with remote endpoint with Token
+      token:                  # Authenticate with remote endpoint with Token
         token: Y2Rhc2Nkc2NkYXNjc2QK
 
 
