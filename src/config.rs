@@ -216,6 +216,7 @@ impl Config {
     }
 
     pub async fn get(&mut self, path: ProxyPath) -> Result<(Entry, ProxyPath), RestError> {
+        self.renew().await;
         let proxy_path = match path.path() {
             Some(p) => p,
             None => return Err(RestError::UnknownEndpoint),
