@@ -22,7 +22,7 @@ pub struct ProxyRequest {
 }
 
 // Default endpoint connection timeout of 5 seconds
-const TIMEOUT_DEFAULT: u64 = 5000;
+const TIMEOUT_DEFAULT: u64 = 60000;
 
 impl ProxyRequest {
     pub async fn single(
