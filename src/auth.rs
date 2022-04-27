@@ -19,6 +19,9 @@ pub enum EndpointAuth {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+pub struct EndpointAuthArray(Vec<EndpointAuth>);
+
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct BasicAuth {
     pub username: String,
     #[serde(skip_serializing)]
@@ -36,6 +39,21 @@ pub struct DigestAuth {
 pub struct BearerAuth {
     #[serde(skip_serializing)]
     pub token: String,
+}
+
+impl EndpointAuthArray {
+    pub fn authorize(&self, header: &HeaderValue) -> Result<(), ProximaError> {
+        let Self(internal) = self;
+        for user in internal.iter() {
+            log::debug!("\"Checking if client auth against {:?}\"", user);
+            match user.authorize(header) {
+                Ok(_) => return Ok(()),
+                Err(_) => continue,
+            }
+        }
+        log::debug!("\"Client could not be authenticated\"");
+        Err(ProximaError::UnauthorizedUser)
+    }
 }
 
 impl<'a> EndpointAuth {

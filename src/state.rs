@@ -131,12 +131,7 @@ impl State {
                 }
                 false => match headers.get("AUTHORIZATION") {
                     Some(header) => lock.authorize(header)?,
-                    None => match endpoint.lock {
-                        Some(EndpointAuth::digest(_)) => {
-                            return Err(ProximaError::UnauthorizedDigestUser)
-                        }
-                        _ => return Err(ProximaError::UnauthorizedUser),
-                    },
+                    None => return Err(ProximaError::UnauthorizedUser),
                 },
             }
         }

@@ -6,6 +6,6 @@ static_config:
         username: user
         password: testing
     lock:
-      basic:
+    - basic:
         username: user
         password: testing

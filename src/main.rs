@@ -218,7 +218,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let app = app.fallback(handler_404.into_service());
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
-    println!("Listening on {}", addr);
+    log::info!("\"Listening on {}\"", addr);
     axum::Server::bind(&addr)
         .serve(app.into_make_service_with_connect_info::<SocketAddr>())
         .await?;

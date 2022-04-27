@@ -11,6 +11,6 @@ static_config:
   local:
     url: http://localhost:8082
     lock:
-      digest:
+    - digest:
         username: user
         password: mypassword

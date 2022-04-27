@@ -13,7 +13,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use url::Url;
 
-use crate::auth::EndpointAuth;
+use crate::auth::{EndpointAuth, EndpointAuthArray};
 use crate::cache::Cache;
 use crate::error::Error as ProximaError;
 use crate::https::HttpsClient;
@@ -74,7 +74,7 @@ pub struct Endpoint {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub whitelist: Option<Whitelist>,
     #[serde(skip_serializing)]
-    pub lock: Option<EndpointAuth>,
+    pub lock: Option<EndpointAuthArray>,
 }
 
 impl<'a> Endpoint {
@@ -273,9 +273,9 @@ impl Config {
         let current_config_hash = Config::calculate_hash(&current_config);
 
         if current_config_hash != new_config_hash {
-            log::info!("Config has been updated");
+            log::info!("\"Config has been updated\"");
             log::debug!(
-                "Config has been changed, new {} vs old {}",
+                "\"Config has been changed, new {} vs old {}\"",
                 &new_config_hash,
                 &current_config_hash
             );
