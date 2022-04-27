@@ -4,7 +4,7 @@ use hyper::header::{HeaderValue, AUTHORIZATION};
 use hyper::{Body, HeaderMap, Uri};
 use serde::{Deserialize, Serialize};
 
-use crate::error::Error as RestError;
+use crate::error::Error as ProximaError;
 use crate::https::HttpsClient;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -39,7 +39,7 @@ pub struct BearerAuth {
 }
 
 impl<'a> EndpointAuth {
-    pub fn authorize(&self, header: &HeaderValue) -> Result<(), RestError> {
+    pub fn authorize(&self, header: &HeaderValue) -> Result<(), ProximaError> {
         metrics::increment_counter!("proxima_endpoint_authentication_total");
         match self {
             EndpointAuth::basic(auth) => {
@@ -47,7 +47,7 @@ impl<'a> EndpointAuth {
                     metrics::increment_counter!(
                         "proxima_endpoint_authentication_basic_failed_total"
                     );
-                    return Err(RestError::UnauthorizedUser);
+                    return Err(ProximaError::UnauthorizedUser);
                 }
             }
             EndpointAuth::bearer(auth) => {
@@ -55,7 +55,7 @@ impl<'a> EndpointAuth {
                     metrics::increment_counter!(
                         "proxima_endpoint_authentication_bearer_failed_total"
                     );
-                    return Err(RestError::UnauthorizedUser);
+                    return Err(ProximaError::UnauthorizedUser);
                 }
             }
             EndpointAuth::digest(auth) => {
@@ -64,7 +64,7 @@ impl<'a> EndpointAuth {
                         Ok(c) => c,
                         Err(e) => {
                             log::error!("Error converting client authorization header: {}", e);
-                            return Err(RestError::UnauthorizedDigestUser);
+                            return Err(ProximaError::UnauthorizedDigestUser);
                         }
                     };
 
@@ -80,7 +80,7 @@ impl<'a> EndpointAuth {
                     metrics::increment_counter!(
                         "proxima_endpoint_authentication_digest_failed_total"
                     );
-                    return Err(RestError::UnauthorizedDigestUser);
+                    return Err(ProximaError::UnauthorizedDigestUser);
                 }
             }
         }
@@ -91,7 +91,7 @@ impl<'a> EndpointAuth {
         &self,
         headers: &'a mut HeaderMap,
         uri: &Uri,
-    ) -> Result<&'a mut HeaderMap, RestError> {
+    ) -> Result<&'a mut HeaderMap, ProximaError> {
         match self {
             EndpointAuth::basic(auth) => {
                 log::debug!("Generating Basic auth headers");
@@ -100,7 +100,7 @@ impl<'a> EndpointAuth {
                     Ok(a) => a,
                     Err(e) => {
                         log::error!("{{\"error\":\"{}\"", e);
-                        return Err(RestError::BadUserPasswd);
+                        return Err(ProximaError::BadUserPasswd);
                     }
                 };
                 headers.insert(AUTHORIZATION, header_basic_auth);
@@ -113,7 +113,7 @@ impl<'a> EndpointAuth {
                     Ok(a) => a,
                     Err(e) => {
                         log::error!("{{\"error\":\"{}\"", e);
-                        return Err(RestError::BadToken);
+                        return Err(ProximaError::BadToken);
                     }
                 };
                 headers.insert(AUTHORIZATION, header_bearer_auth);
@@ -135,7 +135,7 @@ impl<'a> EndpointAuth {
                     Ok(s) => s,
                     Err(e) => {
                         log::error!("{{\"error\":\"{}\"", e);
-                        return Err(RestError::Hyper(e));
+                        return Err(ProximaError::Hyper(e));
                     }
                 };
 
@@ -174,7 +174,7 @@ impl<'a> EndpointAuth {
                     Ok(a) => a,
                     Err(e) => {
                         log::error!("{{\"error\":\"{}\"", e);
-                        return Err(RestError::BadToken);
+                        return Err(ProximaError::BadToken);
                     }
                 };
                 headers.insert(AUTHORIZATION, header_digest_auth);

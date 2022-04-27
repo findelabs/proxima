@@ -11,7 +11,7 @@ use std::error::Error;
 use crate::auth::{BasicAuth, EndpointAuth};
 use crate::config;
 use crate::config::{Config, Endpoint, Entry};
-use crate::error::Error as RestError;
+use crate::error::Error as ProximaError;
 use crate::https::{ClientBuilder, HttpsClient};
 use crate::path::ProxyPath;
 use crate::requests::ProxyRequest;
@@ -94,7 +94,7 @@ impl State {
         &mut self,
         endpoint: &Endpoint,
         method: &Method,
-    ) -> Result<(), RestError> {
+    ) -> Result<(), ProximaError> {
         // If endpoint has a method whitelock, verify
         if let Some(ref whitelist) = endpoint.whitelist {
             log::debug!("Found whitelist");
@@ -109,7 +109,7 @@ impl State {
                     }
                     false => {
                         log::info!("Blocked {} method", &method);
-                        return Err(RestError::Forbidden);
+                        return Err(ProximaError::Forbidden);
                     }
                 }
             }
@@ -121,7 +121,7 @@ impl State {
         &mut self,
         endpoint: &Endpoint,
         headers: &HeaderMap,
-    ) -> Result<(), RestError> {
+    ) -> Result<(), ProximaError> {
         // If endpoint is locked down, verify credentials
         if let Some(ref lock) = endpoint.lock {
             log::debug!("Endpoint is locked");
@@ -133,9 +133,9 @@ impl State {
                     Some(header) => lock.authorize(header)?,
                     None => match endpoint.lock {
                         Some(EndpointAuth::digest(_)) => {
-                            return Err(RestError::UnauthorizedDigestUser)
+                            return Err(ProximaError::UnauthorizedDigestUser)
                         }
-                        _ => return Err(RestError::UnauthorizedUser),
+                        _ => return Err(ProximaError::UnauthorizedUser),
                     },
                 },
             }
@@ -150,7 +150,7 @@ impl State {
         query: Option<String>,
         request_headers: HeaderMap,
         payload: Option<BodyStream>,
-    ) -> Result<Response<Body>, RestError> {
+    ) -> Result<Response<Body>, ProximaError> {
         let (config_entry, path) = match self.config.get(path.clone()).await {
             // If we receive an entry, forward request.
             // If we receive a ConfigMap, return as json to client

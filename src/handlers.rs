@@ -15,7 +15,7 @@ use serde_json::{json, Value};
 use std::convert::Infallible;
 use std::net::SocketAddr;
 
-use crate::error::Error as RestError;
+use crate::error::Error as ProximaError;
 use crate::path::ProxyPath;
 use crate::State;
 
@@ -38,7 +38,7 @@ where
 
 pub async fn metrics(
     Extension(recorder_handle): Extension<PrometheusHandle>,
-) -> Result<String, RestError> {
+) -> Result<String, ProximaError> {
     log::info!("{{\"fn\": \"metrics\", \"method\":\"get\"}}");
     Ok(recorder_handle.render())
 }
@@ -51,7 +51,7 @@ pub async fn proxy(
     all_headers: HeaderMap,
     RawQuery(query): RawQuery,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
-) -> Result<Response<Body>, RestError> {
+) -> Result<Response<Body>, ProximaError> {
     log::info!(
         "{{\"fn\": \"proxy\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"{}\", \"query\": \"{}\"}}",
         &method.as_str(),

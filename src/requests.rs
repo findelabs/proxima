@@ -6,7 +6,7 @@ use hyper::{Body, HeaderMap, Method};
 use std::time::Duration;
 
 use crate::config::Endpoint;
-use crate::error::Error as RestError;
+use crate::error::Error as ProximaError;
 use crate::https::HttpsClient;
 use crate::path::ProxyPath;
 use crate::urls::Urls;
@@ -29,7 +29,7 @@ impl ProxyRequest {
         mut self,
         url: String,
         queries: Option<String>,
-    ) -> Result<Response<Body>, RestError> {
+    ) -> Result<Response<Body>, ProximaError> {
         let host_and_path = format!(
             "{}{}{}",
             url,
@@ -40,7 +40,7 @@ impl ProxyRequest {
             Ok(u) => u,
             Err(e) => {
                 log::error!("{{\"error\": \"{}\"}}", e);
-                return Err(RestError::UnparseableUrl);
+                return Err(ProximaError::UnparseableUrl);
             }
         };
 
@@ -82,14 +82,14 @@ impl ProxyRequest {
                 Ok(response) => Ok(response),
                 Err(e) => {
                     log::error!("{{\"error\":\"{}\"", e);
-                    Err(RestError::Connection)
+                    Err(ProximaError::Connection)
                 }
             },
-            Err(_) => Err(RestError::ConnectionTimeout),
+            Err(_) => Err(ProximaError::ConnectionTimeout),
         }
     }
 
-    pub async fn go(self) -> Result<Response<Body>, RestError> {
+    pub async fn go(self) -> Result<Response<Body>, ProximaError> {
         // Prepare queries for appending
         let queries = self.query.as_ref().map(|q| format!("?{}", q));
 

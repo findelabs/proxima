@@ -15,7 +15,7 @@ use url::Url;
 
 use crate::auth::EndpointAuth;
 use crate::cache::Cache;
-use crate::error::Error as RestError;
+use crate::error::Error as ProximaError;
 use crate::https::HttpsClient;
 use crate::path::ProxyPath;
 use crate::urls::Urls;
@@ -150,10 +150,10 @@ impl Config {
         &self,
         map: ConfigMap,
         path: ProxyPath,
-    ) -> Result<(Entry, ProxyPath), RestError> {
+    ) -> Result<(Entry, ProxyPath), ProximaError> {
         let prefix = match path.prefix() {
             Some(pref) => pref,
-            None => return Err(RestError::UnknownEndpoint),
+            None => return Err(ProximaError::UnknownEndpoint),
         };
 
         log::debug!(
@@ -211,15 +211,15 @@ impl Config {
                     }
                 }
             }
-            None => Err(RestError::UnknownEndpoint),
+            None => Err(ProximaError::UnknownEndpoint),
         }
     }
 
-    pub async fn get(&mut self, path: ProxyPath) -> Result<(Entry, ProxyPath), RestError> {
+    pub async fn get(&mut self, path: ProxyPath) -> Result<(Entry, ProxyPath), ProximaError> {
         self.renew().await;
         let proxy_path = match path.path() {
             Some(p) => p,
-            None => return Err(RestError::UnknownEndpoint),
+            None => return Err(ProximaError::UnknownEndpoint),
         };
 
         log::debug!("Searching for entry {} in cache", &proxy_path);
@@ -301,7 +301,7 @@ impl Config {
         &self,
         remote: Option<Url>,
         config_authentication: Option<EndpointAuth>,
-    ) -> Result<ConfigFile, RestError> {
+    ) -> Result<ConfigFile, ProximaError> {
         let location = match remote {
             Some(url) => url.to_string(),
             None => self.location.clone(),
@@ -333,15 +333,15 @@ impl Config {
                     Ok(s) => s,
                     Err(e) => {
                         log::error!("{{\"error\":\"{}\"", e);
-                        return Err(RestError::Hyper(e));
+                        return Err(ProximaError::Hyper(e));
                     }
                 };
 
                 // Error if status code is not 200
                 match response.status().as_u16() {
-                    404 => Err(RestError::NotFound),
-                    403 => Err(RestError::Forbidden),
-                    401 => Err(RestError::Unauthorized),
+                    404 => Err(ProximaError::NotFound),
+                    403 => Err(ProximaError::Forbidden),
+                    401 => Err(ProximaError::Unauthorized),
                     200 => {
                         let contents = hyper::body::to_bytes(response.into_body()).await?;
                         let body = serde_json::from_slice(&contents)?;
@@ -352,7 +352,7 @@ impl Config {
                             "Got bad status code getting config: {}",
                             response.status().as_u16()
                         );
-                        Err(RestError::Unknown)
+                        Err(ProximaError::Unknown)
                     }
                 }
             }
