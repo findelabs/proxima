@@ -31,7 +31,6 @@ use handlers::{
     clear_cache, config, echo, get_cache, handler_404, health, help, metrics, proxy, reload,
     remove_cache, root,
 };
-use https::create_https_client;
 use state::State;
 
 #[tokio::main]
@@ -122,6 +121,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .long("reuse_address")
                 .required(false)
                 .help("Enable socket reuse")
+                .takes_value(false),
+        )
+        .arg(
+            Arg::with_name("accept_invalid_hostnames")
+                .long("accept_invalid_hostnames")
+                .required(false)
+                .help("Accept invalid remote hostnames")
+                .takes_value(false),
+        )
+        .arg(
+            Arg::with_name("accept_invalid_certs")
+                .long("accept_invalid_certs")
+                .required(false)
+                .help("Accept invalid remote certificates")
                 .takes_value(false),
         )
         .get_matches();

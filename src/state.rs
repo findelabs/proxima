@@ -11,9 +11,8 @@ use std::error::Error;
 use crate::auth::{BasicAuth, EndpointAuth};
 use crate::config;
 use crate::config::{Config, Endpoint, Entry};
-use crate::create_https_client;
 use crate::error::Error as RestError;
-use crate::https::HttpsClient;
+use crate::https::{ClientBuilder, HttpsClient};
 use crate::path::ProxyPath;
 use crate::requests::ProxyRequest;
 
@@ -50,12 +49,15 @@ impl State {
             None => None,
         };
 
-        let client = create_https_client(
-            timeout,
-            opts.is_present("nodelay"),
-            opts.is_present("enforce_http"),
-            opts.is_present("set_reuse_address"),
-        )?;
+        let client = ClientBuilder::new()
+            .timeout(timeout)
+            .nodelay(opts.is_present("nodelay"))
+            .enforce_http(opts.is_present("enforce_http"))
+            .reuse_address(opts.is_present("set_reuse_address"))
+            .accept_invalid_hostnames(opts.is_present("accept_invalid_hostnames"))
+            .accept_invalid_certs(opts.is_present("accept_invalid_certs"))
+            .build()?;
+
         let config_location = opts.value_of("config").unwrap().to_owned();
         let mut config = config::Config::new(
             &config_location,

@@ -14,7 +14,6 @@ pub struct ProxyPath {
 
 impl ProxyPath {
     pub fn new(path: &str) -> ProxyPath {
-
         // Create String so that we can manipulate it
         let mut path = path.to_string();
 

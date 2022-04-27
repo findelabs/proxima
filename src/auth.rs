@@ -1,4 +1,3 @@
-use crate::create_https_client;
 use axum::http::Request;
 use digest_auth::{AuthContext, AuthorizationHeader};
 use hyper::header::{HeaderValue, AUTHORIZATION};
@@ -6,6 +5,7 @@ use hyper::{Body, HeaderMap, Uri};
 use serde::{Deserialize, Serialize};
 
 use crate::error::Error as RestError;
+use crate::https::HttpsClient;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[warn(non_camel_case_types)]
@@ -128,7 +128,7 @@ impl<'a> EndpointAuth {
                     .body(Body::empty())
                     .expect("request builder");
 
-                let client = create_https_client(60u64, false, false, false).unwrap();
+                let client = HttpsClient::default();
 
                 // Send initial request
                 let response = match client.request(req).await {

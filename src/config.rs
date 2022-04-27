@@ -15,7 +15,6 @@ use url::Url;
 
 use crate::auth::EndpointAuth;
 use crate::cache::Cache;
-use crate::create_https_client;
 use crate::error::Error as RestError;
 use crate::https::HttpsClient;
 use crate::path::ProxyPath;
@@ -142,7 +141,7 @@ impl Config {
             last_read: Arc::new(RwLock::new(i64::default())),
             hash: Arc::new(RwLock::new(u64::default())),
             cache: Cache::default(),
-            client: create_https_client(60u64, false, false, false).unwrap(),
+            client: HttpsClient::default(),
         }
     }
 
