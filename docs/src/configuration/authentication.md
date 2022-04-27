@@ -7,7 +7,7 @@ Proxima can both connect to remote endpoints using the following authentication 
 
 ### Client Authentication
 
-If you would like to require that all incoming clients to Proxima authentication with Basic creds, simply create a new lock block within the endpoint yaml:
+If you would like to require that all incoming clients to Proxima authentication with Basic creds, simply create a new lock block within the endpoint yaml. Plese keep in mind that this lock map will not appear when listing the config via the Proxima REST API:
 
 ```yaml
 static_config:
