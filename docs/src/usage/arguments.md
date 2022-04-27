@@ -22,6 +22,12 @@ Enable socket nodelay with `--nodelay`, read about this [here](https://access.re
 #### --reuse_address
 Proxima will reuse socket if possible when `--reuse_address` is specified.
 
+#### --accept_invalid_hostnames
+Ignore hostnames that do not match the request
+
+#### --accept_invalid_certs
+Accept certs that are not valid on remote servers
+
 #### --version
 Print Proxima version with `--version` or `-v`
 
