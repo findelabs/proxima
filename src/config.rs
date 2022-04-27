@@ -16,7 +16,7 @@ use url::Url;
 use crate::auth::{EndpointAuth, EndpointAuthArray};
 use crate::cache::Cache;
 use crate::error::Error as ProximaError;
-use crate::https::HttpsClient;
+use crate::https::{ClientBuilder, HttpsClient};
 use crate::path::ProxyPath;
 use crate::urls::Urls;
 
@@ -141,7 +141,7 @@ impl Config {
             last_read: Arc::new(RwLock::new(i64::default())),
             hash: Arc::new(RwLock::new(u64::default())),
             cache: Cache::default(),
-            client: HttpsClient::default(),
+            client: ClientBuilder::new().accept_invalid_certs(true).build().unwrap(),
         }
     }
 
