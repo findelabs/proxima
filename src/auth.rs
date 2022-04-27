@@ -5,7 +5,7 @@ use hyper::{Body, HeaderMap, Uri};
 use serde::{Deserialize, Serialize};
 
 use crate::error::Error as ProximaError;
-use crate::https::HttpsClient;
+use crate::https::ClientBuilder;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[warn(non_camel_case_types)]
@@ -146,7 +146,7 @@ impl<'a> EndpointAuth {
                     .body(Body::empty())
                     .expect("request builder");
 
-                let client = HttpsClient::default();
+                let client = ClientBuilder::new().accept_invalid_certs(true).build().unwrap();
 
                 // Send initial request
                 let response = match client.request(req).await {
