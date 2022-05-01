@@ -1,9 +1,13 @@
 # Authentication
 
-Proxima can both connect to remote endpoints using the following authentication methods, and authenticate client connections to Proxima in order to verify user identities:
+Proxima can both connect to remote endpoints using the following authentication methods:
+
 - Basic  
 - Bearer  
 - Digest
+
+Proxima can authenticate users using all authentication methods listed above, but it can also authenticate users JWT's as well using JWTS. This authentication can be specified with `jwts`.
+
 
 ### Client Authentication
 
@@ -22,7 +26,7 @@ static_config:
         password: mypasswordtwo
 ```
 
-### Remote URL Authentication
+### Remote Server Authentication
 
 If a remote endpoint requires authentication, for example Basic, simply specify a new authentication block within the endpoint yaml:
 
