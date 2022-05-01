@@ -8,7 +8,7 @@ use serde_json::json;
 use serde_json::Value;
 use std::error::Error;
 
-use crate::auth::{BasicAuth, EndpointAuth};
+use crate::auth::{auth::BasicAuth, server::ServerAuth};
 use crate::config;
 use crate::config::{Config, Endpoint, Entry};
 use crate::error::Error as ProximaError;
@@ -40,7 +40,7 @@ impl State {
             Some(config_username) => {
                 log::debug!("Generating Basic auth for config endpoint");
                 let config_password = opts.value_of("config_password").unwrap();
-                let basic_auth = EndpointAuth::basic(BasicAuth {
+                let basic_auth = ServerAuth::basic(BasicAuth {
                     username: config_username.to_string(),
                     password: config_password.to_string(),
                 });

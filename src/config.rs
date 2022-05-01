@@ -13,7 +13,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use url::Url;
 
-use crate::auth::{EndpointAuth, EndpointAuthArray};
+use crate::auth::{client::ClientAuthList, server::ServerAuth};
 use crate::cache::Cache;
 use crate::error::Error as ProximaError;
 use crate::https::{ClientBuilder, HttpsClient};
@@ -33,7 +33,7 @@ pub struct Config {
     pub config_file: Arc<RwLock<ConfigFile>>,
     pub location: String,
     pub global_authentication: bool,
-    pub config_authentication: Option<EndpointAuth>,
+    pub config_authentication: Option<ServerAuth>,
     pub last_read: Arc<RwLock<i64>>,
     pub hash: Arc<RwLock<u64>>,
     pub cache: Cache,
@@ -56,7 +56,7 @@ pub enum Entry {
 pub struct HttpConfig {
     pub remote: Url,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub authentication: Option<EndpointAuth>,
+    pub authentication: Option<ServerAuth>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -68,13 +68,13 @@ pub struct Whitelist {
 pub struct Endpoint {
     pub url: Urls,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub authentication: Option<EndpointAuth>,
+    pub authentication: Option<ServerAuth>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timeout: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub whitelist: Option<Whitelist>,
     #[serde(skip_serializing)]
-    pub lock: Option<EndpointAuthArray>,
+    pub lock: Option<ClientAuthList>,
 }
 
 impl<'a> Endpoint {
@@ -128,7 +128,7 @@ impl Config {
 
     pub fn new(
         location: &str,
-        config_authentication: Option<EndpointAuth>,
+        config_authentication: Option<ServerAuth>,
         global_authentication: bool,
     ) -> Config {
         Config {
@@ -141,7 +141,10 @@ impl Config {
             last_read: Arc::new(RwLock::new(i64::default())),
             hash: Arc::new(RwLock::new(u64::default())),
             cache: Cache::default(),
-            client: ClientBuilder::new().accept_invalid_certs(true).build().unwrap(),
+            client: ClientBuilder::new()
+                .accept_invalid_certs(true)
+                .build()
+                .unwrap(),
         }
     }
 
@@ -300,7 +303,7 @@ impl Config {
     pub async fn parse(
         &self,
         remote: Option<Url>,
-        config_authentication: Option<EndpointAuth>,
+        config_authentication: Option<ServerAuth>,
     ) -> Result<ConfigFile, ProximaError> {
         let location = match remote {
             Some(url) => url.to_string(),

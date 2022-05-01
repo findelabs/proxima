@@ -22,11 +22,13 @@ pub enum Error {
     UnauthorizedUser,
     UnauthorizedDigestUser,
     ConnectionTimeout,
+    JwtDecode,
     Hyper(hyper::Error),
     SerdeJson(serde_json::Error),
     SerdeYaml(serde_yaml::Error),
     File(std::io::Error),
     InvalidUri(hyper::http::uri::InvalidUri),
+    Jwt(jsonwebtoken::errors::Error),
 }
 
 impl std::error::Error for Error {}
@@ -48,11 +50,13 @@ impl fmt::Display for Error {
             Error::UnauthorizedUser => f.write_str("{\"error\": \"Unauthorized\"}"),
             Error::UnauthorizedDigestUser => f.write_str("{\"error\": \"Unauthorized\"}"),
             Error::ConnectionTimeout => f.write_str("{\"error\": \"Connection timeout\"}"),
+            Error::JwtDecode => f.write_str("{\"error\": \"Unable to decode JWT\"}"),
             Error::Hyper(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::SerdeJson(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::SerdeYaml(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::File(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
-            Error::InvalidUri(ref err) => write!(f, "{{\"error\": \"{}\"}}", err)
+            Error::InvalidUri(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
+            Error::Jwt(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
         }
     }
 }
@@ -116,5 +120,11 @@ impl From<std::io::Error> for Error {
 impl From<hyper::http::uri::InvalidUri> for Error {
     fn from(err: hyper::http::uri::InvalidUri) -> Error {
         Error::InvalidUri(err)
+    }
+}
+
+impl From<jsonwebtoken::errors::Error> for Error {
+    fn from(err: jsonwebtoken::errors::Error) -> Error {
+        Error::Jwt(err)
     }
 }
