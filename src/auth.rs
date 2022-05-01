@@ -3,6 +3,15 @@ use digest_auth::{AuthContext, AuthorizationHeader};
 use hyper::header::{HeaderValue, AUTHORIZATION};
 use hyper::{Body, HeaderMap, Uri};
 use serde::{Deserialize, Serialize};
+use jsonwebtoken::jwk::AlgorithmParameters;
+use jsonwebtoken::{decode, decode_header, jwk, DecodingKey, Validation};
+use url::Url;
+use std::sync::{Arc, Mutex};
+use serde_json::Value;
+use async_recursion::async_recursion;
+use crate::https::HttpsClient;
+use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 
 use crate::error::Error as ProximaError;
 use crate::https::ClientBuilder;
@@ -16,6 +25,8 @@ pub enum EndpointAuth {
     bearer(BearerAuth),
     #[allow(non_camel_case_types)]
     digest(DigestAuth),
+    #[allow(non_camel_case_types)]
+    jwks(JwksAuth),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -41,12 +52,40 @@ pub struct BearerAuth {
     pub token: String,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[warn(non_camel_case_types)]
+pub struct JwksAuth {
+    url: Url,
+    audience: String,
+    scopes: Vec<String>,
+    #[serde(default)]
+    #[serde(skip_serializing)]
+    jwks: Arc<Mutex<Value>>,
+    #[serde(default)]
+    #[serde(skip_serializing)]
+    #[serde(skip_deserializing)]
+    client: HttpsClient,
+    #[serde(default)]
+    validate_audience: bool,
+    #[serde(default)]
+    validate_expiration: bool,
+    #[serde(default)]
+    validate_scopes: bool
+}
+
+impl Hash for JwksAuth {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.url.hash(state);
+        self.audience.hash(state);
+    }
+}
+
 impl EndpointAuthArray {
-    pub fn authorize(&self, header: &HeaderValue) -> Result<(), ProximaError> {
+    pub async fn authorize(&self, header: &HeaderValue) -> Result<(), ProximaError> {
         let Self(internal) = self;
         for user in internal.iter() {
             log::debug!("\"Checking if client auth against {:?}\"", user);
-            match user.authorize(header) {
+            match user.authorize(header).await {
                 Ok(_) => return Ok(()),
                 Err(_) => continue,
             }
@@ -57,7 +96,7 @@ impl EndpointAuthArray {
 }
 
 impl<'a> EndpointAuth {
-    pub fn authorize(&self, header: &HeaderValue) -> Result<(), ProximaError> {
+    pub async fn authorize(&self, header: &HeaderValue) -> Result<(), ProximaError> {
         metrics::increment_counter!("proxima_endpoint_authentication_total");
         match self {
             EndpointAuth::basic(auth) => {
@@ -99,6 +138,16 @@ impl<'a> EndpointAuth {
                         "proxima_endpoint_authentication_digest_failed_total"
                     );
                     return Err(ProximaError::UnauthorizedDigestUser);
+                }
+            }
+            EndpointAuth::jwks(auth) => {
+                let authorize = header.to_str().expect("Cannot convert header to string");
+                let token: Vec<&str> = authorize.split(" ").collect();
+                if let Err(_) = auth.validate(token[1]).await {
+                    metrics::increment_counter!(
+                        "proxima_endpoint_authentication_bearer_failed_total"
+                    );
+                    return Err(ProximaError::UnauthorizedUser)
                 }
             }
         }
@@ -198,6 +247,19 @@ impl<'a> EndpointAuth {
                 headers.insert(AUTHORIZATION, header_digest_auth);
                 Ok(headers)
             }
+            EndpointAuth::jwks(_auth) => {
+                log::debug!("Jwts is not currently usable for remote url auth");
+                let auth = format!("Bearer xxxxxxx");
+                let header_auth = match HeaderValue::from_str(&auth) {
+                    Ok(a) => a,
+                    Err(e) => {
+                        log::error!("{{\"error\":\"{}\"", e);
+                        return Err(ProximaError::BadToken);
+                    }
+                };
+                headers.insert(AUTHORIZATION, header_auth);
+                Ok(headers)
+            }
         }
     }
 }
@@ -226,5 +288,98 @@ impl BasicAuth {
         let basic_auth = format!("Basic {}", encoded);
         log::debug!("Using {}", &basic_auth);
         basic_auth
+    }
+}
+
+impl JwksAuth {
+    pub async fn get_keys(&self) -> Result<(), ProximaError> {
+        let uri = Uri::try_from(self.url.to_string())?;
+
+        let req = Request::builder()
+            .method("GET")
+            .uri(uri)
+            .body(Body::empty())
+            .expect("request builder");
+
+        let response = self.client.request(req).await?;
+
+        let body = match response.status().as_u16() {
+            200 => {
+                let contents = hyper::body::to_bytes(response.into_body()).await?;
+                let string: Value  = serde_json::from_slice(&contents)?;
+                string
+            }
+            _ => {
+                println!(
+                    "Got bad status code getting config: {}",
+                    response.status().as_u16()
+                );
+                return Err(ProximaError::Unknown)
+            }
+        };
+
+        let mut jwks = self.jwks.lock().unwrap();
+        *jwks = body;
+
+        Ok(())
+    }
+
+    #[async_recursion]
+    pub async fn keys(&self) -> Result<jwk::JwkSet, ProximaError> {
+        let jwks = self.jwks.lock().unwrap().clone();
+        match jwks {
+            Value::Null => {
+                println!("Getting keys");
+                self.get_keys().await?;
+                self.keys().await
+            },
+            _ => {
+                println!("Returning known keys");
+                let j: jwk::JwkSet = serde_json::from_value(jwks)?;
+                Ok(j)
+            }
+        }
+    }
+
+    pub async fn validate(&self, token: &str) -> Result<(), Box<dyn std::error::Error>> {
+        let jwks = self.keys().await?;
+        let header = decode_header(&token)?;
+        let kid = match header.kid {
+            Some(k) => k,
+            None => return Err("Token doesn't have a `kid` header field".into()),
+        };
+
+        if let Some(j) = jwks.find(&kid) {
+            match j.algorithm {
+                AlgorithmParameters::RSA(ref rsa) => {
+                    let decoding_key = DecodingKey::from_rsa_components(&rsa.n, &rsa.e).expect("Unable to generate decoding key");
+                    let algo = j.common.algorithm.expect("missing algorithm");
+                    let mut validation = Validation::new(algo);
+
+                    // Ensure token is not expired
+                    if self.validate_expiration {
+                        println!("Will validate expiration");
+                        validation.validate_exp = true;
+                    }
+
+                    // Ensure token is not born yet
+                    validation.validate_nbf = true;
+
+                    // Validate audience
+                    if self.validate_audience {
+                        println!("Will validate audience");
+                        validation.set_audience(&vec!(&self.audience));
+                    }
+
+                    let decoded_token =
+                        decode::<HashMap<String, serde_json::Value>>(&token, &decoding_key, &validation)?;
+                    println!("{:?}", decoded_token);
+                    Ok(())
+                }
+                _ => unreachable!("this should be a RSA"),
+            }
+        } else {
+            return Err("No matching JWK found for the given kid".into());
+        }
     }
 }

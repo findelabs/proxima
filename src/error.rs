@@ -26,6 +26,7 @@ pub enum Error {
     SerdeJson(serde_json::Error),
     SerdeYaml(serde_yaml::Error),
     File(std::io::Error),
+    InvalidUri(hyper::http::uri::InvalidUri),
 }
 
 impl std::error::Error for Error {}
@@ -51,6 +52,7 @@ impl fmt::Display for Error {
             Error::SerdeJson(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::SerdeYaml(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::File(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
+            Error::InvalidUri(ref err) => write!(f, "{{\"error\": \"{}\"}}", err)
         }
     }
 }
@@ -108,5 +110,11 @@ impl From<serde_yaml::Error> for Error {
 impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Error {
         Error::File(err)
+    }
+}
+
+impl From<hyper::http::uri::InvalidUri> for Error {
+    fn from(err: hyper::http::uri::InvalidUri) -> Error {
+        Error::InvalidUri(err)
     }
 }

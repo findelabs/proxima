@@ -130,7 +130,7 @@ impl State {
                     log::info!("Endpoint is locked, but proxima is using global authentication");
                 }
                 false => match headers.get("AUTHORIZATION") {
-                    Some(header) => lock.authorize(header)?,
+                    Some(header) => lock.authorize(header).await?,
                     None => return Err(ProximaError::UnauthorizedUser),
                 },
             }
