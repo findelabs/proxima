@@ -43,7 +43,7 @@ impl Default for ClientConfig {
             enforce_http: false,
             set_reuse_address: false,
             accept_invalid_hostnames: false,
-            accept_invalid_certs: false,
+            accept_invalid_certs: true,
         }
     }
 }
