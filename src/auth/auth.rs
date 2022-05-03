@@ -14,6 +14,8 @@ use url::Url;
 
 use crate::error::Error as ProximaError;
 
+const VALIDATE_DEFAULT: bool = true;
+
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct BasicAuth {
     pub username: String,
@@ -39,7 +41,7 @@ pub struct BearerAuth {
 pub struct JwksAuth {
     url: Url,
     audience: String,
-    scopes: Vec<String>,
+    scopes: Option<Vec<String>>,
     #[serde(default)]
     #[serde(skip_serializing)]
     jwks: Arc<Mutex<Value>>,
@@ -47,16 +49,20 @@ pub struct JwksAuth {
     #[serde(skip_serializing)]
     #[serde(skip_deserializing)]
     client: HttpsClient,
-    #[serde(default)]
+    #[serde(default = "validate_default")]
     validate_audience: bool,
-    #[serde(default)]
+    #[serde(default = "validate_default")]
     validate_expiration: bool,
-    #[serde(default)]
+    #[serde(default = "validate_default")]
     validate_scopes: bool,
     #[serde(default)]
     #[serde(skip_serializing)]
     #[serde(skip_deserializing)]
     last_read: Arc<Mutex<i64>>,
+}
+
+fn validate_default() -> bool {
+    VALIDATE_DEFAULT
 }
 
 impl Hash for JwksAuth {
@@ -217,9 +223,35 @@ impl JwksAuth {
                         &validation,
                     )?;
                     log::debug!("{:?}", decoded_token);
+
+                    if self.scopes.is_some() && self.validate_scopes {
+                        let scp = match decoded_token.claims.get("scp") {
+                            Some(scopes) => {
+                                let vec_values =
+                                    scopes.as_array().expect("Unable to convert to array");
+                                let vec_string = vec_values
+                                    .iter()
+                                    .map(|s| s.to_string().replace('"', ""))
+                                    .collect();
+                                vec_string
+                            }
+                            None => Vec::new(),
+                        };
+
+                        // Ensure that all required scopes are contained with the JWT.scp field
+                        for scope in self.scopes.as_ref().unwrap().iter() {
+                            if !scp.contains(scope) {
+                                log::error!(
+                                    "\"Blocking client as JWT.scp does not contain {}\"",
+                                    scope
+                                );
+                                return Err(ProximaError::UnauthorizedUser);
+                            }
+                        }
+                    }
                     Ok(())
                 }
-                _ => unreachable!("this should be a RSA"),
+                _ => Err(ProximaError::JwtDecode),
             }
         } else {
             log::error!("\"No matching JWK found for the given kid\"");
