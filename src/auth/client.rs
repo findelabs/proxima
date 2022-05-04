@@ -1,5 +1,6 @@
 use digest_auth::{AuthContext, AuthorizationHeader};
 use hyper::header::HeaderValue;
+use hyper::Method;
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 
@@ -23,11 +24,16 @@ pub enum ClientAuth {
 pub struct ClientAuthList(Vec<ClientAuth>);
 
 impl ClientAuthList {
-    pub async fn authorize(&self, header: &HeaderValue) -> Result<(), ProximaError> {
+    pub async fn authorize(
+        &self,
+        header: &HeaderValue,
+        method: &Method,
+    ) -> Result<(), ProximaError> {
+        log::debug!("ClientAuthList::authorize looping over users");
         let Self(internal) = self;
         for user in internal.iter() {
             log::debug!("\"Checking if client auth against {:?}\"", user);
-            match user.authorize(header).await {
+            match user.authorize(header, method).await {
                 Ok(_) => return Ok(()),
                 Err(_) => continue,
             }
@@ -38,10 +44,18 @@ impl ClientAuthList {
 }
 
 impl<'a> ClientAuth {
-    pub async fn authorize(&self, header: &HeaderValue) -> Result<(), ProximaError> {
+    pub async fn authorize(
+        &self,
+        header: &HeaderValue,
+        method: &Method,
+    ) -> Result<(), ProximaError> {
         metrics::increment_counter!("proxima_endpoint_authentication_total");
         match self {
             ClientAuth::basic(auth) => {
+                if let Some(ref whitelist) = auth.whitelist {
+                    log::debug!("Found whitelist");
+                    whitelist.authorize(method)?
+                }
                 if HeaderValue::from_str(&auth.basic()).unwrap() != header {
                     metrics::increment_counter!(
                         "proxima_endpoint_authentication_basic_failed_total"
@@ -50,6 +64,10 @@ impl<'a> ClientAuth {
                 }
             }
             ClientAuth::bearer(auth) => {
+                if let Some(ref whitelist) = auth.whitelist {
+                    log::debug!("Found whitelist");
+                    whitelist.authorize(method)?
+                }
                 if HeaderValue::from_str(&auth.token()).unwrap() != header {
                     metrics::increment_counter!(
                         "proxima_endpoint_authentication_bearer_failed_total"
@@ -58,6 +76,10 @@ impl<'a> ClientAuth {
                 }
             }
             ClientAuth::digest(auth) => {
+                if let Some(ref whitelist) = auth.whitelist {
+                    log::debug!("Found whitelist");
+                    whitelist.authorize(method)?
+                }
                 let client_authorization_header =
                     match AuthorizationHeader::parse(header.to_str().unwrap()) {
                         Ok(c) => c,
@@ -83,6 +105,10 @@ impl<'a> ClientAuth {
                 }
             }
             ClientAuth::jwks(auth) => {
+                if let Some(ref whitelist) = auth.whitelist {
+                    log::debug!("Found whitelist");
+                    whitelist.authorize(method)?
+                }
                 let authorize = header.to_str().expect("Cannot convert header to string");
                 let token: Vec<&str> = authorize.split(' ').collect();
                 if (auth.validate(token[1]).await).is_err() {

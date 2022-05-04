@@ -12,6 +12,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use url::Url;
 
+use crate::config::Whitelist;
 use crate::error::Error as ProximaError;
 
 const VALIDATE_DEFAULT: bool = true;
@@ -21,6 +22,8 @@ pub struct BasicAuth {
     pub username: String,
     #[serde(skip_serializing)]
     pub password: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub whitelist: Option<Whitelist>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -28,12 +31,16 @@ pub struct DigestAuth {
     pub username: String,
     #[serde(skip_serializing)]
     pub password: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub whitelist: Option<Whitelist>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct BearerAuth {
     #[serde(skip_serializing)]
     pub token: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub whitelist: Option<Whitelist>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -59,6 +66,8 @@ pub struct JwksAuth {
     #[serde(skip_serializing)]
     #[serde(skip_deserializing)]
     last_read: Arc<Mutex<i64>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub whitelist: Option<Whitelist>,
 }
 
 fn validate_default() -> bool {

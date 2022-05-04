@@ -1,7 +1,7 @@
 use async_recursion::async_recursion;
 use axum::http::Request;
 use chrono::Utc;
-use hyper::{Body, Uri};
+use hyper::{Body, Method, Uri};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use std::collections::hash_map::DefaultHasher;
@@ -65,16 +65,52 @@ pub struct Whitelist {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+pub struct Security {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub whitelist: Option<Whitelist>,
+    #[serde(skip_serializing)]
+    pub client: Option<ClientAuthList>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 pub struct Endpoint {
     pub url: Urls,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authentication: Option<ServerAuth>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub timeout: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub whitelist: Option<Whitelist>,
-    #[serde(skip_serializing)]
-    pub lock: Option<ClientAuthList>,
+    #[serde(skip_serializing_if = "display_security")]
+    pub security: Option<Security>,
+}
+
+fn display_security(item: &Option<Security>) -> bool {
+    if let Some(security) = item {
+        if security.whitelist.is_some() {
+            false
+        } else {
+            true
+        }
+    } else {
+        true
+    }
+}
+
+impl Whitelist {
+    pub fn authorize(&self, method: &Method) -> Result<(), ProximaError> {
+        if let Some(ref methods) = self.methods {
+            log::debug!("The method whitelist allows: {:?}", methods);
+            match methods.contains(&method.to_string()) {
+                true => {
+                    log::debug!("{} is in whitelist", method);
+                }
+                false => {
+                    log::info!("Blocked {} method", method);
+                    return Err(ProximaError::Forbidden);
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 impl<'a> Endpoint {

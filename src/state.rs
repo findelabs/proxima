@@ -43,6 +43,7 @@ impl State {
                 let basic_auth = ServerAuth::basic(BasicAuth {
                     username: config_username.to_string(),
                     password: config_password.to_string(),
+                    whitelist: None,
                 });
                 Some(basic_auth)
             }
@@ -96,22 +97,10 @@ impl State {
         method: &Method,
     ) -> Result<(), ProximaError> {
         // If endpoint has a method whitelock, verify
-        if let Some(ref whitelist) = endpoint.whitelist {
-            log::debug!("Found whitelist");
-            if let Some(ref methods) = whitelist.methods {
-                log::debug!(
-                    "Endpoint is configured with a method whitelist that allows: {:?}",
-                    whitelist.methods
-                );
-                match methods.contains(&method.to_string()) {
-                    true => {
-                        log::debug!("{} is in whitelist", &method);
-                    }
-                    false => {
-                        log::info!("Blocked {} method", &method);
-                        return Err(ProximaError::Forbidden);
-                    }
-                }
+        if let Some(ref security) = endpoint.security {
+            if let Some(ref whitelist) = security.whitelist {
+                log::debug!("Found whitelist");
+                whitelist.authorize(method)?
             }
         }
         Ok(())
@@ -121,18 +110,23 @@ impl State {
         &mut self,
         endpoint: &Endpoint,
         headers: &HeaderMap,
+        method: &Method,
     ) -> Result<(), ProximaError> {
         // If endpoint is locked down, verify credentials
-        if let Some(ref lock) = endpoint.lock {
-            log::debug!("Endpoint is locked");
-            match self.config.global_authentication {
-                true => {
-                    log::info!("Endpoint is locked, but proxima is using global authentication");
+        if let Some(ref security) = endpoint.security {
+            if let Some(ref client) = security.client {
+                log::debug!("Endpoint is locked");
+                match self.config.global_authentication {
+                    true => {
+                        log::info!(
+                            "Endpoint is locked, but proxima is using global authentication"
+                        );
+                    }
+                    false => match headers.get("AUTHORIZATION") {
+                        Some(header) => client.authorize(header, method).await?,
+                        None => return Err(ProximaError::UnauthorizedUser),
+                    },
                 }
-                false => match headers.get("AUTHORIZATION") {
-                    Some(header) => lock.authorize(header).await?,
-                    None => return Err(ProximaError::UnauthorizedUser),
-                },
             }
         }
         Ok(())
@@ -179,7 +173,7 @@ impl State {
         };
 
         // Authorize clients
-        self.authorize_client(&config_entry, &request_headers)
+        self.authorize_client(&config_entry, &request_headers, &method)
             .await?;
 
         // Verify Whitelists
