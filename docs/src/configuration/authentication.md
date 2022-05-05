@@ -17,13 +17,14 @@ If you would like to require that all incoming clients to Proxima authentication
 static_config:
   endpoint_locked:
     url: http://myurl.net
-    lock:
-    - basic:
-        username: client_one
-        password: mypasswordone
-    - basic:
-        username: client_two
-        password: mypasswordtwo
+    security:
+      client:
+      - basic:
+          username: client_one
+          password: mypasswordone
+      - basic:
+          username: client_two
+          password: mypasswordtwo
 ```
 
 #### Client JWKS Configuration
@@ -36,12 +37,13 @@ Here is an example on how to configure an endpoint with jwks client authenticati
 static_config:
   endpoint_test:
     url: http://myurl.net
-    lock:
-    - jwks:
-        url: https://dev-17129172.okta.com/oauth2/default/v1/keys
-        audience: api://default
-        scopes:
-        - findelabs.test
+    security:
+      client:
+      - jwks:
+          url: https://dev-17129172.okta.com/oauth2/default/v1/keys
+          audience: api://default
+          scopes:
+          - findelabs.test
 ```
 
 With this configuration, after a user generates a token via the Okta /token endpoint, include said token field in the Authorization header of the request to Proxima.
@@ -69,10 +71,10 @@ static_config:
   endpoint_test:
     url: http://myurl.net
     authentication:
-      basic:                  # Authenticate with remote endpoint with Basic
+      basic:                  # Authenticate with remote endpoint with Basic or
         username: client
         password: mypassword
-      digest:                 # Authenticate with remote endpoint with Digest
+      digest:                 # Authenticate with remote endpoint with Digest or
         username: client
         password: mypassword
       token:                  # Authenticate with remote endpoint with Token
