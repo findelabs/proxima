@@ -23,10 +23,11 @@ Proxima can also lock down specific endpoints using basic, digest, or token auth
 ```
 locked_endpoint:
   url: http://localhost:8081/endpoint
-    lock:
-      digest:
-        username: admin
-        password: testing
+    security:
+      client:
+      - digest:
+          username: admin
+          password: testing
 ```
 
 There are example configs under examples, but the general shape should look something like:
