@@ -6,10 +6,11 @@ You can globally whitelist specific methods for an endpoint, as shown below:
 static_config:
   endpoint_basic:
     url: http://myurl.net
-    whitelist:
-      methods:
-      - GET
-      - POST
+    security:
+      whitelist:
+        methods:
+        - GET
+        - POST
 ```
 
 The following methods can currently be whitelisted:
