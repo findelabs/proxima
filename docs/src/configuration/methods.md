@@ -33,11 +33,11 @@ You can also whitelist specific methods for specific clients under security.clie
 static_config:
   endpoint_basic:
     url: http://myurl.net
-    whitelist:
-      methods:
-      - GET
-      - POST
     security:
+      whitelist:
+        methods:
+        - GET
+        - POST
       client:
       - basic:      # This will work
         username: myuser_one
