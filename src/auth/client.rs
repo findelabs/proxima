@@ -29,7 +29,7 @@ impl ClientAuthList {
         header: &HeaderValue,
         method: &Method,
     ) -> Result<(), ProximaError> {
-        log::debug!("ClientAuthList::authorize looping over users");
+        log::debug!("Looping over users");
         let Self(internal) = self;
         for user in internal.iter() {
             log::debug!("\"Checking if client auth against {:?}\"", user);
