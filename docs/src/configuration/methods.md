@@ -1,6 +1,6 @@
-### Method Whitelisting
+### Endpoint Method Whitelisting
 
-You can whitelist specific methods for an endpoint, as shown below:
+You can globally whitelist specific methods for an endpoint, as shown below:
 
 ```yaml
 static_config:
@@ -23,3 +23,33 @@ The following methods can currently be whitelisted:
 - Trace
 - Connect
 - Patch
+
+
+### Whitelisting Client Methods
+
+You can also whitelist specific methods for specific clients under security.clients[].whitelist, as shown below. Keep in mind that if you also have specified a list of globally whitelisted methods for the endpoint, the clients will only be able to access a subset of those methods.
+
+```yaml
+static_config:
+  endpoint_basic:
+    url: http://myurl.net
+    whitelist:
+      methods:
+      - GET
+      - POST
+    security:
+      client:
+      - basic:      # This will work
+        username: myuser_one
+        password: mypassword
+        whitelist:
+          methods:
+          - GET
+      - basic:      # But this will not
+        username: myuser_two
+        password: mypassword
+        whitelist:
+          methods:
+          - PUT
+```
+
