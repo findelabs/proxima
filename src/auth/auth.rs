@@ -18,6 +18,7 @@ use crate::error::Error as ProximaError;
 const VALIDATE_DEFAULT: bool = true;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+#[serde(deny_unknown_fields)]
 pub struct BasicAuth {
     pub username: String,
     #[serde(skip_serializing)]
@@ -27,6 +28,7 @@ pub struct BasicAuth {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+#[serde(deny_unknown_fields)]
 pub struct DigestAuth {
     pub username: String,
     #[serde(skip_serializing)]
@@ -36,6 +38,7 @@ pub struct DigestAuth {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+#[serde(deny_unknown_fields)]
 pub struct BearerAuth {
     #[serde(skip_serializing)]
     pub token: String,
@@ -44,6 +47,7 @@ pub struct BearerAuth {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 #[warn(non_camel_case_types)]
 pub struct JwksAuth {
     url: Url,

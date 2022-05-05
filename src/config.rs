@@ -42,6 +42,7 @@ pub struct Config {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[warn(non_camel_case_types)]
+#[serde(deny_unknown_fields)]
 #[serde(untagged)]
 pub enum Entry {
     #[allow(non_camel_case_types)]
@@ -53,6 +54,7 @@ pub enum Entry {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+#[serde(deny_unknown_fields)]
 pub struct HttpConfig {
     pub remote: Url,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -60,11 +62,13 @@ pub struct HttpConfig {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+#[serde(deny_unknown_fields)]
 pub struct Whitelist {
     pub methods: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+#[serde(deny_unknown_fields)]
 pub struct Security {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub whitelist: Option<Whitelist>,
@@ -73,6 +77,7 @@ pub struct Security {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+#[serde(deny_unknown_fields)]
 pub struct Endpoint {
     pub url: Urls,
     #[serde(skip_serializing_if = "Option::is_none")]

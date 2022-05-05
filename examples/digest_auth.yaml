@@ -5,7 +5,8 @@ static_config:
       digest:
         username: user
         password: testing
-    lock:
-    - basic:
-        username: user
-        password: testing
+    security:
+      client:
+      - basic:
+          username: user
+          password: testing
