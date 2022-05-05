@@ -16,3 +16,6 @@ static_config:
       - digest:
           username: user
           password: mypassword
+          whitelist:
+            methods:
+            - GET
