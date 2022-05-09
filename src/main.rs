@@ -137,6 +137,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .help("Accept invalid remote certificates")
                 .takes_value(false),
         )
+        .arg(
+            Arg::with_name("root_cert")
+                .long("root_cert")
+                .short("r")
+                .required(false)
+                .help("Import root cert, overrides system default")
+                .env("PROXIMA_ROOT_CERT")
+                .takes_value(true),
+        )
         .get_matches();
 
     // Initialize log Builder

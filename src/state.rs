@@ -57,6 +57,7 @@ impl State {
             .reuse_address(opts.is_present("set_reuse_address"))
             .accept_invalid_hostnames(opts.is_present("accept_invalid_hostnames"))
             .accept_invalid_certs(opts.is_present("accept_invalid_certs"))
+            .import_root_cert(opts.value_of("root_cert"))
             .build()?;
 
         let config_location = opts.value_of("config").unwrap().to_owned();

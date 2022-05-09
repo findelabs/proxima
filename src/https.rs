@@ -4,7 +4,7 @@ use hyper::Body;
 use hyper::Request;
 use hyper::Response;
 use hyper_tls::HttpsConnector;
-use native_tls::TlsConnector;
+use native_tls::{Certificate, TlsConnector};
 use std::error::Error;
 
 //pub type Client = hyper::client::Client<HttpsConnector<HttpConnector>, Body>;
@@ -21,21 +21,22 @@ impl HttpsClient {
 }
 
 #[derive(Debug, Clone)]
-pub struct ClientConfig {
+pub struct ClientConfig<'a> {
     timeout: u64,
     set_nodelay: bool,
     enforce_http: bool,
     set_reuse_address: bool,
     accept_invalid_hostnames: bool,
     accept_invalid_certs: bool,
+    root_cert: Option<&'a str>
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct ClientBuilder {
-    config: ClientConfig,
+pub struct ClientBuilder<'a> {
+    config: ClientConfig<'a>,
 }
 
-impl Default for ClientConfig {
+impl Default for ClientConfig<'_> {
     fn default() -> Self {
         ClientConfig {
             timeout: 60u64,
@@ -44,6 +45,7 @@ impl Default for ClientConfig {
             set_reuse_address: false,
             accept_invalid_hostnames: false,
             accept_invalid_certs: true,
+            root_cert: None,
         }
     }
 }
@@ -54,7 +56,7 @@ impl Default for HttpsClient {
     }
 }
 
-impl ClientBuilder {
+impl<'a> ClientBuilder<'a> {
     pub fn new() -> Self {
         let config = ClientConfig::default();
         Self { config }
@@ -83,11 +85,30 @@ impl ClientBuilder {
         self.config.accept_invalid_certs = arg;
         self
     }
+    pub fn import_root_cert(mut self, arg: Option<&'a str>) -> Self {
+        self.config.root_cert = arg;
+        self
+    }
     pub fn build(&mut self) -> BoxResult<HttpsClient> {
-        let tls = TlsConnector::builder()
-            .danger_accept_invalid_hostnames(self.config.accept_invalid_hostnames)
-            .danger_accept_invalid_certs(self.config.accept_invalid_certs)
-            .build()?;
+        let tls_connector = match self.config.root_cert {
+            Some(path) => {
+                let cert = &std::fs::read(path).expect("Failed reading in root cert");
+                let root_cert = Certificate::from_pem(cert).expect("Root cert is not in PEM format");
+                log::info!("Reading in root cert at {}", &path);
+                TlsConnector::builder()
+                    .danger_accept_invalid_hostnames(self.config.accept_invalid_hostnames)
+                    .danger_accept_invalid_certs(self.config.accept_invalid_certs)
+                    .add_root_certificate(root_cert)
+                    .build()?
+
+            },
+            None => {
+                TlsConnector::builder()
+                    .danger_accept_invalid_hostnames(self.config.accept_invalid_hostnames)
+                    .danger_accept_invalid_certs(self.config.accept_invalid_certs)
+                    .build()?
+            }
+        };
 
         let mut http = hyper::client::HttpConnector::new();
 
@@ -100,7 +121,7 @@ impl ClientBuilder {
         http.set_reuse_address(self.config.set_reuse_address);
 
         let https: hyper_tls::HttpsConnector<hyper::client::HttpConnector> =
-            hyper_tls::HttpsConnector::from((http, tls.into()));
+            hyper_tls::HttpsConnector::from((http, tls_connector.into()));
         Ok(HttpsClient(
             hyper::Client::builder().build::<_, hyper::Body>(https),
         ))
