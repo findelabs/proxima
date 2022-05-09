@@ -29,6 +29,7 @@ pub enum Error {
     File(std::io::Error),
     InvalidUri(hyper::http::uri::InvalidUri),
     Jwt(jsonwebtoken::errors::Error),
+    RenderError(handlebars::RenderError)
 }
 
 impl std::error::Error for Error {}
@@ -57,6 +58,7 @@ impl fmt::Display for Error {
             Error::File(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::InvalidUri(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::Jwt(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
+            Error::RenderError(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
         }
     }
 }
@@ -126,5 +128,11 @@ impl From<hyper::http::uri::InvalidUri> for Error {
 impl From<jsonwebtoken::errors::Error> for Error {
     fn from(err: jsonwebtoken::errors::Error) -> Error {
         Error::Jwt(err)
+    }
+}
+
+impl From<handlebars::RenderError> for Error {
+    fn from(err: handlebars::RenderError) -> Error {
+        Error::RenderError(err)
     }
 }

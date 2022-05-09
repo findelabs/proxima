@@ -25,6 +25,7 @@ mod path;
 mod requests;
 mod state;
 mod urls;
+mod vault;
 
 use crate::metrics::{setup_metrics_recorder, track_metrics};
 use handlers::{
@@ -137,6 +138,75 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .help("Accept invalid remote certificates")
                 .takes_value(false),
         )
+        .arg(
+            Arg::with_name("vault_url")
+                .short("v")
+                .long("vault_url")
+                .required(false)
+                .env("VAULT_URL")
+                .help("Vault url")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("vault_kubernetes_role")
+                .short("r")
+                .long("vault_kubernetes_role")
+                .required(false)
+                .requires("vault_url")
+                .env("VAULT_KUBERNETES_ROLE")
+                .help("Vault kubernetes role")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("vault_role_id")
+                .short("i")
+                .long("role_id")
+                .env("VAULT_ROLE_ID")
+                .required(false)
+                .requires("vault_secret_id")
+                .help("Vault role_id")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("vault_secret_id")
+                .short("S")
+                .long("secret_id")
+                .env("VAULT_SECRET_ID")
+                .required(false)
+                .requires("vault_role_id")
+                .help("Vault secret_id")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("vault_mount")
+                .short("m")
+                .long("vault_mount")
+                .required(false)
+                .requires("vault_url")
+                .env("VAULT_MOUNT")
+                .help("Vault engine mount path")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("vault_login_path")
+                .short("l")
+                .long("vault_login_path")
+                .default_value("auth/kubernetes")
+                .required(false)
+                .env("VAULT_LOGIN_PATH")
+                .help("Vault login path")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("jwt_path")
+                .short("j")
+                .long("jwt_path")
+                .default_value("/var/run/secrets/kubernetes.io/serviceaccount/token")
+                .required(false)
+                .env("JWT_PATH")
+                .help("JWT path")
+                .takes_value(true),
+        )
         .get_matches();
 
     // Initialize log Builder
@@ -164,7 +234,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     });
 
     // Create state for axum
-    let state = State::new(opts.clone()).await?;
+    let state = State::default().build(opts.clone()).await?;
 
     // Create prometheus handle
     let recorder_handle = setup_metrics_recorder();

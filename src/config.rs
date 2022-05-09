@@ -16,19 +16,19 @@ use url::Url;
 use crate::auth::{client::ClientAuthList, server::ServerAuth};
 use crate::cache::Cache;
 use crate::error::Error as ProximaError;
-use crate::https::{ClientBuilder, HttpsClient};
 use crate::path::ProxyPath;
 use crate::urls::Urls;
+use crate::State;
 
 type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 pub type ConfigMap = BTreeMap<String, Entry>;
 
-#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, Hash, Default)]
 pub struct ConfigFile {
     pub static_config: ConfigMap,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Config {
     pub config_file: Arc<RwLock<ConfigFile>>,
     pub location: String,
@@ -37,7 +37,7 @@ pub struct Config {
     pub last_read: Arc<RwLock<i64>>,
     pub hash: Arc<RwLock<u64>>,
     pub cache: Cache,
-    pub client: HttpsClient,
+    pub parent: Option<Arc<State>>
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -177,6 +177,7 @@ impl Config {
         location: &str,
         config_authentication: Option<ServerAuth>,
         global_authentication: bool,
+        parent: &State
     ) -> Config {
         Config {
             config_file: Arc::new(RwLock::new(ConfigFile {
@@ -188,10 +189,11 @@ impl Config {
             last_read: Arc::new(RwLock::new(i64::default())),
             hash: Arc::new(RwLock::new(u64::default())),
             cache: Cache::default(),
-            client: ClientBuilder::new()
-                .accept_invalid_certs(true)
-                .build()
-                .unwrap(),
+//            client: ClientBuilder::new()
+//                .accept_invalid_certs(true)
+//                .build()
+//                .unwrap(),
+            parent: Some(Arc::new(parent.clone()))
         }
     }
 
@@ -379,7 +381,7 @@ impl Config {
                 }
 
                 // Send request
-                let response = match self.client.request(req).await {
+                let response = match self.parent.as_ref().unwrap().client.request(req).await {
                     Ok(s) => s,
                     Err(e) => {
                         log::error!("{{\"error\":\"{}\"", e);
