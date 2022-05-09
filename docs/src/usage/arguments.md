@@ -28,6 +28,9 @@ Ignore hostnames that do not match the request
 #### --accept_invalid_certs
 Accept certs that are not valid on remote servers
 
+#### --root_cert
+Import root cert, overriding system default cert
+
 #### --version
 Print Proxima version with `--version` or `-v`
 
