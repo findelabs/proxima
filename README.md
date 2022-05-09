@@ -13,21 +13,21 @@ Proxima is great at handling endpoint authentication for users. If a remote url 
 ```
 remote_endpoint:
   url: http://localhost:8081/endpoint
-    authentication:
-      basic:
-        username: admin
-        password: testing
+  authentication:
+    basic:
+      username: admin
+      password: testing
 ```
 
 Proxima can also lock down specific endpoints using basic, digest, or token authentication. This configuration looks exactly like the authentication settings shown above. However, specific lock, not authentication. The example below will require any client hitting proxima to use digest authentication:
 ```
 locked_endpoint:
   url: http://localhost:8081/endpoint
-    security:
-      client:
-      - digest:
-          username: admin
-          password: testing
+  security:
+    client:
+    - digest:
+        username: admin
+        password: testing
 ```
 
 There are example configs under examples, but the general shape should look something like:
