@@ -138,12 +138,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .takes_value(false),
         )
         .arg(
-            Arg::with_name("root_cert")
-                .long("root_cert")
-                .short("r")
+            Arg::with_name("import_cert")
+                .long("import_cert")
+                .short("c")
                 .required(false)
-                .help("Import root cert, overrides system default")
-                .env("PROXIMA_ROOT_CERT")
+                .help("Import CA certificate")
+                .env("PROXIMA_IMPORT_CERT")
                 .takes_value(true),
         )
         .get_matches();

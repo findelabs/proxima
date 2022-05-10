@@ -28,7 +28,7 @@ pub struct ClientConfig<'a> {
     set_reuse_address: bool,
     accept_invalid_hostnames: bool,
     accept_invalid_certs: bool,
-    root_cert: Option<&'a str>
+    import_cert: Option<&'a str>
 }
 
 #[derive(Debug, Clone, Default)]
@@ -45,7 +45,7 @@ impl Default for ClientConfig<'_> {
             set_reuse_address: false,
             accept_invalid_hostnames: false,
             accept_invalid_certs: true,
-            root_cert: None,
+            import_cert: None,
         }
     }
 }
@@ -85,20 +85,20 @@ impl<'a> ClientBuilder<'a> {
         self.config.accept_invalid_certs = arg;
         self
     }
-    pub fn import_root_cert(mut self, arg: Option<&'a str>) -> Self {
-        self.config.root_cert = arg;
+    pub fn import_cert(mut self, arg: Option<&'a str>) -> Self {
+        self.config.import_cert = arg;
         self
     }
     pub fn build(&mut self) -> BoxResult<HttpsClient> {
-        let tls_connector = match self.config.root_cert {
+        let tls_connector = match self.config.import_cert {
             Some(path) => {
                 let cert = &std::fs::read(path).expect("Failed reading in root cert");
-                let root_cert = Certificate::from_pem(cert).expect("Root cert is not in PEM format");
+                let import_cert = Certificate::from_pem(cert).expect("Root cert is not in PEM format");
                 log::info!("Reading in root cert at {}", &path);
                 TlsConnector::builder()
                     .danger_accept_invalid_hostnames(self.config.accept_invalid_hostnames)
                     .danger_accept_invalid_certs(self.config.accept_invalid_certs)
-                    .add_root_certificate(root_cert)
+                    .add_root_certificate(import_cert)
                     .build()?
 
             },
