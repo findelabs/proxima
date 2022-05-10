@@ -19,6 +19,7 @@ use crate::error::Error as ProximaError;
 use crate::path::ProxyPath;
 use crate::urls::Urls;
 use crate::State;
+use crate::vault::VaultConfig;
 
 type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 pub type ConfigMap = BTreeMap<String, Entry>;
@@ -51,6 +52,8 @@ pub enum Entry {
     Endpoint(Endpoint),
     #[allow(non_camel_case_types)]
     HttpConfig(HttpConfig),
+    #[allow(non_camel_case_types)]
+    VaultConfig(VaultConfig),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -231,6 +234,29 @@ impl Config {
                         }
                     }
                     Entry::HttpConfig(entry) => {
+                        log::debug!("Found http config fork");
+                        let config_file = match self
+                            .parse(Some(entry.remote.clone()), entry.authentication.clone())
+                            .await
+                        {
+                            Ok(c) => c,
+                            Err(e) => {
+                                log::error!("Error parsing remote config: {}", e.to_string());
+                                return Err(e);
+                            }
+                        };
+                        match path.next() {
+                            Some(next) => {
+                                log::debug!("Sub folder specified for httpconfig, calling self");
+                                self.get_sub_entry(config_file.static_config, next).await
+                            }
+                            None => {
+                                log::debug!("No more subfolders specified for httpconfig, returning httpconfig");
+                                Ok((Entry::ConfigMap(Box::new(config_file.static_config)), path))
+                            }
+                        }
+                    }
+                    Entry::VaultConfig(entry) => {
                         log::debug!("Found http config fork");
                         let config_file = match self
                             .parse(Some(entry.remote.clone()), entry.authentication.clone())

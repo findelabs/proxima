@@ -4,6 +4,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use vault_client_rs::error::VaultError;
 use hyper::header::HeaderValue;
 use rand::{distributions::Alphanumeric, Rng};
 use std::fmt;
@@ -29,7 +30,11 @@ pub enum Error {
     File(std::io::Error),
     InvalidUri(hyper::http::uri::InvalidUri),
     Jwt(jsonwebtoken::errors::Error),
-    RenderError(handlebars::RenderError)
+    RenderError(handlebars::RenderError),
+    TemplateError(handlebars::TemplateError),
+    DecodeError(base64::DecodeError),
+    UtfError(std::str::Utf8Error),
+    VaultError(VaultError)
 }
 
 impl std::error::Error for Error {}
@@ -59,6 +64,10 @@ impl fmt::Display for Error {
             Error::InvalidUri(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::Jwt(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::RenderError(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
+            Error::TemplateError(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
+            Error::DecodeError(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
+            Error::UtfError(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
+            Error::VaultError(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
         }
     }
 }
@@ -134,5 +143,29 @@ impl From<jsonwebtoken::errors::Error> for Error {
 impl From<handlebars::RenderError> for Error {
     fn from(err: handlebars::RenderError) -> Error {
         Error::RenderError(err)
+    }
+}
+
+impl From<handlebars::TemplateError> for Error {
+    fn from(err: handlebars::TemplateError) -> Error {
+        Error::TemplateError(err)
+    }
+}
+
+impl From<base64::DecodeError> for Error {
+    fn from(err: base64::DecodeError) -> Error {
+        Error::DecodeError(err)
+    }
+}
+
+impl From<std::str::Utf8Error> for Error {
+    fn from(err: std::str::Utf8Error) -> Error {
+        Error::UtfError(err)
+    }
+}
+
+impl From<VaultError> for Error {
+    fn from(err: VaultError) -> Error {
+        Error::VaultError(err)
     }
 }
