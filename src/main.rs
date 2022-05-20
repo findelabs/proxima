@@ -206,6 +206,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .env("JWT_PATH")
                 .help("JWT path")
                 .takes_value(true),
+        .arg(
+            Arg::with_name("import_cert")
+                .long("import_cert")
+                .short("c")
+                .required(false)
+                .help("Import CA certificate")
+                .env("PROXIMA_IMPORT_CERT")
+                .takes_value(true),
         )
         .get_matches();
 
