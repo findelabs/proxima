@@ -206,6 +206,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .env("JWT_PATH")
                 .help("JWT path")
                 .takes_value(true),
+        )
         .arg(
             Arg::with_name("import_cert")
                 .long("import_cert")
