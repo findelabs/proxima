@@ -203,6 +203,14 @@ impl State {
                         .body(body)
                         .unwrap());
                 }
+                Entry::VaultConfig(map) => {
+                    let config = serde_json::to_string(&map).expect("Cannot convert to JSON");
+                    let body = Body::from(config);
+                    return Ok(Response::builder()
+                        .status(StatusCode::OK)
+                        .body(body)
+                        .unwrap());
+                }
             },
             Err(e) => return Err(e),
         };

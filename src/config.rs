@@ -257,25 +257,19 @@ impl Config {
                         }
                     }
                     Entry::VaultConfig(entry) => {
-                        log::debug!("Found http config fork");
-                        let config_file = match self
-                            .parse(Some(entry.remote.clone()), entry.authentication.clone())
-                            .await
-                        {
-                            Ok(c) => c,
-                            Err(e) => {
-                                log::error!("Error parsing remote config: {}", e.to_string());
-                                return Err(e);
-                            }
-                        };
+                        log::debug!("Found vault config fork");
                         match path.next() {
                             Some(next) => {
-                                log::debug!("Sub folder specified for httpconfig, calling self");
-                                self.get_sub_entry(config_file.static_config, next).await
+                                log::debug!("Sub folder specified for vault config, getting secret from vault");
+                                let parent = self.parent.as_ref().unwrap();
+                                let entry = entry.get(parent.vault_client.as_ref().unwrap().clone(), &path.prefix().expect("missing path prefix")).await?;
+                                Ok((entry, next))
                             }
                             None => {
-                                log::debug!("No more subfolders specified for httpconfig, returning httpconfig");
-                                Ok((Entry::ConfigMap(Box::new(config_file.static_config)), path))
+                                log::debug!("No more subfolders specified for vaultconfig, returning vault configmap");
+                                let parent = self.parent.as_ref().unwrap();
+                                let configmap = entry.config(parent.vault_client.as_ref().unwrap().clone()).await?;
+                                Ok((Entry::ConfigMap(Box::new(configmap)), path))
                             }
                         }
                     }

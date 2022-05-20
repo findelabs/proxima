@@ -1,13 +1,12 @@
-use std::sync::Arc;
 use serde_json::{Value, Map};
 use std::collections::BTreeMap;
 use handlebars::Handlebars;
 use crate::error::Error as ProximaError;
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
 use base64;
 use async_recursion::async_recursion;
 use vault_client_rs::client::Client as VaultClient;
+use std::hash::{Hash, Hasher};
 
 //type BoxResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 
@@ -24,8 +23,17 @@ pub struct VaultConfig {
     pub recursive: bool
 }
 
+impl Hash for VaultConfig {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.template.hash(state);
+        self.secret.hash(state);
+        self.insecure.hash(state);
+        self.recursive.hash(state);
+    }
+}
+
 impl VaultConfig {
-    pub async fn config(&mut self, mut vault: VaultClient) -> Result<ConfigMap, ProximaError> {
+    pub async fn config(&self, mut vault: VaultClient) -> Result<ConfigMap, ProximaError> {
         let list = vault.list(&self.secret).await?;
         let mut map = BTreeMap::new();
         for key in list.keys().await {
@@ -51,8 +59,22 @@ impl VaultConfig {
         Ok(map)
     }
 
+    pub async fn get(&self, mut vault: VaultClient, secret: &str) -> Result<Entry, ProximaError> {
+        let secret_path = format!("{}{}", self.secret, secret);
+        let secret = vault.get(&secret_path).await?;
+        match self.template(secret.data().await).await {
+            Ok(templated) => {
+                Ok(templated)
+            },
+            Err(e) => {
+                log::error!("Error generating template: {}", e);
+                Err(e)
+            }
+        }
+    }
+
     #[async_recursion]
-    pub async fn template(&mut self, secret: Map<String, Value>) -> Result<Entry, ProximaError> {
+    pub async fn template(&self, secret: Map<String, Value>) -> Result<Entry, ProximaError> {
         let handlebars = self.handlebars().await?;
         let output = handlebars.render("secret", &secret)?;
         log::debug!("Rendered string: {}", &output);
@@ -61,7 +83,7 @@ impl VaultConfig {
         Ok(v)
     }
 
-    pub async fn handlebars(&mut self) -> Result<Handlebars<'_>, ProximaError> {
+    pub async fn handlebars(&self) -> Result<Handlebars<'_>, ProximaError> {
         let bytes = base64::decode(&self.template)?;
         let template_decoded = std::str::from_utf8(&bytes)?;
         let mut handlebars = Handlebars::new();
