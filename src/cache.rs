@@ -13,13 +13,15 @@ pub struct Cache {
     pub cache: CacheMap,
 }
 
-impl<'a> Cache {
-    pub fn default() -> Cache {
+impl Default for Cache {
+    fn default() -> Cache {
         Cache {
             cache: Arc::new(RwLock::new(HashMap::new())),
         }
     }
+}
 
+impl<'a> Cache {
     pub async fn clear(&mut self) {
         log::debug!("Clearing cache");
         let mut cache = self.cache.write().await;
