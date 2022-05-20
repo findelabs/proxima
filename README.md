@@ -19,7 +19,7 @@ remote_endpoint:
       password: testing
 ```
 
-Proxima can also lock down specific endpoints using basic, digest, or token authentication. This configuration looks exactly like the authentication settings shown above. However, specific lock, not authentication. The example below will require any client hitting proxima to use digest authentication:
+Proxima can also lock down specific endpoints using basic, digest, or token authentication. This configuration looks exactly like the authentication settings shown above, however, we specify lock, not authentication. The example below will require any client hitting proxima to use digest authentication:
 ```
 locked_endpoint:
   url: http://localhost:8081/endpoint
