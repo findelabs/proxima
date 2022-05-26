@@ -202,6 +202,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             Arg::new("jwt_path")
                 .short('J')
                 .long("jwt_path")
+                .conflicts_with("vault_role_id")
                 .default_value("/var/run/secrets/kubernetes.io/serviceaccount/token")
                 .env("JWT_PATH")
                 .help("JWT path")
