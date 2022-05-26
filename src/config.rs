@@ -254,7 +254,7 @@ impl Config {
         log::debug!("Searching for entry {} in cache", &proxy_path);
         metrics::increment_counter!("proxima_cache_attempts_total");
         match self.cache.get(proxy_path).await {
-            Some((entry, remainder)) => {
+            Some(entry) => {
                 metrics::increment_counter!("proxima_cache_hit_total");
                 log::debug!("Found {} in cache", proxy_path);
                 Ok((Entry::Endpoint(entry), remainder))

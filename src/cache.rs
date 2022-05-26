@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-pub type CacheMap = Arc<RwLock<HashMap<String, (Endpoint, ProxyPath)>>>;
+pub type CacheMap = Arc<RwLock<HashMap<String, Endpoint>>>;
 
 #[derive(Debug, Clone)]
 pub struct Cache {
@@ -28,7 +28,7 @@ impl<'a> Cache {
         cache.clear();
     }
 
-    pub async fn get(&self, key: &str) -> Option<(Endpoint, ProxyPath)> {
+    pub async fn get(&self, key: &str) -> Option<Endpoint> {
         log::debug!("Searching for {} in cache", key);
         let cache = self.cache.read().await;
         cache.get(key).cloned()
@@ -49,20 +49,19 @@ impl<'a> Cache {
         log::debug!("Generating cache");
         let mut map = Map::new();
         let cache = self.cache.read().await;
-        for (key, (endpoint, proxypath)) in &*cache {
-            let value = format!("{}{}", endpoint.url().await, proxypath.path().unwrap_or(""));
+        for (key, endpoint) in &*cache {
+            let value = endpoint.url().await;
             map.insert(key.to_string(), serde_json::Value::String(value));
         }
         map
     }
 
-    pub async fn set(&self, key: &str, remainder: &ProxyPath, value: &Endpoint) {
+    pub async fn set(&self, key: &str, endpoint: &Endpoint) {
         log::debug!(
-            "Adding {} to cache with remainder of {}",
-            key,
-            remainder.path().unwrap_or("")
+            "Adding {} to cache",
+            key
         );
         let mut cache = self.cache.write().await;
-        cache.insert(key.to_string(), (value.clone(), remainder.clone()));
+        cache.insert(key.to_string(), endpoint.clone());
     }
 }
