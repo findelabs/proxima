@@ -8,8 +8,6 @@ use async_recursion::async_recursion;
 use vault_client_rs::client::Client as VaultClient;
 use std::hash::{Hash, Hasher};
 
-//type BoxResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
-
 use crate::config::ConfigMap;
 use crate::config::{Entry};
 
@@ -17,17 +15,12 @@ use crate::config::{Entry};
 pub struct VaultConfig {
     pub template: String,
     pub secret: String,
-//    #[serde(skip)]
-//    pub handlebars: Option<Arc<Mutex<Handlebars<'a>>>>,
-    #[serde(default)]
-    pub recursive: bool
 }
 
 impl Hash for VaultConfig {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.template.hash(state);
         self.secret.hash(state);
-        self.recursive.hash(state);
     }
 }
 

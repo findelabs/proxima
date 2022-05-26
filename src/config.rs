@@ -1,7 +1,7 @@
 use async_recursion::async_recursion;
 use axum::http::Request;
 use chrono::Utc;
-use hyper::{Body, Method, Uri};
+use hyper::{Body, Uri};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use std::collections::hash_map::DefaultHasher;
@@ -14,13 +14,14 @@ use tokio::sync::RwLock;
 use url::Url;
 use vault_client_rs::client::Client as VaultClient;
 
-use crate::auth::{client::ClientAuthList, server::ServerAuth};
+use crate::auth::{server::ServerAuth};
 use crate::https::{HttpsClient};
 use crate::cache::Cache;
 use crate::error::Error as ProximaError;
 use crate::path::ProxyPath;
 use crate::urls::Urls;
 use crate::vault::VaultConfig;
+use crate::security::{display_security, Security};
 
 type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 pub type ConfigMap = BTreeMap<String, Entry>;
@@ -68,21 +69,6 @@ pub struct HttpConfig {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(deny_unknown_fields)]
-pub struct Whitelist {
-    pub methods: Option<Vec<String>>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
-#[serde(deny_unknown_fields)]
-pub struct Security {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub whitelist: Option<Whitelist>,
-    #[serde(skip_serializing)]
-    pub client: Option<ClientAuthList>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
-#[serde(deny_unknown_fields)]
 pub struct Endpoint {
     pub url: Urls,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -91,42 +77,6 @@ pub struct Endpoint {
     pub timeout: Option<u64>,
     #[serde(skip_serializing_if = "display_security")]
     pub security: Option<Security>,
-}
-
-fn display_security(item: &Option<Security>) -> bool {
-    if let Some(security) = item {
-        if security.whitelist.is_some() {
-            false
-        } else {
-            true
-        }
-    } else {
-        true
-    }
-}
-
-impl Whitelist {
-    pub fn authorize(&self, method: &Method) -> Result<(), ProximaError> {
-        if let Some(ref methods) = self.methods {
-            log::debug!("The method whitelist allows: {:?}", methods);
-            metrics::increment_counter!(
-                "proxima_security_method_whitelist_total"
-            );
-            match methods.contains(&method.to_string()) {
-                true => {
-                    log::debug!("{} is in whitelist", method);
-                }
-                false => {
-                    metrics::increment_counter!(
-                        "proxima_security_method_blocked_total"
-                    );
-                    log::info!("Blocked {} method", method);
-                    return Err(ProximaError::Forbidden);
-                }
-            }
-        }
-        Ok(())
-    }
 }
 
 impl<'a> Endpoint {
