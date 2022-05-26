@@ -19,7 +19,7 @@ pub struct VaultConfig {
     pub secret: String,
 //    #[serde(skip)]
 //    pub handlebars: Option<Arc<Mutex<Handlebars<'a>>>>,
-    pub insecure: bool,
+    #[serde(default)]
     pub recursive: bool
 }
 
@@ -27,7 +27,6 @@ impl Hash for VaultConfig {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.template.hash(state);
         self.secret.hash(state);
-        self.insecure.hash(state);
         self.recursive.hash(state);
     }
 }

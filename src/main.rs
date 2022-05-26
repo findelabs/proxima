@@ -6,7 +6,7 @@ use axum::{
     Router,
 };
 use chrono::Local;
-use clap::{crate_name, crate_version, App, Arg};
+use clap::{crate_name, crate_version, Command, Arg};
 use env_logger::{Builder, Target};
 use log::LevelFilter;
 use std::io::Write;
@@ -36,13 +36,13 @@ use state::State;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    let opts = App::new(crate_name!())
+    let opts = Command::new(crate_name!())
         .version(crate_version!())
         .author("Daniel F. <Verticaleap>")
         .about(crate_name!())
         .arg(
-            Arg::with_name("port")
-                .short("p")
+            Arg::new("port")
+                .short('p')
                 .long("port")
                 .help("Set port to listen on")
                 .env("PROXIMA_LISTEN_PORT")
@@ -50,8 +50,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("timeout")
-                .short("t")
+            Arg::new("timeout")
+                .short('t')
                 .long("timeout")
                 .help("Set default global timeout")
                 .default_value("60")
@@ -59,8 +59,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("username")
-                .short("u")
+            Arg::new("username")
+                .short('u')
                 .long("username")
                 .help("Set required client username")
                 .env("PROXIMA_CLIENT_USERNAME")
@@ -68,8 +68,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("password")
-                .short("p")
+            Arg::new("password")
+                .short('p')
                 .long("password")
                 .help("Set required client password")
                 .requires("username")
@@ -77,8 +77,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("config_username")
-                .short("u")
+            Arg::new("config_username")
+                .short('u')
                 .long("config_username")
                 .help("Set required username for config endpoint")
                 .env("PROXIMA_AUTH_USERNAME")
@@ -86,8 +86,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("config_password")
-                .short("p")
+            Arg::new("config_password")
+                .short('p')
                 .long("config_password")
                 .help("Set required password for config endpoint")
                 .env("PROXIMA_AUTH_PASSWORD")
@@ -95,8 +95,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("config")
-                .short("c")
+            Arg::new("config")
+                .short('c')
                 .long("config")
                 .env("PROXIMA_CONFIG")
                 .required(true)
@@ -104,52 +104,53 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("set_nodelay")
+            Arg::new("set_nodelay")
                 .long("nodelay")
                 .required(false)
                 .help("Set socket nodelay")
                 .takes_value(false),
         )
         .arg(
-            Arg::with_name("enforce_http")
+            Arg::new("enforce_http")
                 .long("enforce_http")
                 .required(false)
                 .help("Enforce http protocol for remote endpoints")
                 .takes_value(false),
         )
         .arg(
-            Arg::with_name("set_reuse_address")
+            Arg::new("set_reuse_address")
                 .long("reuse_address")
                 .required(false)
                 .help("Enable socket reuse")
                 .takes_value(false),
         )
         .arg(
-            Arg::with_name("accept_invalid_hostnames")
+            Arg::new("accept_invalid_hostnames")
                 .long("accept_invalid_hostnames")
                 .required(false)
                 .help("Accept invalid remote hostnames")
                 .takes_value(false),
         )
         .arg(
-            Arg::with_name("accept_invalid_certs")
+            Arg::new("accept_invalid_certs")
                 .long("accept_invalid_certs")
                 .required(false)
                 .help("Accept invalid remote certificates")
                 .takes_value(false),
         )
         .arg(
-            Arg::with_name("vault_url")
-                .short("v")
+            Arg::new("vault_url")
+                .short('v')
                 .long("vault_url")
                 .required(false)
+                .requires_all(&["vault_mount","vault_login_path"])
                 .env("VAULT_URL")
                 .help("Vault url")
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("vault_kubernetes_role")
-                .short("r")
+            Arg::new("vault_kubernetes_role")
+                .short('r')
                 .long("vault_kubernetes_role")
                 .required(false)
                 .requires("vault_url")
@@ -158,9 +159,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("vault_role_id")
-                .short("i")
-                .long("role_id")
+            Arg::new("vault_role_id")
+                .short('i')
+                .long("vault_role_id")
                 .env("VAULT_ROLE_ID")
                 .required(false)
                 .requires("vault_secret_id")
@@ -168,9 +169,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("vault_secret_id")
-                .short("S")
-                .long("secret_id")
+            Arg::new("vault_secret_id")
+                .short('S')
+                .long("vault_secret_id")
                 .env("VAULT_SECRET_ID")
                 .required(false)
                 .requires("vault_role_id")
@@ -178,39 +179,37 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("vault_mount")
-                .short("m")
+            Arg::new("vault_mount")
+                .short('m')
                 .long("vault_mount")
-                .required(false)
                 .requires("vault_url")
                 .env("VAULT_MOUNT")
                 .help("Vault engine mount path")
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("vault_login_path")
-                .short("l")
+            Arg::new("vault_login_path")
+                .short('l')
                 .long("vault_login_path")
-                .default_value("auth/kubernetes")
+//                .default_value("auth/kubernetes")
+                .requires("vault_url")
                 .required(false)
                 .env("VAULT_LOGIN_PATH")
                 .help("Vault login path")
                 .takes_value(true),
         )
         .arg(
-            Arg::with_name("jwt_path")
-                .short("j")
+            Arg::new("jwt_path")
+                .short('J')
                 .long("jwt_path")
                 .default_value("/var/run/secrets/kubernetes.io/serviceaccount/token")
-                .required(false)
                 .env("JWT_PATH")
                 .help("JWT path")
-                .takes_value(true),
         )
         .arg(
-            Arg::with_name("import_cert")
+            Arg::new("import_cert")
                 .long("import_cert")
-                .short("c")
+                .short('c')
                 .required(false)
                 .help("Import CA certificate")
                 .env("PROXIMA_IMPORT_CERT")
@@ -243,7 +242,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     });
 
     // Create state for axum
-    let state = State::default().build(opts.clone()).await?;
+    let mut state = State::default();
+    state.build(opts.clone()).await?;
 
     // Create prometheus handle
     let recorder_handle = setup_metrics_recorder();

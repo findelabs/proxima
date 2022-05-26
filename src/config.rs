@@ -12,13 +12,14 @@ use std::io::prelude::*;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use url::Url;
+use vault_client_rs::client::Client as VaultClient;
 
 use crate::auth::{client::ClientAuthList, server::ServerAuth};
+use crate::https::{HttpsClient};
 use crate::cache::Cache;
 use crate::error::Error as ProximaError;
 use crate::path::ProxyPath;
 use crate::urls::Urls;
-use crate::State;
 use crate::vault::VaultConfig;
 
 type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
@@ -38,7 +39,8 @@ pub struct Config {
     pub last_read: Arc<RwLock<i64>>,
     pub hash: Arc<RwLock<u64>>,
     pub cache: Cache,
-    pub parent: Option<Arc<State>>
+    pub https_client: HttpsClient,
+    pub vault_client: Option<VaultClient>
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -154,6 +156,15 @@ impl Config {
         self.cache.clear().await;
     }
 
+    pub fn vault_client(&self) -> Result<VaultClient, ProximaError> {
+        match &self.vault_client {
+            Some(c) => {
+                Ok(c.clone())
+            },
+            None => Err(ProximaError::MissingVaultClient)
+        }
+    }
+
     pub async fn renew(&self) {
         let last_read = self.last_read.read().await;
         let diff = Utc::now().timestamp() - *last_read;
@@ -180,7 +191,8 @@ impl Config {
         location: &str,
         config_authentication: Option<ServerAuth>,
         global_authentication: bool,
-        parent: &State
+        https_client: HttpsClient,
+        vault_client: Option<VaultClient>
     ) -> Config {
         Config {
             config_file: Arc::new(RwLock::new(ConfigFile {
@@ -192,11 +204,8 @@ impl Config {
             last_read: Arc::new(RwLock::new(i64::default())),
             hash: Arc::new(RwLock::new(u64::default())),
             cache: Cache::default(),
-//            client: ClientBuilder::new()
-//                .accept_invalid_certs(true)
-//                .build()
-//                .unwrap(),
-            parent: Some(Arc::new(parent.clone()))
+            https_client,
+            vault_client
         }
     }
 
@@ -261,14 +270,12 @@ impl Config {
                         match path.next() {
                             Some(next) => {
                                 log::debug!("Sub folder specified for vault config, getting secret from vault");
-                                let parent = self.parent.as_ref().unwrap();
-                                let entry = entry.get(parent.vault_client.as_ref().unwrap().clone(), &path.prefix().expect("missing path prefix")).await?;
-                                Ok((entry, next))
+                                let entry = entry.get(self.vault_client()?, &next.prefix().expect("missing path prefix")).await?;
+                                Ok((entry, next.next().unwrap_or_default()))
                             }
                             None => {
                                 log::debug!("No more subfolders specified for vaultconfig, returning vault configmap");
-                                let parent = self.parent.as_ref().unwrap();
-                                let configmap = entry.config(parent.vault_client.as_ref().unwrap().clone()).await?;
+                                let configmap = entry.config(self.vault_client()?).await?;
                                 Ok((Entry::ConfigMap(Box::new(configmap)), path))
                             }
                         }
@@ -401,7 +408,7 @@ impl Config {
                 }
 
                 // Send request
-                let response = match self.parent.as_ref().unwrap().client.request(req).await {
+                let response = match self.https_client.request(req).await {
                     Ok(s) => s,
                     Err(e) => {
                         log::error!("{{\"error\":\"{}\"", e);

@@ -7,7 +7,6 @@ use hyper::{Body, HeaderMap, Method};
 use serde_json::json;
 use serde_json::Value;
 use std::error::Error;
-use vault_client_rs::client::Client as VaultClient;
 
 use crate::auth::{auth::BasicAuth, server::ServerAuth};
 use crate::config;
@@ -23,21 +22,20 @@ type BoxResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 pub struct State {
     pub config: Config,
     pub client: HttpsClient,
-    pub vault_client: Option<VaultClient>
 }
 
+// Let's have this instead create client and vault_client, and add config at a later point
 impl Default for State {
     fn default() -> Self {
         State {
             client: HttpsClient::default(),
             config: Config::default(),
-            vault_client: None
         }
     }
 }
 
 impl State {
-    pub async fn build(&self, opts: ArgMatches<'_>) -> BoxResult<Self> {
+    pub async fn build(&mut self, opts: ArgMatches) -> BoxResult<()> {
         // Set timeout
         let timeout: u64 = opts
             .value_of("timeout")
@@ -64,6 +62,11 @@ impl State {
 
         let vault_client = match opts.is_present("vault_url") {
             true => {
+                // This is required in order to set jwt_path to None if the flag was not passed
+                let jwt_path = match opts.occurrences_of("jwt_path") {
+                    0 => None,
+                    _ => opts.value_of("jwt_path")
+                };
                 let mut client = vault_client_rs::client::ClientBuilder::new()
                     .with_mount(opts.value_of("vault_mount").unwrap())
                     .with_url(opts.value_of("vault_url").unwrap())
@@ -71,7 +74,7 @@ impl State {
                     .with_kubernetes_role(opts.value_of("vault_kubernetes_role"))
                     .with_role_id(opts.value_of("vault_role_id"))
                     .with_secret_id(opts.value_of("vault_secret_id"))
-                    .with_jwt_path(opts.value_of("jwt_path"))
+                    .with_jwt_path(jwt_path)
                     .insecure(opts.is_present("insecure"))
                     .build().unwrap();
 
@@ -99,11 +102,15 @@ impl State {
             &config_location,
             config_auth.clone(),
             opts.is_present("username"),
-            self
+            client.clone(),
+            vault_client
         );
         config.update().await?;
 
-        Ok(State { client, config, vault_client })
+        self.client = client;
+        self.config = config;
+
+        Ok(())
     }
 
     pub async fn config(&mut self) -> Value {
