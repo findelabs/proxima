@@ -89,7 +89,7 @@ impl State {
 
         let client = ClientBuilder::new()
             .timeout(timeout)
-            .nodelay(opts.is_present("nodelay"))
+            .nodelay(opts.is_present("set_nodelay"))
             .enforce_http(opts.is_present("enforce_http"))
             .reuse_address(opts.is_present("set_reuse_address"))
             .accept_invalid_hostnames(opts.is_present("accept_invalid_hostnames"))
@@ -191,7 +191,7 @@ impl State {
                     log::debug!(
                         "Found an endpoint {}, with path {}",
                         endpoint.url().await,
-                        remainder.path().unwrap_or("None")
+                        remainder.suffix()
                     );
                     (endpoint, remainder)
                 }

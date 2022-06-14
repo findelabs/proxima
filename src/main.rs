@@ -61,7 +61,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         )
         .arg(
             Arg::new("username")
-                .short('u')
                 .long("username")
                 .help("Set required client username")
                 .env("PROXIMA_CLIENT_USERNAME")
@@ -70,7 +69,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         )
         .arg(
             Arg::new("password")
-                .short('p')
                 .long("password")
                 .help("Set required client password")
                 .requires("username")
@@ -88,7 +86,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         )
         .arg(
             Arg::new("config_password")
-                .short('p')
                 .long("config_password")
                 .help("Set required password for config endpoint")
                 .env("PROXIMA_AUTH_PASSWORD")
@@ -141,7 +138,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         )
         .arg(
             Arg::new("vault_url")
-                .short('v')
                 .long("vault_url")
                 .required(false)
                 .requires_all(&["vault_mount","vault_login_path"])
@@ -151,7 +147,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         )
         .arg(
             Arg::new("vault_kubernetes_role")
-                .short('r')
                 .long("vault_kubernetes_role")
                 .required(false)
                 .requires("vault_url")
@@ -161,7 +156,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         )
         .arg(
             Arg::new("vault_role_id")
-                .short('i')
                 .long("vault_role_id")
                 .env("VAULT_ROLE_ID")
                 .required(false)
@@ -171,7 +165,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         )
         .arg(
             Arg::new("vault_secret_id")
-                .short('S')
                 .long("vault_secret_id")
                 .env("VAULT_SECRET_ID")
                 .required(false)
@@ -181,7 +174,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         )
         .arg(
             Arg::new("vault_mount")
-                .short('m')
                 .long("vault_mount")
                 .requires("vault_url")
                 .env("VAULT_MOUNT")
@@ -190,7 +182,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         )
         .arg(
             Arg::new("vault_login_path")
-                .short('l')
                 .long("vault_login_path")
 //                .default_value("auth/kubernetes")
                 .requires("vault_url")
@@ -201,7 +192,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         )
         .arg(
             Arg::new("jwt_path")
-                .short('J')
                 .long("jwt_path")
                 .conflicts_with("vault_role_id")
                 .default_value("/var/run/secrets/kubernetes.io/serviceaccount/token")
@@ -211,7 +201,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .arg(
             Arg::new("import_cert")
                 .long("import_cert")
-                .short('c')
                 .required(false)
                 .help("Import CA certificate")
                 .env("PROXIMA_IMPORT_CERT")
