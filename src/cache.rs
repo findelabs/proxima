@@ -35,14 +35,9 @@ impl<'a> Cache {
     }
 
     pub async fn remove(&self, path: ProxyPath) -> Option<String> {
-        match path.path() {
-            Some(path_key) => {
-                log::debug!("Removing {} from cache", &path_key);
-                let mut cache = self.cache.write().await;
-                cache.remove_entry(path_key).map(|(key, _)| key)
-            }
-            None => None,
-        }
+        log::debug!("Removing {} from cache", &path.path());
+        let mut cache = self.cache.write().await;
+        cache.remove_entry(path.path()).map(|(key, _)| key)
     }
 
     pub async fn cache(&self) -> Map<String, Value> {

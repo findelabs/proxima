@@ -160,125 +160,73 @@ impl Config {
     }
 
     #[async_recursion]
-    pub async fn get_sub_entry(
-        &self,
-        map: ConfigMap,
-        path: ProxyPath,
-    ) -> Result<(Entry, ProxyPath), ProximaError> {
-        let prefix = match path.prefix() {
-            Some(pref) => pref,
-            None => return Err(ProximaError::UnknownEndpoint),
+    // Fetch should check the cache, then the ConfigMap
+    pub async fn fetch(&self, mut path: ProxyPath, config: ConfigMap) -> Result<(Entry, ProxyPath), ProximaError> {
+        // Check if cache contains endpoint
+        if let Some(next_hop) = path.next_hop() {
+            if let Some(hit) = self.cache.get(&next_hop).await {
+                return Ok((Entry::Endpoint(hit), path))
+            }
         };
+        
+        // If endpoint is not found in cache, check configmap
+        match config.get(&path.current()) {
+            Some(Entry::ConfigMap(entry)) => {
+                path.next()?;
+                self.fetch(path, *entry.clone()).await
+            },
+            Some(Entry::HttpConfig(entry)) => {
+                if let Some(next_hop) = path.next_hop() {
+                    if let Some(hit) = self.cache.get(&next_hop).await {
+                        return Ok((Entry::Endpoint(hit), path))
+                    }
+                };
 
-        log::debug!(
-            "Searching for endpoint: {}, with remainder of {}",
-            prefix,
-            path.suffix().unwrap_or_else(|| "None".to_string())
-        );
+                // Get the http config as config_file
+                let config_file = match self
+                    .parse(Some(entry.remote.clone()), entry.authentication.clone())
+                    .await
+                {
+                    Ok(c) => c,
+                    Err(e) => {
+                        log::error!("Error parsing remote config: {}", e.to_string());
+                        return Err(e);
+                    }
+                };
+                path.next()?;
+                self.fetch(path, config_file.static_config).await
+            },
+            Some(Entry::VaultConfig(entry)) => {
+                if let Some(next_hop) = path.next_hop() {
+                    if let Some(hit) = self.cache.get(&next_hop).await {
+                        return Ok((Entry::Endpoint(hit), path))
+                    }
+                };
 
-        match map.get(&prefix) {
-            Some(entry) => {
-                match entry {
-                    Entry::ConfigMap(map) => {
-                        log::debug!("Found configmap fork");
-                        match path.next() {
-                            Some(next) => {
-                                log::debug!("Looks like there is another subfolder specified, calling myself");
-                                self.get_sub_entry(*map.clone(), next).await
-                            }
-                            None => {
-                                log::debug!("No more subfolders specified, returning configmap");
-                                Ok((Entry::ConfigMap(map.clone()), path))
-                            }
-                        }
-                    }
-                    Entry::HttpConfig(entry) => {
-                        log::debug!("Found http config fork");
-                        let config_file = match self
-                            .parse(Some(entry.remote.clone()), entry.authentication.clone())
-                            .await
-                        {
-                            Ok(c) => c,
-                            Err(e) => {
-                                log::error!("Error parsing remote config: {}", e.to_string());
-                                return Err(e);
-                            }
-                        };
-                        match path.next() {
-                            Some(next) => {
-                                log::debug!("Sub folder specified for httpconfig, calling self");
-                                self.get_sub_entry(config_file.static_config, next).await
-                            }
-                            None => {
-                                log::debug!("No more subfolders specified for httpconfig, returning httpconfig");
-                                Ok((Entry::ConfigMap(Box::new(config_file.static_config)), path))
-                            }
-                        }
-                    }
-                    Entry::VaultConfig(entry) => {
-                        log::debug!("Found vault config fork");
-                        match path.next() {
-                            Some(next) => {
-                                log::debug!("Sub folder specified for vault config, getting secret from vault");
-                                let entry = entry.get(self.vault_client()?, &next.prefix().expect("missing path prefix")).await?;
-                                Ok((entry, next.next().unwrap_or_default()))
-                            }
-                            None => {
-                                log::debug!("No more subfolders specified for vaultconfig, returning vault configmap");
-                                let configmap = entry.config(self.vault_client()?).await?;
-                                Ok((Entry::ConfigMap(Box::new(configmap)), path))
-                            }
-                        }
-                    }
-                    Entry::Endpoint(e) => {
-                        log::debug!(
-                            "Returning endpoint: {}, with remainder of {}",
-                            &e.url,
-                            path.suffix().unwrap_or_else(|| "None".to_string())
-                        );
-                        Ok((Entry::Endpoint(e.clone()), path.next().unwrap_or_default()))
+                // Check to see if there are any other subfolders requested, 
+                // or else return the full vault config
+                match path.next_hop() {
+                    Some(h) => {
+                        let entry = entry.get(self.vault_client()?, &h).await?;
+                        Ok((entry, path))
+                    },
+                    None => {
+                        let configmap = entry.config(self.vault_client()?).await?;
+                        Ok((Entry::ConfigMap(Box::new(configmap)), path))
                     }
                 }
+            }
+            Some(Entry::Endpoint(entry)) => {
+                self.cache.set(&path.current(), entry);
+                Ok((Entry::Endpoint(entry.clone()), path))
             }
             None => Err(ProximaError::UnknownEndpoint),
         }
     }
 
-    pub async fn get(&mut self, path: ProxyPath) -> Result<(Entry, ProxyPath), ProximaError> {
+    pub async fn get(&self, path: ProxyPath) -> Result<(Entry, ProxyPath), ProximaError> {
         self.renew().await;
-        let proxy_path = match path.path() {
-            Some(p) => p,
-            None => return Err(ProximaError::UnknownEndpoint),
-        };
-
-        log::debug!("Searching for entry {} in cache", &proxy_path);
-        metrics::increment_counter!("proxima_cache_attempts_total");
-        match self.cache.get(proxy_path).await {
-            Some(entry) => {
-                metrics::increment_counter!("proxima_cache_hit_total");
-                log::debug!("Found {} in cache", proxy_path);
-                Ok((Entry::Endpoint(entry), remainder))
-            }
-            None => {
-                log::debug!(
-                    "{} not found in cache, searching for entry {} in configmap",
-                    &proxy_path,
-                    &path.prefix().unwrap()
-                );
-                match self
-                    .get_sub_entry(self.config_file().await.static_config, path.clone())
-                    .await
-                {
-                    Ok((entry, remainder)) => {
-                        if let Entry::Endpoint(ref hit) = entry {
-                            self.cache.set(proxy_path, &remainder, hit).await;
-                        };
-                        Ok((entry, remainder))
-                    }
-                    Err(e) => Err(e),
-                }
-            }
-        }
+        self.fetch(path, self.config_file().await.static_config).await
     }
 
     pub fn calculate_hash<T: Hash>(t: &T) -> u64 {

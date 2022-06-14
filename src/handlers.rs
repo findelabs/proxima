@@ -56,7 +56,7 @@ pub async fn proxy(
         "{{\"fn\": \"proxy\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"{}\", \"query\": \"{}\"}}",
         &method.as_str(),
         &addr,
-        &path.path().unwrap_or("None"),
+        &path.path(),
         query.clone().unwrap_or_else(|| "".to_string())
     );
     state
