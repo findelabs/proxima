@@ -162,9 +162,13 @@ impl Config {
     #[async_recursion]
     // Fetch should check the cache, then the ConfigMap
     pub async fn fetch(&self, mut path: ProxyPath, config: ConfigMap) -> Result<(Entry, ProxyPath), ProximaError> {
+
+        // Iterate through path
+        path.next()?;
+        
         // Check if cache contains endpoint
-        if let Some(next_hop) = path.next_hop() {
-            if let Some(hit) = self.cache.get(&next_hop).await {
+        if let Some(key) = path.key() {
+            if let Some(hit) = self.cache.get(&key).await {
                 return Ok((Entry::Endpoint(hit), path))
             }
         };
@@ -172,12 +176,11 @@ impl Config {
         // If endpoint is not found in cache, check configmap
         match config.get(&path.current()) {
             Some(Entry::ConfigMap(entry)) => {
-                path.next()?;
                 self.fetch(path, *entry.clone()).await
             },
             Some(Entry::HttpConfig(entry)) => {
-                if let Some(next_hop) = path.next_hop() {
-                    if let Some(hit) = self.cache.get(&next_hop).await {
+                if let Some(key) = path.key() {
+                    if let Some(hit) = self.cache.get(&key).await {
                         return Ok((Entry::Endpoint(hit), path))
                     }
                 };
@@ -193,12 +196,11 @@ impl Config {
                         return Err(e);
                     }
                 };
-                path.next()?;
                 self.fetch(path, config_file.static_config).await
             },
             Some(Entry::VaultConfig(entry)) => {
-                if let Some(next_hop) = path.next_hop() {
-                    if let Some(hit) = self.cache.get(&next_hop).await {
+                if let Some(key) = path.key() {
+                    if let Some(hit) = self.cache.get(&key).await {
                         return Ok((Entry::Endpoint(hit), path))
                     }
                 };
@@ -217,7 +219,7 @@ impl Config {
                 }
             }
             Some(Entry::Endpoint(entry)) => {
-                self.cache.set(&path.current(), entry);
+                self.cache.set(&path.key().expect("weird"), entry).await;
                 Ok((Entry::Endpoint(entry.clone()), path))
             }
             None => Err(ProximaError::UnknownEndpoint),

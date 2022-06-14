@@ -87,7 +87,7 @@ impl ProxyPath {
         self.vec.get(count as usize).unwrap().to_string()
     }
 
-    pub fn next_next(&self) -> Option<String> {
+    pub fn next_hop(&self) -> Option<String> {
         let index = self.count() + 1;
         match self.vec.get(index as usize) {
             Some(h) => Some(h.to_string()),
@@ -95,12 +95,27 @@ impl ProxyPath {
         }
     }
 
-    pub fn next_hop(&self) -> Option<String> {
+    pub fn next_key(&self) -> Option<String> {
         if self.count() == -1 {
+            return None
+        };
+        let count = self.count() + 2;
+        let slice = self.vec[..count as usize].to_vec().join("/");
+        log::debug!("next_key, getting path slice with count of {}: {}", &count, &slice.as_str());
+        match slice.as_str() {
+            "" => None,
+            _ => Some(slice),
+        }
+    }
+
+    pub fn key(&self) -> Option<String> {
+        if self.count() == -1 {
+            log::debug!("path count is -1, returning None");
             return None
         };
         let count = self.count() + 1;
         let slice = self.vec[..count as usize].to_vec().join("/");
+        log::debug!("key, getting path slice with count of {}: {}", &count, &slice.as_str());
         match slice.as_str() {
             "" => None,
             _ => Some(slice),
@@ -120,7 +135,7 @@ impl ProxyPath {
             let slice = self.vec[start as usize..].to_vec().join("/");
             slice
         } else {
-            "/".to_string()
+            "".to_string()
         }
     }
 }
