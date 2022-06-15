@@ -4,10 +4,10 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use vault_client_rs::error::VaultError;
 use hyper::header::HeaderValue;
 use rand::{distributions::Alphanumeric, Rng};
 use std::fmt;
+use vault_client_rs::error::VaultError;
 
 #[derive(Debug)]
 pub enum Error {
@@ -35,7 +35,7 @@ pub enum Error {
     TemplateError(handlebars::TemplateError),
     DecodeError(base64::DecodeError),
     UtfError(std::str::Utf8Error),
-    VaultError(VaultError)
+    VaultError(VaultError),
 }
 
 impl std::error::Error for Error {}
@@ -58,7 +58,7 @@ impl fmt::Display for Error {
             Error::UnauthorizedDigestUser => f.write_str("{\"error\": \"Unauthorized\"}"),
             Error::ConnectionTimeout => f.write_str("{\"error\": \"Connection timeout\"}"),
             Error::JwtDecode => f.write_str("{\"error\": \"Unable to decode JWT\"}"),
-            Error::MissingVaultClient=> f.write_str("{\"error\": \"Missing vault client\"}"),
+            Error::MissingVaultClient => f.write_str("{\"error\": \"Missing vault client\"}"),
             Error::Hyper(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::SerdeJson(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::SerdeYaml(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),

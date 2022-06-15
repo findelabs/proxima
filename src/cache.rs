@@ -60,10 +60,7 @@ impl<'a> Cache {
     }
 
     pub async fn set(&self, key: &str, endpoint: &Endpoint) {
-        log::debug!(
-            "Adding {} to cache",
-            key
-        );
+        log::debug!("Adding {} to cache", key);
         let mut cache = self.cache.write().await;
         cache.insert(key.to_string(), endpoint.clone());
     }

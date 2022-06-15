@@ -69,21 +69,21 @@ impl ProxyPath {
         &self.path
     }
 
-//    pub fn prefix(&self) -> String {
-//        if self.count() == -1 {
-//            return "".to_string()
-//        };
-//        let slice = self.vec[..self.count() as usize].to_vec().join("/");
-//        match slice.as_str() {
-//            "" => "".to_string(),
-//            _ => slice
-//        }
-//    }
+    //    pub fn prefix(&self) -> String {
+    //        if self.count() == -1 {
+    //            return "".to_string()
+    //        };
+    //        let slice = self.vec[..self.count() as usize].to_vec().join("/");
+    //        match slice.as_str() {
+    //            "" => "".to_string(),
+    //            _ => slice
+    //        }
+    //    }
 
     pub fn current(&self) -> String {
         let count = match self.count() {
             -1 => 0,
-            _ => self.count()
+            _ => self.count(),
         };
         self.vec.get(count as usize).unwrap().to_string()
     }
@@ -98,14 +98,18 @@ impl ProxyPath {
 
     pub fn next_key(&self) -> Option<String> {
         if self.count() == -1 {
-            return None
+            return None;
         };
         let count = self.count() + 2;
         log::trace!("next_key: {} vs {} ?", &count, self.max + 1);
         if count <= self.max + 1 {
             log::trace!("next_key: {:?}", self.vec);
             let slice = self.vec[..count as usize].to_vec().join("/");
-            log::trace!("next_key, getting path slice with count of {}: {}", &count, &slice.as_str());
+            log::trace!(
+                "next_key, getting path slice with count of {}: {}",
+                &count,
+                &slice.as_str()
+            );
             match slice.as_str() {
                 "" => None,
                 _ => Some(slice),
@@ -118,25 +122,29 @@ impl ProxyPath {
     pub fn key(&self) -> Option<String> {
         if self.count() == -1 {
             log::debug!("path count is -1, returning None");
-            return None
+            return None;
         };
         let count = self.count() + 1;
         let slice = self.vec[..count as usize].to_vec().join("/");
-        log::trace!("key, getting path slice with count of {}: {}", &count, &slice.as_str());
+        log::trace!(
+            "key, getting path slice with count of {}: {}",
+            &count,
+            &slice.as_str()
+        );
         match slice.as_str() {
             "" => None,
             _ => Some(slice),
         }
     }
 
-//    pub fn prefix_dot_notated(&self) -> String {
-//        let end = self.count() as usize;
-//        let slice = self.vec[..end].to_vec().join(".");
-//        slice
-//    }
+    //    pub fn prefix_dot_notated(&self) -> String {
+    //        let end = self.count() as usize;
+    //        let slice = self.vec[..end].to_vec().join(".");
+    //        slice
+    //    }
 
     pub fn suffix(&self) -> String {
-//        println!("{} vs {}", self.count(), self.max);
+        //        println!("{} vs {}", self.count(), self.max);
         if self.count() < self.max {
             let start = self.count() + 1;
             let slice = self.vec[start as usize..].to_vec().join("/");

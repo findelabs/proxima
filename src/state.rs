@@ -62,11 +62,11 @@ impl State {
 
         let vault_client = match opts.is_present("vault_url") {
             true => {
-//                // This is required in order to set jwt_path to None if the flag was not passed
-//                let jwt_path = match opts.occurrences_of("jwt_path") {
-//                    0 => None,
-//                    _ => opts.value_of("jwt_path")
-//                };
+                //                // This is required in order to set jwt_path to None if the flag was not passed
+                //                let jwt_path = match opts.occurrences_of("jwt_path") {
+                //                    0 => None,
+                //                    _ => opts.value_of("jwt_path")
+                //                };
                 let mut client = vault_client_rs::client::ClientBuilder::new()
                     .with_mount(opts.value_of("vault_mount").unwrap())
                     .with_url(opts.value_of("vault_url").unwrap())
@@ -76,15 +76,16 @@ impl State {
                     .with_secret_id(opts.value_of("vault_secret_id"))
                     .with_jwt_path(opts.value_of("jwt_path"))
                     .insecure(opts.is_present("insecure"))
-                    .build().unwrap();
+                    .build()
+                    .unwrap();
 
                 // Ensure we can login to vault
                 match client.login().await {
                     Ok(_) => Some(client),
-                    Err(_) => panic!("Failed logging in to vault")
+                    Err(_) => panic!("Failed logging in to vault"),
                 }
-            },
-            false => None
+            }
+            false => None,
         };
 
         let client = ClientBuilder::new()
@@ -103,7 +104,7 @@ impl State {
             config_auth.clone(),
             opts.is_present("username"),
             client.clone(),
-            vault_client
+            vault_client,
         );
         config.update().await?;
 

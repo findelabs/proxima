@@ -1,15 +1,15 @@
-use serde_json::{Value, Map};
-use std::collections::BTreeMap;
-use handlebars::Handlebars;
 use crate::error::Error as ProximaError;
-use serde::{Deserialize, Serialize};
-use base64;
 use async_recursion::async_recursion;
-use vault_client_rs::client::Client as VaultClient;
+use base64;
+use handlebars::Handlebars;
+use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
+use std::collections::BTreeMap;
 use std::hash::{Hash, Hasher};
+use vault_client_rs::client::Client as VaultClient;
 
 use crate::config::ConfigMap;
-use crate::config::{Entry};
+use crate::config::Entry;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct VaultConfig {
@@ -35,16 +35,16 @@ impl VaultConfig {
                 Ok(s) => s,
                 Err(e) => {
                     log::error!("Error getting secret {}: {}", &secret_path, e);
-                    continue
+                    continue;
                 }
             };
             match self.template(secret.data().await).await {
                 Ok(t) => {
                     map.insert(key_str.to_string(), t);
-                },
+                }
                 Err(e) => {
                     log::error!("Error generating template: {}", e);
-                    continue
+                    continue;
                 }
             }
         }
@@ -55,9 +55,7 @@ impl VaultConfig {
         let secret_path = format!("{}{}", self.secret, secret);
         let secret = vault.get(&secret_path).await?;
         match self.template(secret.data().await).await {
-            Ok(templated) => {
-                Ok(templated)
-            },
+            Ok(templated) => Ok(templated),
             Err(e) => {
                 log::error!("Error generating template: {}", e);
                 Err(e)
@@ -81,7 +79,7 @@ impl VaultConfig {
         let mut handlebars = Handlebars::new();
         handlebars.register_template_string("secret", template_decoded)?;
         handlebars.set_strict_mode(true);
-        
+
         Ok(handlebars)
     }
 }

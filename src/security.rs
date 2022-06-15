@@ -1,10 +1,8 @@
+use hyper::Method;
 use serde::{Deserialize, Serialize};
-use hyper::{Method};
 
-use crate::error::Error as ProximaError;
 use crate::auth::client::ClientAuthList;
-
-
+use crate::error::Error as ProximaError;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(deny_unknown_fields)]
@@ -37,17 +35,13 @@ impl Whitelist {
     pub fn authorize(&self, method: &Method) -> Result<(), ProximaError> {
         if let Some(ref methods) = self.methods {
             log::debug!("The method whitelist allows: {:?}", methods);
-            metrics::increment_counter!(
-                "proxima_security_method_whitelist_total"
-            );
+            metrics::increment_counter!("proxima_security_method_whitelist_total");
             match methods.contains(&method.to_string()) {
                 true => {
                     log::debug!("{} is in whitelist", method);
                 }
                 false => {
-                    metrics::increment_counter!(
-                        "proxima_security_method_blocked_total"
-                    );
+                    metrics::increment_counter!("proxima_security_method_blocked_total");
                     log::info!("Blocked {} method", method);
                     return Err(ProximaError::Forbidden);
                 }

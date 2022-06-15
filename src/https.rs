@@ -28,7 +28,7 @@ pub struct ClientConfig<'a> {
     set_reuse_address: bool,
     accept_invalid_hostnames: bool,
     accept_invalid_certs: bool,
-    import_cert: Option<&'a str>
+    import_cert: Option<&'a str>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -93,21 +93,19 @@ impl<'a> ClientBuilder<'a> {
         let tls_connector = match self.config.import_cert {
             Some(path) => {
                 let cert = &std::fs::read(path).expect("Failed reading in root cert");
-                let import_cert = Certificate::from_pem(cert).expect("Root cert is not in PEM format");
+                let import_cert =
+                    Certificate::from_pem(cert).expect("Root cert is not in PEM format");
                 log::info!("Reading in root cert at {}", &path);
                 TlsConnector::builder()
                     .danger_accept_invalid_hostnames(self.config.accept_invalid_hostnames)
                     .danger_accept_invalid_certs(self.config.accept_invalid_certs)
                     .add_root_certificate(import_cert)
                     .build()?
-
-            },
-            None => {
-                TlsConnector::builder()
-                    .danger_accept_invalid_hostnames(self.config.accept_invalid_hostnames)
-                    .danger_accept_invalid_certs(self.config.accept_invalid_certs)
-                    .build()?
             }
+            None => TlsConnector::builder()
+                .danger_accept_invalid_hostnames(self.config.accept_invalid_hostnames)
+                .danger_accept_invalid_certs(self.config.accept_invalid_certs)
+                .build()?,
         };
 
         let mut http = hyper::client::HttpConnector::new();

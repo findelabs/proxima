@@ -12,8 +12,8 @@ use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use url::Url;
 
-use crate::security::Whitelist;
 use crate::error::Error as ProximaError;
+use crate::security::Whitelist;
 
 const VALIDATE_DEFAULT: bool = true;
 

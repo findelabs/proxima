@@ -14,14 +14,14 @@ use tokio::sync::RwLock;
 use url::Url;
 use vault_client_rs::client::Client as VaultClient;
 
-use crate::auth::{server::ServerAuth};
-use crate::https::{HttpsClient};
+use crate::auth::server::ServerAuth;
 use crate::cache::Cache;
 use crate::error::Error as ProximaError;
+use crate::https::HttpsClient;
 use crate::path::ProxyPath;
+use crate::security::{display_security, Security};
 use crate::urls::Urls;
 use crate::vault::VaultConfig;
-use crate::security::{display_security, Security};
 
 type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 pub type ConfigMap = BTreeMap<String, Entry>;
@@ -41,7 +41,7 @@ pub struct Config {
     pub hash: Arc<RwLock<u64>>,
     pub cache: Cache,
     pub https_client: HttpsClient,
-    pub vault_client: Option<VaultClient>
+    pub vault_client: Option<VaultClient>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -108,10 +108,8 @@ impl Config {
 
     pub fn vault_client(&self) -> Result<VaultClient, ProximaError> {
         match &self.vault_client {
-            Some(c) => {
-                Ok(c.clone())
-            },
-            None => Err(ProximaError::MissingVaultClient)
+            Some(c) => Ok(c.clone()),
+            None => Err(ProximaError::MissingVaultClient),
         }
     }
 
@@ -142,7 +140,7 @@ impl Config {
         config_authentication: Option<ServerAuth>,
         global_authentication: bool,
         https_client: HttpsClient,
-        vault_client: Option<VaultClient>
+        vault_client: Option<VaultClient>,
     ) -> Config {
         Config {
             config_file: Arc::new(RwLock::new(ConfigFile {
@@ -155,57 +153,66 @@ impl Config {
             hash: Arc::new(RwLock::new(u64::default())),
             cache: Cache::default(),
             https_client,
-            vault_client
+            vault_client,
         }
     }
 
     #[async_recursion]
     // Fetch should check the cache, then the ConfigMap
-    pub async fn fetch(&self, mut path: ProxyPath, config: ConfigMap) -> Result<(Entry, ProxyPath), ProximaError> {
-
+    pub async fn fetch(
+        &self,
+        mut path: ProxyPath,
+        config: ConfigMap,
+    ) -> Result<(Entry, ProxyPath), ProximaError> {
         // If there are no more hops, return configmap
-        if let Some(_) = path.next_hop() {
+        if path.next_hop().is_some() {
             path.next()?;
         } else {
-            return Ok((Entry::ConfigMap(Box::new(config)), path))
+            return Ok((Entry::ConfigMap(Box::new(config)), path));
         };
-        
+
         // Check if cache contains endpoint
         if let Some(key) = path.key() {
             log::debug!("Starting fetch with cache search for {}", &key);
             if let Some(hit) = self.cache.get(&key).await {
                 log::debug!("Got cache hit for {}", &key);
-                return Ok((Entry::Endpoint(hit), path))
+                return Ok((Entry::Endpoint(hit), path));
             }
         };
-        
+
         // If endpoint is not found in cache, check configmap
         match config.get(&path.current()) {
             Some(Entry::ConfigMap(entry)) => {
-                log::debug!("Found ConfigMap at {}", &path.key().unwrap_or_else(||"None".to_string()));
-                
+                log::debug!(
+                    "Found ConfigMap at {}",
+                    &path.key().unwrap_or_else(|| "None".to_string())
+                );
+
                 // Check if cache has the next key
                 if let Some(key) = path.next_key() {
                     log::debug!("Searching cache for next hop of {}", &key);
                     if let Some(hit) = self.cache.get(&key).await {
                         log::debug!("Got cache hit for {}", &key);
-                        // Move path forward 
-                        path.next()?;    
-                        return Ok((Entry::Endpoint(hit), path))
+                        // Move path forward
+                        path.next()?;
+                        return Ok((Entry::Endpoint(hit), path));
                     }
                 };
 
                 self.fetch(path, *entry.clone()).await
-            },
+            }
             Some(Entry::HttpConfig(entry)) => {
-                log::debug!("Found HttpConfig at {}", &path.key().unwrap_or_else(||"None".to_string()));
+                log::debug!(
+                    "Found HttpConfig at {}",
+                    &path.key().unwrap_or_else(|| "None".to_string())
+                );
                 if let Some(key) = path.next_key() {
                     log::debug!("Searching cache for next hop of {}", &key);
                     if let Some(hit) = self.cache.get(&key).await {
                         log::debug!("Got cache hit for {}", &key);
-                        // Move path forward 
-                        path.next()?;    
-                        return Ok((Entry::Endpoint(hit), path))
+                        // Move path forward
+                        path.next()?;
+                        return Ok((Entry::Endpoint(hit), path));
                     }
                 };
 
@@ -221,26 +228,29 @@ impl Config {
                     }
                 };
                 self.fetch(path, config_file.static_config).await
-            },
+            }
             Some(Entry::VaultConfig(entry)) => {
-                log::debug!("Found VaultConifg at {}", &path.key().unwrap_or_else(||"None".to_string()));
+                log::debug!(
+                    "Found VaultConifg at {}",
+                    &path.key().unwrap_or_else(|| "None".to_string())
+                );
                 if let Some(key) = path.next_key() {
                     log::debug!("Searching cache for next hop of {}", &key);
                     if let Some(hit) = self.cache.get(&key).await {
                         log::debug!("Got cache hit for {}", &key);
-                        // Move path forward 
-                        path.next()?;    
-                        return Ok((Entry::Endpoint(hit), path))
+                        // Move path forward
+                        path.next()?;
+                        return Ok((Entry::Endpoint(hit), path));
                     }
                 };
 
-                // Check to see if there are any other subfolders requested, 
+                // Check to see if there are any other subfolders requested,
                 // or else return the full vault config
                 match path.next_hop() {
                     Some(h) => {
                         let entry = entry.get(self.vault_client()?, &h).await?;
                         Ok((entry, path))
-                    },
+                    }
                     None => {
                         let configmap = entry.config(self.vault_client()?).await?;
                         Ok((Entry::ConfigMap(Box::new(configmap)), path))
@@ -248,7 +258,10 @@ impl Config {
                 }
             }
             Some(Entry::Endpoint(entry)) => {
-                log::debug!("Found Endpoint at {}", &path.key().unwrap_or_else(||"None".to_string()));
+                log::debug!(
+                    "Found Endpoint at {}",
+                    &path.key().unwrap_or_else(|| "None".to_string())
+                );
                 self.cache.set(&path.key().expect("weird"), entry).await;
                 Ok((Entry::Endpoint(entry.clone()), path))
             }
@@ -258,7 +271,8 @@ impl Config {
 
     pub async fn get(&self, path: ProxyPath) -> Result<(Entry, ProxyPath), ProximaError> {
         self.renew().await;
-        self.fetch(path, self.config_file().await.static_config).await
+        self.fetch(path, self.config_file().await.static_config)
+            .await
     }
 
     pub fn calculate_hash<T: Hash>(t: &T) -> u64 {

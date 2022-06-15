@@ -6,7 +6,7 @@ use axum::{
     Router,
 };
 use chrono::Local;
-use clap::{crate_name, crate_version, Command, Arg};
+use clap::{crate_name, crate_version, Arg, Command};
 use env_logger::{Builder, Target};
 use log::LevelFilter;
 use std::io::Write;
@@ -23,10 +23,10 @@ mod https;
 mod metrics;
 mod path;
 mod requests;
+mod security;
 mod state;
 mod urls;
 mod vault;
-mod security;
 
 use crate::metrics::{setup_metrics_recorder, track_metrics};
 use handlers::{
@@ -140,7 +140,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             Arg::new("vault_url")
                 .long("vault_url")
                 .required(false)
-                .requires_all(&["vault_mount","vault_login_path"])
+                .requires_all(&["vault_mount", "vault_login_path"])
                 .env("VAULT_URL")
                 .help("Vault url")
                 .takes_value(true),
@@ -183,7 +183,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .arg(
             Arg::new("vault_login_path")
                 .long("vault_login_path")
-//                .default_value("auth/kubernetes")
+                //                .default_value("auth/kubernetes")
                 .requires("vault_url")
                 .required(false)
                 .env("VAULT_LOGIN_PATH")
@@ -196,7 +196,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .conflicts_with("vault_role_id")
                 .default_value("/var/run/secrets/kubernetes.io/serviceaccount/token")
                 .env("JWT_PATH")
-                .help("JWT path")
+                .help("JWT path"),
         )
         .arg(
             Arg::new("import_cert")
