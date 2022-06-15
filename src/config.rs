@@ -212,6 +212,7 @@ impl Config {
                         log::debug!("Got cache hit for {}", &key);
                         // Move path forward
                         path.next()?;
+
                         return Ok((Entry::Endpoint(hit), path));
                     }
                 };
@@ -231,7 +232,7 @@ impl Config {
             }
             Some(Entry::VaultConfig(entry)) => {
                 log::debug!(
-                    "Found VaultConifg at {}",
+                    "Found VaultConfig at {}",
                     &path.key().unwrap_or_else(|| "None".to_string())
                 );
                 if let Some(key) = path.next_key() {
@@ -249,6 +250,14 @@ impl Config {
                 match path.next_hop() {
                     Some(h) => {
                         let entry = entry.get(self.vault_client()?, &h).await?;
+                        // Move path forward
+                        path.next()?;
+
+                        // If vault secret is Endpoint variant, cache endpoint
+                        if let Entry::Endpoint(ref e) = entry {
+                            self.cache.set(&path.key().expect("odd"), &e).await;
+                        };
+
                         Ok((entry, path))
                     }
                     None => {
