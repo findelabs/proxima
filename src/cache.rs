@@ -30,8 +30,16 @@ impl<'a> Cache {
 
     pub async fn get(&self, key: &str) -> Option<Endpoint> {
         log::debug!("Searching for {} in cache", key);
+        metrics::increment_counter!("proxima_cache_attempt_total");
         let cache = self.cache.read().await;
-        cache.get(key).cloned()
+        match cache.get(key).cloned() {
+            Some(h) => Some(h),
+            None => {
+                log::debug!("Cache miss for {}", &key);
+                metrics::increment_counter!("proxima_cache_miss_total");
+                None
+            }
+        }
     }
 
     pub async fn remove(&self, path: ProxyPath) -> Option<String> {

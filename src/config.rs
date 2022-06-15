@@ -163,12 +163,18 @@ impl Config {
     // Fetch should check the cache, then the ConfigMap
     pub async fn fetch(&self, mut path: ProxyPath, config: ConfigMap) -> Result<(Entry, ProxyPath), ProximaError> {
 
-        // Iterate through path
-        path.next()?;
+        // If there are no more hops, return configmap
+        if let Some(_) = path.next_hop() {
+            path.next()?;
+        } else {
+            return Ok((Entry::ConfigMap(Box::new(config)), path))
+        };
         
         // Check if cache contains endpoint
         if let Some(key) = path.key() {
+            log::debug!("Starting fetch with cache search for {}", &key);
             if let Some(hit) = self.cache.get(&key).await {
+                log::debug!("Got cache hit for {}", &key);
                 return Ok((Entry::Endpoint(hit), path))
             }
         };
@@ -176,11 +182,29 @@ impl Config {
         // If endpoint is not found in cache, check configmap
         match config.get(&path.current()) {
             Some(Entry::ConfigMap(entry)) => {
+                log::debug!("Found ConfigMap at {}", &path.key().unwrap_or_else(||"None".to_string()));
+                
+                // Check if cache has the next key
+                if let Some(key) = path.next_key() {
+                    log::debug!("Searching cache for next hop of {}", &key);
+                    if let Some(hit) = self.cache.get(&key).await {
+                        log::debug!("Got cache hit for {}", &key);
+                        // Move path forward 
+                        path.next()?;    
+                        return Ok((Entry::Endpoint(hit), path))
+                    }
+                };
+
                 self.fetch(path, *entry.clone()).await
             },
             Some(Entry::HttpConfig(entry)) => {
-                if let Some(key) = path.key() {
+                log::debug!("Found HttpConfig at {}", &path.key().unwrap_or_else(||"None".to_string()));
+                if let Some(key) = path.next_key() {
+                    log::debug!("Searching cache for next hop of {}", &key);
                     if let Some(hit) = self.cache.get(&key).await {
+                        log::debug!("Got cache hit for {}", &key);
+                        // Move path forward 
+                        path.next()?;    
                         return Ok((Entry::Endpoint(hit), path))
                     }
                 };
@@ -199,8 +223,13 @@ impl Config {
                 self.fetch(path, config_file.static_config).await
             },
             Some(Entry::VaultConfig(entry)) => {
-                if let Some(key) = path.key() {
+                log::debug!("Found VaultConifg at {}", &path.key().unwrap_or_else(||"None".to_string()));
+                if let Some(key) = path.next_key() {
+                    log::debug!("Searching cache for next hop of {}", &key);
                     if let Some(hit) = self.cache.get(&key).await {
+                        log::debug!("Got cache hit for {}", &key);
+                        // Move path forward 
+                        path.next()?;    
                         return Ok((Entry::Endpoint(hit), path))
                     }
                 };
@@ -219,6 +248,7 @@ impl Config {
                 }
             }
             Some(Entry::Endpoint(entry)) => {
+                log::debug!("Found Endpoint at {}", &path.key().unwrap_or_else(||"None".to_string()));
                 self.cache.set(&path.key().expect("weird"), entry).await;
                 Ok((Entry::Endpoint(entry.clone()), path))
             }
