@@ -182,8 +182,8 @@ impl JwksAuth {
                 log::debug!("Kicking off background thread to renew jwts");
                 if let Err(e) = me.get_keys().await {
                     log::error!("Error gettings updated jwts: {}", e);
+                    metrics::increment_counter!("proxima_jwts_renew_failures_total");
                 }
-                metrics::increment_counter!("proxima_jwts_renew_success_total");
             });
         } else {
             log::debug!("\"jwts has not expired, current age is {} seconds\"", diff);
