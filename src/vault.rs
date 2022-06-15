@@ -34,7 +34,7 @@ impl VaultConfig {
             let secret = match vault.get(&secret_path).await {
                 Ok(s) => s,
                 Err(e) => {
-                    log::error!("Error getting secret: {}", e);
+                    log::error!("Error getting secret {}: {}", &secret_path, e);
                     continue
                 }
             };
