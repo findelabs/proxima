@@ -185,7 +185,7 @@ impl Config {
             if let Some(endpoint) = self.cache.get(&mapping).await {
                 log::debug!("Found cache entry for {}", &mapping);
 
-                return Ok((Entry::Endpoint(endpoint), path))
+                return Ok((Entry::Endpoint(endpoint), ProxyPath::default()))
             }
         }
 
