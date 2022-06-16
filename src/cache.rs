@@ -1,33 +1,33 @@
-use crate::config::Endpoint;
+//use crate::config::Endpoint;
 use serde_json::map::Map;
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-pub type CacheMap = Arc<RwLock<HashMap<String, Endpoint>>>;
+pub type CacheMap<T> = Arc<RwLock<HashMap<String, T>>>;
 
 #[derive(Debug, Clone)]
-pub struct Cache {
-    pub cache: CacheMap,
+pub struct Cache<T> {
+    pub cache: CacheMap<T>,
 }
 
-impl Default for Cache {
-    fn default() -> Cache {
+impl<T> Default for Cache<T> {
+    fn default() -> Cache<T> {
         Cache {
             cache: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 }
 
-impl<'a> Cache {
+impl<'a, T: std::clone::Clone + std::fmt::Display> Cache<T> {
     pub async fn clear(&mut self) {
         log::debug!("Clearing cache");
         let mut cache = self.cache.write().await;
         cache.clear();
     }
 
-    pub async fn get(&self, key: &str) -> Option<Endpoint> {
+    pub async fn get(&self, key: &str) -> Option<T> {
         log::debug!("Searching for {} in cache", key);
         metrics::increment_counter!("proxima_cache_attempt_total");
         let cache = self.cache.read().await;
@@ -51,14 +51,13 @@ impl<'a> Cache {
         log::debug!("Generating cache");
         let mut map = Map::new();
         let cache = self.cache.read().await;
-        for (key, endpoint) in &*cache {
-            let value = endpoint.url().await;
-            map.insert(key.to_string(), serde_json::Value::String(value));
+        for (key, value) in &*cache {
+            map.insert(key.to_string(), serde_json::Value::String(value.to_string()));
         }
         map
     }
 
-    pub async fn set(&self, key: &str, endpoint: &Endpoint) {
+    pub async fn set(&self, key: &str, endpoint: &T) {
         log::debug!("Adding {} to cache", key);
         let mut cache = self.cache.write().await;
         cache.insert(key.to_string(), endpoint.clone());

@@ -10,6 +10,7 @@ use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::prelude::*;
 use std::sync::Arc;
+use std::fmt;
 use tokio::sync::RwLock;
 use url::Url;
 use vault_client_rs::client::Client as VaultClient;
@@ -39,7 +40,8 @@ pub struct Config {
     pub config_authentication: Option<ServerAuth>,
     pub last_read: Arc<RwLock<i64>>,
     pub hash: Arc<RwLock<u64>>,
-    pub cache: Cache,
+    pub cache: Cache<Endpoint>,
+    pub mappings: Cache<String>,
     pub https_client: HttpsClient,
     pub vault_client: Option<VaultClient>,
 }
@@ -79,6 +81,18 @@ pub struct Endpoint {
     pub security: Option<Security>,
 }
 
+impl fmt::Display for Endpoint {
+    // This trait requires `fmt` with this exact signature.
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        // Write strictly the first element into the supplied output
+        // stream: `f`. Returns `fmt::Result` which indicates whether the
+        // operation succeeded or failed. Note that `write!` uses syntax which
+        // is very similar to `println!`.
+        write!(f, "{}", self.url.to_string())
+    }
+}
+
+
 impl<'a> Endpoint {
     pub async fn url(&self) -> String {
         match self.url.path().await {
@@ -100,6 +114,10 @@ impl Config {
 
     pub async fn get_cache(&self) -> Map<String, Value> {
         self.cache.cache().await
+    }
+
+    pub async fn get_mappings(&self) -> Map<String, Value> {
+        self.mappings.cache().await
     }
 
     pub async fn clear_cache(&mut self) {
@@ -152,9 +170,34 @@ impl Config {
             last_read: Arc::new(RwLock::new(i64::default())),
             hash: Arc::new(RwLock::new(u64::default())),
             cache: Cache::default(),
+            mappings: Cache::default(),
             https_client,
             vault_client,
         }
+    }
+
+    pub async fn cache_get(&self, path: ProxyPath) -> Result<(Entry, ProxyPath), ProximaError> {
+        let path_str = path.path();
+        log::debug!("Starting cache_get for {}", &path_str);
+        if let Some(mapping) = self.mappings.get(&path_str).await {
+            log::debug!("Found cached mapping for {}", &path_str);
+
+            if let Some(endpoint) = self.cache.get(&mapping).await {
+                log::debug!("Found cache entry for {}", &mapping);
+
+                return Ok((Entry::Endpoint(endpoint), path))
+            }
+        }
+
+        let result = self.fetch(path, self.config_file().await.static_config).await?;
+
+        if let (Entry::Endpoint(_), ref path) = result {
+            // Set cache and mappings
+            log::debug!("Adding {} to mappings", path.path());
+            self.mappings.set(&path.path(), &path.key().expect("weird")).await;
+        }
+
+        Ok(result)
     }
 
     #[async_recursion]
@@ -271,7 +314,13 @@ impl Config {
                     "Found Endpoint at {}",
                     &path.key().unwrap_or_else(|| "None".to_string())
                 );
-                self.cache.set(&path.key().expect("weird"), entry).await;
+
+                // Save entry into cache
+                let key = &path.key().expect("weird");
+                log::debug!("Adding {} to cache", key);
+                self.cache.set(key, &entry).await;
+
+                // Return endpoint
                 Ok((Entry::Endpoint(entry.clone()), path))
             }
             None => Err(ProximaError::UnknownEndpoint),
@@ -280,8 +329,7 @@ impl Config {
 
     pub async fn get(&self, path: ProxyPath) -> Result<(Entry, ProxyPath), ProximaError> {
         self.renew().await;
-        self.fetch(path, self.config_file().await.static_config)
-            .await
+        self.cache_get(path).await
     }
 
     pub fn calculate_hash<T: Hash>(t: &T) -> u64 {

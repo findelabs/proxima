@@ -31,7 +31,7 @@ mod vault;
 use crate::metrics::{setup_metrics_recorder, track_metrics};
 use handlers::{
     cache_delete, config, echo, cache_get, handler_404, health, help, metrics, proxy, reload,
-    root,
+    root, mappings_get
 };
 use state::State;
 
@@ -244,6 +244,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .route("/-/config", get(config))
         .route("/-/reload", post(reload))
         .route("/-/cache", get(cache_get).delete(cache_delete))
+        .route("/-/mappings", get(mappings_get))
         .route("/:endpoint", any(proxy))
         .route("/:endpoint/*path", any(proxy));
 

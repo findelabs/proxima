@@ -97,6 +97,19 @@ pub async fn config(
     Json(state.config().await)
 }
 
+pub async fn mappings_get(
+    Extension(mut state): Extension<State>,
+    RequestMethod(method): RequestMethod,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+) -> Json<Value> {
+    log::debug!(
+        "{{\"fn\": \"cache\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/cache\"}}",
+        &method,
+        &addr,
+    );
+    Json(state.mappings_get().await)
+}
+
 pub async fn cache_get(
     Extension(mut state): Extension<State>,
     RequestMethod(method): RequestMethod,

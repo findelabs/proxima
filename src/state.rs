@@ -123,6 +123,10 @@ impl State {
         json!(self.config.get_cache().await)
     }
 
+    pub async fn mappings_get(&mut self) -> Value {
+        json!(self.config.get_mappings().await)
+    }
+
     pub async fn cache_clear(&mut self) -> Value {
         self.config.clear_cache().await;
         json!({"msg": "cache has been cleared"})
