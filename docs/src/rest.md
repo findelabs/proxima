@@ -105,7 +105,7 @@ Delete Proxima's cache
 ## Delete Cache Entry
 Get the current url cache hashmap.
 
-**URL** : `/-/cache[/key]`
+**URL** : `/-/cache?key=[key]`
 
 **Method** : `DELETE`
 
