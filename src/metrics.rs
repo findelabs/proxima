@@ -42,6 +42,14 @@ pub async fn track_metrics<B>(req: Request<B>, next: Next<B>) -> impl IntoRespon
     let latency = start.elapsed().as_secs_f64();
     let status = response.status().as_u16().to_string();
 
+    log::info!(
+        "{{\"method\": \"{}\", \"path\":\"{}\", \"client\":\"{}\", \"status\":{}}}",
+        &method,
+        &path,
+        &client,
+        &status
+    );
+
     let labels = [
         ("method", method.to_string()),
         ("path", path),
@@ -52,6 +60,5 @@ pub async fn track_metrics<B>(req: Request<B>, next: Next<B>) -> impl IntoRespon
 
     metrics::increment_counter!("proxima_requests_total", &labels);
     metrics::histogram!("proxima_requests_duration_seconds", latency, &labels);
-
     response
 }

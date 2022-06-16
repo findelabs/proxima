@@ -1,7 +1,7 @@
 use axum::{
     async_trait,
     extract::{
-        BodyStream, ConnectInfo, Extension, FromRequest, OriginalUri, Path, RawQuery, RequestParts, Query,
+        BodyStream, ConnectInfo, Extension, FromRequest, OriginalUri, RawQuery, RequestParts, Query,
     },
     http::Response,
     http::StatusCode,
@@ -59,7 +59,7 @@ pub async fn proxy(
     RawQuery(query): RawQuery,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Result<Response<Body>, ProximaError> {
-    log::info!(
+    log::debug!(
         "{{\"fn\": \"proxy\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"{}\", \"query\": \"{}\"}}",
         &method.as_str(),
         &addr,
