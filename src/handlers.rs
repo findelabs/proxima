@@ -46,7 +46,7 @@ where
 pub async fn metrics(
     Extension(recorder_handle): Extension<PrometheusHandle>,
 ) -> Result<String, ProximaError> {
-    log::info!("{{\"fn\": \"metrics\", \"method\":\"get\"}}");
+    log::debug!("{{\"fn\": \"metrics\", \"method\":\"get\"}}");
     Ok(recorder_handle.render())
 }
 
@@ -76,7 +76,7 @@ pub async fn reload(
     RequestMethod(method): RequestMethod,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) {
-    log::info!(
+    log::debug!(
         "{{\"fn\": \"reload\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/reload\"}}",
         &method,
         &addr,
@@ -89,7 +89,7 @@ pub async fn config(
     RequestMethod(method): RequestMethod,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Json<Value> {
-    log::info!(
+    log::debug!(
         "{{\"fn\": \"config\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/config\"}}",
         &method,
         &addr,
@@ -102,7 +102,7 @@ pub async fn cache_get(
     RequestMethod(method): RequestMethod,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Json<Value> {
-    log::info!(
+    log::debug!(
         "{{\"fn\": \"cache\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/cache\"}}",
         &method,
         &addr,
@@ -117,7 +117,7 @@ pub async fn cache_delete(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Query(params): Query<CacheParams>
 ) -> Json<Value> {
-    log::info!(
+    log::debug!(
         "{{\"fn\": \"cache\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/cache\"}}",
         &method,
         &addr
@@ -134,7 +134,7 @@ pub async fn health(
     RequestMethod(method): RequestMethod,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Json<Value> {
-    log::info!(
+    log::debug!(
         "{{\"fn\": \"health\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/health\"}}",
         &method,
         &addr,
@@ -146,7 +146,7 @@ pub async fn root(
     RequestMethod(method): RequestMethod,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Json<Value> {
-    log::info!(
+    log::debug!(
         "{{\"fn\": \"root\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/\"}}",
         &method,
         &addr,
@@ -161,7 +161,7 @@ pub async fn echo(
     RequestMethod(method): RequestMethod,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Json<Value> {
-    log::info!(
+    log::debug!(
         "{{\"fn\": \"echo\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/echo\"}}",
         &method,
         &addr,
@@ -173,7 +173,7 @@ pub async fn help(
     RequestMethod(method): RequestMethod,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Json<Value> {
-    log::info!(
+    log::debug!(
         "{{\"fn\": \"help\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/help\"}}",
         &method,
         &addr,
@@ -189,7 +189,7 @@ pub async fn handler_404(
 ) -> impl IntoResponse {
     let parts = original_uri.into_parts();
     let path_and_query = parts.path_and_query.expect("Missing post path and query");
-    log::info!(
+    log::debug!(
         "{{\"fn\": \"handler_404\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"{}\"}}",
         &method,
         &addr,
