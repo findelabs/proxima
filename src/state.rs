@@ -119,16 +119,16 @@ impl State {
         json!(self.config.config_file().await)
     }
 
-    pub async fn get_cache(&mut self) -> Value {
+    pub async fn cache_get(&mut self) -> Value {
         json!(self.config.get_cache().await)
     }
 
-    pub async fn clear_cache(&mut self) -> Value {
+    pub async fn cache_clear(&mut self) -> Value {
         self.config.clear_cache().await;
         json!({"msg": "cache has been cleared"})
     }
 
-    pub async fn remove_cache(&mut self, path: ProxyPath) -> Value {
+    pub async fn cache_remove(&mut self, path: &str) -> Value {
         match self.config.cache.remove(path).await {
             Some(e) => json!({"msg": "entry remove from cache", "entry": e}),
             None => json!({"msg": "entry not found in cache"}),

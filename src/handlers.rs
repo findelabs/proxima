@@ -1,13 +1,14 @@
 use axum::{
     async_trait,
     extract::{
-        BodyStream, ConnectInfo, Extension, FromRequest, OriginalUri, Path, RawQuery, RequestParts,
+        BodyStream, ConnectInfo, Extension, FromRequest, OriginalUri, Path, RawQuery, RequestParts, Query,
     },
     http::Response,
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
+use serde::{Deserialize};
 use clap::{crate_description, crate_name, crate_version};
 use hyper::{Body, HeaderMap};
 use metrics_exporter_prometheus::PrometheusHandle;
@@ -22,6 +23,12 @@ use crate::State;
 // This is required in order to get the method from the request
 #[derive(Debug)]
 pub struct RequestMethod(pub hyper::Method);
+
+// This is for accessing the cache
+#[derive(Deserialize)]
+pub struct CacheParams {
+    key: Option<String>
+}
 
 #[async_trait]
 impl<B> FromRequest<B> for RequestMethod
@@ -90,7 +97,7 @@ pub async fn config(
     Json(state.config().await)
 }
 
-pub async fn get_cache(
+pub async fn cache_get(
     Extension(mut state): Extension<State>,
     RequestMethod(method): RequestMethod,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
@@ -100,35 +107,27 @@ pub async fn get_cache(
         &method,
         &addr,
     );
-    Json(state.get_cache().await)
+    Json(state.cache_get().await)
 }
 
-pub async fn remove_cache(
+pub async fn cache_delete(
     Extension(mut state): Extension<State>,
-    Path(entry): Path<String>,
+//    Path(entry): Path<String>,
     RequestMethod(method): RequestMethod,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
-) -> Json<Value> {
-    log::info!(
-        "{{\"fn\": \"cache\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/cache/{}\"}}",
-        &method,
-        &addr,
-        &entry
-    );
-    Json(state.remove_cache(ProxyPath::new(&entry)).await)
-}
-
-pub async fn clear_cache(
-    Extension(mut state): Extension<State>,
-    RequestMethod(method): RequestMethod,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    Query(params): Query<CacheParams>
 ) -> Json<Value> {
     log::info!(
         "{{\"fn\": \"cache\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/cache\"}}",
         &method,
-        &addr,
+        &addr
     );
-    Json(state.clear_cache().await)
+
+    if let Some(key) = params.key {
+        Json(state.cache_remove(&key).await)
+    } else {
+        Json(state.cache_clear().await)
+    }
 }
 
 pub async fn health(

@@ -1,5 +1,4 @@
 use crate::config::Endpoint;
-use crate::path::ProxyPath;
 use serde_json::map::Map;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -42,10 +41,10 @@ impl<'a> Cache {
         }
     }
 
-    pub async fn remove(&self, path: ProxyPath) -> Option<String> {
-        log::debug!("Removing {} from cache", &path.path());
+    pub async fn remove(&self, key: &str) -> Option<String> {
+        log::debug!("Removing {} from cache", &key);
         let mut cache = self.cache.write().await;
-        cache.remove_entry(path.path()).map(|(key, _)| key)
+        cache.remove_entry(key).map(|(key, _)| key)
     }
 
     pub async fn cache(&self) -> Map<String, Value> {

@@ -2,7 +2,7 @@ use axum::{
     extract::Extension,
     handler::Handler,
     middleware,
-    routing::{any, delete, get, post},
+    routing::{any, get, post},
     Router,
 };
 use chrono::Local;
@@ -30,8 +30,8 @@ mod vault;
 
 use crate::metrics::{setup_metrics_recorder, track_metrics};
 use handlers::{
-    clear_cache, config, echo, get_cache, handler_404, health, help, metrics, proxy, reload,
-    remove_cache, root,
+    cache_delete, config, echo, cache_get, handler_404, health, help, metrics, proxy, reload,
+    root,
 };
 use state::State;
 
@@ -243,8 +243,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let closed = Router::new()
         .route("/-/config", get(config))
         .route("/-/reload", post(reload))
-        .route("/-/cache", get(get_cache).delete(clear_cache))
-        .route("/-/cache/*entry", delete(remove_cache))
+        .route("/-/cache", get(cache_get).delete(cache_delete))
         .route("/:endpoint", any(proxy))
         .route("/:endpoint/*path", any(proxy));
 
