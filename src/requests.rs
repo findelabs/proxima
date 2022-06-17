@@ -65,8 +65,6 @@ impl ProxyRequest {
             authentication.headers(headers, &uri).await?;
         }
 
-        //        let work = self.client.clone().request(req);
-
         let timeout = match self.endpoint.timeout {
             Some(duration) => duration,
             None => TIMEOUT_DEFAULT,

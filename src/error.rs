@@ -104,6 +104,10 @@ impl IntoResponse for Error {
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
+        metrics::increment_counter!(
+            "proxima_response_errors_total"
+        );
+
         res.status(status_code).body(body).unwrap()
     }
 }
