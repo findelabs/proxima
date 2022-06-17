@@ -9,18 +9,28 @@ pub type CacheMap<T> = Arc<RwLock<HashMap<String, T>>>;
 
 #[derive(Debug, Clone)]
 pub struct Cache<T> {
+    pub name: String,
     pub cache: CacheMap<T>,
 }
 
 impl<T> Default for Cache<T> {
     fn default() -> Cache<T> {
         Cache {
+            // Used for metric tracking
+            name: String::default(),
             cache: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 }
 
 impl<'a, T: std::clone::Clone + std::fmt::Display> Cache<T> {
+    pub fn new(name: Option<String>) -> Cache<T> {
+        Cache {
+            name: name.unwrap_or_else(||String::default()),
+            cache: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+
     pub async fn clear(&mut self) {
         log::debug!("Clearing cache");
         let mut cache = self.cache.write().await;
@@ -29,13 +39,13 @@ impl<'a, T: std::clone::Clone + std::fmt::Display> Cache<T> {
 
     pub async fn get(&self, key: &str) -> Option<T> {
         log::debug!("Searching for {} in cache", key);
-        metrics::increment_counter!("proxima_cache_attempt_total");
+        metrics::increment_counter!("proxima_cache_attempt_total", "name" => self.name.clone());
         let cache = self.cache.read().await;
         match cache.get(key).cloned() {
             Some(h) => Some(h),
             None => {
                 log::debug!("Cache miss for {}", &key);
-                metrics::increment_counter!("proxima_cache_miss_total");
+                metrics::increment_counter!("proxima_cache_miss_total", "name" => self.name.clone());
                 None
             }
         }

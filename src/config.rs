@@ -169,8 +169,8 @@ impl Config {
             config_authentication,
             last_read: Arc::new(RwLock::new(i64::default())),
             hash: Arc::new(RwLock::new(u64::default())),
-            cache: Cache::default(),
-            mappings: Cache::default(),
+            cache: Cache::new(Some("cache".to_string())),
+            mappings: Cache::new(Some("mappings".to_string())),
             https_client,
             vault_client,
         }
