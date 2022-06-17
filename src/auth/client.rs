@@ -49,7 +49,7 @@ impl<'a> ClientAuth {
         header: &HeaderValue,
         method: &Method,
     ) -> Result<(), ProximaError> {
-        metrics::increment_counter!("proxima_client_authentication_total");
+        metrics::increment_counter!("proxima_security_client_authentication_total");
         match self {
             ClientAuth::basic(auth) => {
                 if let Some(ref whitelist) = auth.whitelist {
@@ -58,7 +58,7 @@ impl<'a> ClientAuth {
                 }
                 if HeaderValue::from_str(&auth.basic()).unwrap() != header {
                     metrics::increment_counter!(
-                        "proxima_client_authentication_failed_count",
+                        "proxima_security_client_authentication_failed_count",
                         "type" => "basic"
                     );
                     return Err(ProximaError::UnauthorizedUser);
@@ -71,7 +71,7 @@ impl<'a> ClientAuth {
                 }
                 if HeaderValue::from_str(&auth.token()).unwrap() != header {
                     metrics::increment_counter!(
-                        "proxima_client_authentication_failed_count",
+                        "proxima_security_client_authentication_failed_count",
                         "type" => "bearer"
                     );
                     return Err(ProximaError::UnauthorizedUser);
@@ -101,7 +101,7 @@ impl<'a> ClientAuth {
 
                 if server_authorization_header != client_authorization_header {
                     metrics::increment_counter!(
-                        "proxima_client_authentication_failed_count",
+                        "proxima_security_client_authentication_failed_count",
                         "type" => "digest"
                     );
                     return Err(ProximaError::UnauthorizedDigestUser);
@@ -116,7 +116,7 @@ impl<'a> ClientAuth {
                 let token: Vec<&str> = authorize.split(' ').collect();
                 if (auth.validate(token[1]).await).is_err() {
                     metrics::increment_counter!(
-                        "proxima_client_authentication_failed_count",
+                        "proxima_security_client_authentication_failed_count",
                         "type" => "jwks"
                     );
                     return Err(ProximaError::UnauthorizedUser);

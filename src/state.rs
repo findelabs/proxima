@@ -166,13 +166,19 @@ impl State {
                 log::debug!("Endpoint is locked");
                 match self.config.global_authentication {
                     true => {
-                        log::info!(
+                        log::error!(
                             "Endpoint is locked, but proxima is using global authentication"
                         );
                     }
                     false => match headers.get("AUTHORIZATION") {
                         Some(header) => client.authorize(header, method).await?,
-                        None => return Err(ProximaError::UnauthorizedUser),
+                        None => {
+                            metrics::increment_counter!(
+                                "proxima_security_client_authentication_failed_count",
+                                "type" => "absent"
+                            );
+                            return Err(ProximaError::UnauthorizedUser)
+                        }
                     },
                 }
             }
