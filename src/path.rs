@@ -65,6 +65,23 @@ impl ProxyPath {
         *count
     }
 
+    pub fn set_count(&self, count: i32) -> Result<(), ProximaError> {
+        if count > self.max {
+            Err(ProximaError::PathCount)
+        } else {
+            let mut current = self.count.write().unwrap();
+            *current = count;
+            Ok(())
+        }
+    }
+
+    pub fn forward(&mut self, key: &str) -> Result<(), ProximaError> {
+        log::debug!("Setting {} forward in {}", key, self.path());
+        let slashes = key.matches('/').count() as i32;
+        self.set_count(slashes)?;
+        Ok(())
+    }
+
     pub fn path(&self) -> &str {
         &self.path
     }

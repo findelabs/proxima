@@ -176,7 +176,7 @@ impl Config {
         }
     }
 
-    pub async fn cache_get(&self, path: ProxyPath) -> Result<(Entry, ProxyPath), ProximaError> {
+    pub async fn cache_get(&self, mut path: ProxyPath) -> Result<(Entry, ProxyPath), ProximaError> {
         let path_str = path.path();
         log::debug!("Starting cache_get for {}", &path_str);
         if let Some(mapping) = self.mappings.get(&path_str).await {
@@ -184,8 +184,10 @@ impl Config {
 
             if let Some(endpoint) = self.cache.get(&mapping).await {
                 log::debug!("Found cache entry for {}", &mapping);
-
-                return Ok((Entry::Endpoint(endpoint), ProxyPath::default()))
+                
+                // Spin path fowward, so that only the remainder is passed along
+                path.forward(&mapping)?;
+                return Ok((Entry::Endpoint(endpoint), path))
             }
         }
 
