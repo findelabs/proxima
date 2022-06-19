@@ -4,6 +4,7 @@ use axum::{
 };
 use hyper::{Body, HeaderMap, Method};
 use std::time::Duration;
+use hyper::header::HeaderValue;
 
 use crate::config::Endpoint;
 use crate::error::Error as ProximaError;
@@ -55,6 +56,10 @@ impl ProxyRequest {
         // Remove HOST and USER_AGENT headers
         self.request_headers.remove(hyper::header::HOST);
         self.request_headers.remove(hyper::header::USER_AGENT);
+
+        // Add x-forwarded-prefix
+        let header = HeaderValue::from_str(&self.path.path()).unwrap();
+        self.request_headers.insert("x-forwarded-prefix", header);
 
         // Append to request the headers passed by client
         let headers = req.headers_mut();
