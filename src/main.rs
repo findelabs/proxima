@@ -30,8 +30,8 @@ mod vault;
 
 use crate::metrics::{setup_metrics_recorder, track_metrics};
 use handlers::{
-    cache_delete, config, echo, cache_get, handler_404, health, help, metrics, proxy, reload,
-    root, mappings_get
+    cache_delete, cache_get, config, echo, handler_404, health, help, mappings_get, metrics, proxy,
+    reload, root,
 };
 use state::State;
 

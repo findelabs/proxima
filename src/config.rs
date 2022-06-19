@@ -6,11 +6,11 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::BTreeMap;
+use std::fmt;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::prelude::*;
 use std::sync::Arc;
-use std::fmt;
 use tokio::sync::RwLock;
 use url::Url;
 use vault_client_rs::client::Client as VaultClient;
@@ -91,7 +91,6 @@ impl fmt::Display for Endpoint {
         write!(f, "{}", self.url.to_string())
     }
 }
-
 
 impl<'a> Endpoint {
     pub async fn url(&self) -> String {
@@ -184,19 +183,23 @@ impl Config {
 
             if let Some(endpoint) = self.cache.get(&mapping).await {
                 log::debug!("Found cache entry for {}", &mapping);
-                
+
                 // Spin path fowward, so that only the remainder is passed along
                 path.forward(&mapping)?;
-                return Ok((Entry::Endpoint(endpoint), path))
+                return Ok((Entry::Endpoint(endpoint), path));
             }
         }
 
-        let result = self.fetch(path, self.config_file().await.static_config).await?;
+        let result = self
+            .fetch(path, self.config_file().await.static_config)
+            .await?;
 
         if let (Entry::Endpoint(_), ref path) = result {
             // Set cache and mappings
             log::debug!("Adding {} to mappings", path.path());
-            self.mappings.set(&path.path(), &path.key().expect("weird")).await;
+            self.mappings
+                .set(&path.path(), &path.key().expect("weird"))
+                .await;
         }
 
         Ok(result)

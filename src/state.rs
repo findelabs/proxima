@@ -173,11 +173,12 @@ impl State {
                     false => match headers.get("AUTHORIZATION") {
                         Some(header) => client.authorize(header, method).await?,
                         None => {
+                            log::debug!("Endpoint is locked, but no authorization header found");
                             metrics::increment_counter!(
                                 "proxima_security_client_authentication_failed_count",
                                 "type" => "absent"
                             );
-                            return Err(ProximaError::UnauthorizedUser)
+                            return Err(ProximaError::UnauthorizedClientBasic);
                         }
                     },
                 }

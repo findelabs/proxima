@@ -258,7 +258,7 @@ impl JwksAuth {
                                     "\"Blocking client as JWT.scp does not contain {}\"",
                                     scope
                                 );
-                                return Err(ProximaError::UnauthorizedUser);
+                                return Err(ProximaError::UnauthorizedClient);
                             }
                         }
                     }

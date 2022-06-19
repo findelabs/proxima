@@ -31,15 +31,32 @@ impl ClientAuthList {
     ) -> Result<(), ProximaError> {
         log::debug!("Looping over users");
         let Self(internal) = self;
+
+        // We need to check if any of the client auths are Digest or Basic users
+        // This is becuase we need to return the proper www-authenticate headers
+        let mut digest_found = false;
+        let mut basic_found = false;
+
         for user in internal.iter() {
-            log::debug!("\"Checking if client auth against {:?}\"", user);
+            log::debug!("\"Checking if connecting client matches {:?}\"", user);
             match user.authorize(header, method).await {
                 Ok(_) => return Ok(()),
-                Err(_) => continue,
+                Err(e) => {
+                    match e {
+                        ProximaError::UnauthorizedClientBasic => basic_found = true,
+                        ProximaError::UnauthorizedClientDigest => digest_found = true,
+                        _ => log::trace!("Error variant not matched"),
+                    }
+                    continue;
+                }
             }
         }
         log::debug!("\"Client could not be authenticated\"");
-        Err(ProximaError::UnauthorizedUser)
+        match (digest_found, basic_found) {
+            (true, false) => Err(ProximaError::UnauthorizedClientDigest),
+            (false, true) => Err(ProximaError::UnauthorizedClientBasic),
+            _ => Err(ProximaError::UnauthorizedClient),
+        }
     }
 }
 
@@ -61,7 +78,7 @@ impl<'a> ClientAuth {
                         "proxima_security_client_authentication_failed_count",
                         "type" => "basic"
                     );
-                    return Err(ProximaError::UnauthorizedUser);
+                    return Err(ProximaError::UnauthorizedClientBasic);
                 }
             }
             ClientAuth::bearer(auth) => {
@@ -74,7 +91,7 @@ impl<'a> ClientAuth {
                         "proxima_security_client_authentication_failed_count",
                         "type" => "bearer"
                     );
-                    return Err(ProximaError::UnauthorizedUser);
+                    return Err(ProximaError::UnauthorizedClient);
                 }
             }
             ClientAuth::digest(auth) => {
@@ -87,7 +104,7 @@ impl<'a> ClientAuth {
                         Ok(c) => c,
                         Err(e) => {
                             log::error!("Error converting client authorization header: {}", e);
-                            return Err(ProximaError::UnauthorizedDigestUser);
+                            return Err(ProximaError::UnauthorizedClientDigest);
                         }
                     };
 
@@ -104,7 +121,7 @@ impl<'a> ClientAuth {
                         "proxima_security_client_authentication_failed_count",
                         "type" => "digest"
                     );
-                    return Err(ProximaError::UnauthorizedDigestUser);
+                    return Err(ProximaError::UnauthorizedClientDigest);
                 }
             }
             ClientAuth::jwks(auth) => {
@@ -119,7 +136,7 @@ impl<'a> ClientAuth {
                         "proxima_security_client_authentication_failed_count",
                         "type" => "jwks"
                     );
-                    return Err(ProximaError::UnauthorizedUser);
+                    return Err(ProximaError::UnauthorizedClient);
                 }
             }
         }

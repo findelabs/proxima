@@ -1,17 +1,17 @@
 use axum::{
     async_trait,
     extract::{
-        BodyStream, ConnectInfo, Extension, FromRequest, OriginalUri, RawQuery, RequestParts, Query,
+        BodyStream, ConnectInfo, Extension, FromRequest, OriginalUri, Query, RawQuery, RequestParts,
     },
     http::Response,
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
-use serde::{Deserialize};
 use clap::{crate_description, crate_name, crate_version};
 use hyper::{Body, HeaderMap};
 use metrics_exporter_prometheus::PrometheusHandle;
+use serde::Deserialize;
 use serde_json::{json, Value};
 use std::convert::Infallible;
 use std::net::SocketAddr;
@@ -27,7 +27,7 @@ pub struct RequestMethod(pub hyper::Method);
 // This is for accessing the cache
 #[derive(Deserialize)]
 pub struct CacheParams {
-    key: Option<String>
+    key: Option<String>,
 }
 
 #[async_trait]
@@ -125,10 +125,10 @@ pub async fn cache_get(
 
 pub async fn cache_delete(
     Extension(mut state): Extension<State>,
-//    Path(entry): Path<String>,
+    //    Path(entry): Path<String>,
     RequestMethod(method): RequestMethod,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
-    Query(params): Query<CacheParams>
+    Query(params): Query<CacheParams>,
 ) -> Json<Value> {
     log::debug!(
         "{{\"fn\": \"cache\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/cache\"}}",

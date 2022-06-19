@@ -20,8 +20,9 @@ pub enum Error {
     BadUserPasswd,
     Connection,
     UnparseableUrl,
-    UnauthorizedUser,
-    UnauthorizedDigestUser,
+    UnauthorizedClient,
+    UnauthorizedClientBasic,
+    UnauthorizedClientDigest,
     ConnectionTimeout,
     JwtDecode,
     MissingVaultClient,
@@ -45,7 +46,10 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Error::Forbidden => f.write_str("{\"error\": \"Forbidden\"}"),
-            Error::Unauthorized => f.write_str("{\"error\": \"Unauthorized\"}"),
+            Error::Unauthorized
+            | Error::UnauthorizedClient
+            | Error::UnauthorizedClientBasic
+            | Error::UnauthorizedClientDigest => f.write_str("{\"error\": \"Unauthorized\"}"),
             Error::NotFound => f.write_str("{\"error\": \"Not found\"}"),
             Error::Unknown => f.write_str("{\"error\": \"Bad status code\"}"),
             Error::BadToken => f.write_str("{\"error\": \"Unparsable token provided\"}"),
@@ -55,12 +59,10 @@ impl fmt::Display for Error {
             Error::UnknownEndpoint => f.write_str("{\"error\": \"unknown endpoint\"}"),
             Error::Connection => f.write_str("{\"error\": \"Error connecting to rest endpoint\"}"),
             Error::UnparseableUrl => f.write_str("{\"error\": \"Error parsing uri\"}"),
-            Error::UnauthorizedUser => f.write_str("{\"error\": \"Unauthorized\"}"),
-            Error::UnauthorizedDigestUser => f.write_str("{\"error\": \"Unauthorized\"}"),
             Error::ConnectionTimeout => f.write_str("{\"error\": \"Connection timeout\"}"),
             Error::JwtDecode => f.write_str("{\"error\": \"Unable to decode JWT\"}"),
             Error::MissingVaultClient => f.write_str("{\"error\": \"Missing vault client\"}"),
-            Error::PathCount=> f.write_str("{\"error\": \"Path count too large\"}"),
+            Error::PathCount => f.write_str("{\"error\": \"Path count too large\"}"),
             Error::Hyper(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::SerdeJson(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::SerdeYaml(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
@@ -88,8 +90,8 @@ impl IntoResponse for Error {
         let status_code = match self {
             Error::UnknownEndpoint => StatusCode::NOT_FOUND,
             Error::Forbidden => StatusCode::FORBIDDEN,
-            Error::Unauthorized | Error::UnauthorizedUser => StatusCode::UNAUTHORIZED,
-            Error::UnauthorizedDigestUser => {
+            Error::Unauthorized | Error::UnauthorizedClient => StatusCode::UNAUTHORIZED,
+            Error::UnauthorizedClientDigest => {
                 let nonce: String = rand::thread_rng()
                     .sample_iter(&Alphanumeric)
                     .take(32)
@@ -101,12 +103,16 @@ impl IntoResponse for Error {
                 headers.insert("www-authenticate", header);
                 StatusCode::UNAUTHORIZED
             }
+            Error::UnauthorizedClientBasic => {
+                let header_value = "Basic realm=\"Proxima\"";
+                let header = HeaderValue::from_str(&header_value).unwrap();
+                headers.insert("www-authenticate", header);
+                StatusCode::UNAUTHORIZED
+            }
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
-        metrics::increment_counter!(
-            "proxima_response_errors_total"
-        );
+        metrics::increment_counter!("proxima_response_errors_total");
 
         res.status(status_code).body(body).unwrap()
     }
