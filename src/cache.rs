@@ -74,9 +74,9 @@ impl<'a, T: std::clone::Clone + std::fmt::Display> Cache<T> {
         log::debug!("Adding {} to cache", key);
         let mut cache = self.cache.write().await;
         cache.insert(key.to_string(), endpoint.clone());
-        let count = cache.keys().len() as f64;
+        let count = cache.len() as f64;
 
-        metrics::increment_gauge!("proxima_cache_keys", count, "name" => self.name.clone());
+        metrics::gauge!("proxima_cache_keys", count, "name" => self.name.clone());
 
     }
 }
