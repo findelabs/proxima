@@ -5,7 +5,9 @@ use hyper::{Body, HeaderMap, Uri};
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 
-use crate::auth::auth;
+use crate::auth::basic;
+use crate::auth::digest;
+use crate::auth::bearer;
 use crate::error::Error as ProximaError;
 use crate::https::ClientBuilder;
 
@@ -13,11 +15,11 @@ use crate::https::ClientBuilder;
 #[warn(non_camel_case_types)]
 pub enum ServerAuth {
     #[allow(non_camel_case_types)]
-    basic(auth::BasicAuth),
+    basic(basic::BasicAuth),
     #[allow(non_camel_case_types)]
-    bearer(auth::BearerAuth),
+    bearer(bearer::BearerAuth),
     #[allow(non_camel_case_types)]
-    digest(auth::DigestAuth),
+    digest(digest::DigestAuth),
 }
 
 impl<'a> ServerAuth {

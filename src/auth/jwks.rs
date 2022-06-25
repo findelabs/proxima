@@ -11,40 +11,13 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use url::Url;
+use hyper::header::HeaderValue;
+use hyper::Method;
 
 use crate::error::Error as ProximaError;
 use crate::security::Whitelist;
 
 const VALIDATE_DEFAULT: bool = true;
-
-#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
-#[serde(deny_unknown_fields)]
-pub struct BasicAuth {
-    pub username: String,
-    #[serde(skip_serializing)]
-    pub password: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub whitelist: Option<Whitelist>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
-#[serde(deny_unknown_fields)]
-pub struct DigestAuth {
-    pub username: String,
-    #[serde(skip_serializing)]
-    pub password: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub whitelist: Option<Whitelist>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
-#[serde(deny_unknown_fields)]
-pub struct BearerAuth {
-    #[serde(skip_serializing)]
-    pub token: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub whitelist: Option<Whitelist>,
-}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -74,6 +47,32 @@ pub struct JwksAuth {
     pub whitelist: Option<Whitelist>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+pub struct JwksAuthList(Vec<JwksAuth>);
+
+impl JwksAuthList {
+    pub async fn authorize(
+        &self,
+        header: &HeaderValue,
+        method: &Method
+    ) -> Result<(), ProximaError> {
+        log::debug!("Looping over jwks users");
+        let Self(internal) = self;
+
+        for user in internal.iter() {
+            log::debug!("\"Checking if connecting client matches {:?}\"", user);
+            match user.authorize(header, method).await {
+                Ok(_) => return Ok(()),
+                Err(_) => {
+                    continue;
+                }
+            }
+        }
+        log::debug!("\"Client could not be authenticated\"");
+        Err(ProximaError::UnauthorizedClient)
+    }
+}
+
 fn validate_default() -> bool {
     VALIDATE_DEFAULT
 }
@@ -85,34 +84,28 @@ impl Hash for JwksAuth {
     }
 }
 
-impl BearerAuth {
-    pub fn token(&self) -> String {
-        self.token.clone()
-    }
-}
-
-impl BasicAuth {
-    #[allow(dead_code)]
-    pub fn username(&self) -> String {
-        self.username.clone()
-    }
-
-    #[allow(dead_code)]
-    pub fn password(&self) -> String {
-        self.password.clone()
-    }
-
-    pub fn basic(&self) -> String {
-        log::debug!("Generating Basic auth");
-        let user_pass = format!("{}:{}", self.username, self.password);
-        let encoded = base64::encode(user_pass);
-        let basic_auth = format!("Basic {}", encoded);
-        log::debug!("Using {}", &basic_auth);
-        basic_auth
-    }
-}
-
 impl JwksAuth {
+    pub async fn authorize(
+        &self,
+        header: &HeaderValue,
+        method: &Method
+    ) -> Result<(), ProximaError> {
+        let authorize = header.to_str().expect("Cannot convert header to string");
+        let token: Vec<&str> = authorize.split(' ').collect();
+        if (self.validate(token[1]).await).is_err() {
+            metrics::increment_counter!(
+                "proxima_security_client_authentication_failed_count",
+                "type" => "jwks"
+            );
+            return Err(ProximaError::UnauthorizedClient);
+        }
+        if let Some(ref whitelist) = self.whitelist {
+            log::debug!("Found whitelist");
+            whitelist.authorize(method)?
+        }
+        Ok(())
+    }
+
     pub async fn get_keys(&self) -> Result<(), ProximaError> {
         let uri = Uri::try_from(self.url.to_string())?;
 

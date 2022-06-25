@@ -1,8 +1,22 @@
 use hyper::Method;
 use serde::{Deserialize, Serialize};
+use hyper::HeaderMap;
 
-use crate::auth::client::ClientAuthList;
+//use crate::auth::client::ClientAuthList;
 use crate::error::Error as ProximaError;
+use crate::auth::basic::BasicAuthList;
+use crate::auth::digest::DigestAuthList;
+use crate::auth::bearer::BearerAuthList;
+use crate::auth::jwks::JwksAuthList;
+
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+#[serde(deny_unknown_fields)]
+pub struct Security {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub whitelist: Option<Whitelist>,
+    #[serde(skip_serializing)]
+    pub client: Option<AuthorizedClients>,
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(deny_unknown_fields)]
@@ -12,11 +26,84 @@ pub struct Whitelist {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(deny_unknown_fields)]
-pub struct Security {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub whitelist: Option<Whitelist>,
-    #[serde(skip_serializing)]
-    pub client: Option<ClientAuthList>,
+pub struct AuthorizedClients {
+    pub basic: Option<BasicAuthList>,
+    pub digest: Option<DigestAuthList>,
+    pub bearer: Option<BearerAuthList>,
+    pub jwks: Option<JwksAuthList>
+}
+
+impl AuthorizedClients {
+    pub async fn authorize(
+        &self,
+        headers: &HeaderMap,
+        method: &Method,
+    ) -> Result<(), ProximaError> {
+        // Check if Authorization header exists
+        let header = match headers.get("AUTHORIZATION") {
+            Some(header) => header,
+            None => {
+                log::debug!("Endpoint is locked, but no authorization header found");
+                metrics::increment_counter!(
+                    "proxima_security_client_authentication_failed_count",
+                    "type" => "absent"
+                );
+                if self.digest.is_some() {
+                    return Err(ProximaError::UnauthorizedClientDigest)
+                } else {
+                    return Err(ProximaError::Unauthorized)
+                }
+            }
+        };
+
+        // Check what header type is being passed
+        let authorize = header.to_str().expect("Cannot convert header to string");
+        let auth_scheme_vec: Vec<&str> = authorize.split(' ').collect();
+        let scheme = auth_scheme_vec.into_iter().nth(0);
+
+        // Match known schemas
+        match scheme {
+            Some("Basic") => {
+                log::debug!("Found Basic Authorization header");
+                match &self.basic {
+                    Some(list) => list.authorize(header, method).await,
+                    None => Err(ProximaError::UnauthorizedClientBasic)
+                }
+            },
+            Some("Digest") => {
+                log::debug!("Found Digest Authorization header");
+                match &self.digest {
+                    Some(list) => list.authorize(header, method).await,
+                    None => Err(ProximaError::UnauthorizedClientDigest)
+                }
+            }
+            Some("Bearer") => {
+                log::debug!("Found Bearer Authorization header");
+                if let Some(list) = &self.bearer {
+                    if let Err(_) = list.authorize(header, method).await {
+                        if let Some(list) = &self.jwks {
+                            list.authorize(header, method).await
+                        } else {
+                            log::debug!("Client authentication failed for both Bearer and JWKS types");
+                            Err(ProximaError::UnauthorizedClient)
+                        }
+                    } else {
+                        Ok(())
+                    }
+                } else {
+                    Err(ProximaError::UnauthorizedClient)
+                }
+            }
+            None => {
+                log::debug!("Found No Authorization header");
+                Err(ProximaError::Unauthorized)
+            }
+            _ => {
+                log::debug!("Found Unknown Authorization header {}", scheme.unwrap());
+                Err(ProximaError::Unauthorized)
+            }
+        }
+    }
 }
 
 pub fn display_security(item: &Option<Security>) -> bool {

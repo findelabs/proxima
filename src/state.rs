@@ -8,7 +8,7 @@ use serde_json::json;
 use serde_json::Value;
 use std::error::Error;
 
-use crate::auth::{auth::BasicAuth, server::ServerAuth};
+use crate::auth::{basic::BasicAuth, server::ServerAuth};
 use crate::config;
 use crate::config::{Config, Endpoint, Entry};
 use crate::error::Error as ProximaError;
@@ -170,17 +170,7 @@ impl State {
                             "Endpoint is locked, but proxima is using global authentication"
                         );
                     }
-                    false => match headers.get("AUTHORIZATION") {
-                        Some(header) => client.authorize(header, method).await?,
-                        None => {
-                            log::debug!("Endpoint is locked, but no authorization header found");
-                            metrics::increment_counter!(
-                                "proxima_security_client_authentication_failed_count",
-                                "type" => "absent"
-                            );
-                            return Err(ProximaError::UnauthorizedClientBasic);
-                        }
-                    },
+                    false => client.authorize(headers, method).await?
                 }
             }
         }
