@@ -51,6 +51,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .takes_value(true),
         )
         .arg(
+            Arg::new("api_port")
+                .short('P')
+                .long("api_port")
+                .help("Set API port to listen on")
+                .env("PROXIMA_API_LISTEN_PORT")
+                .default_value("8081")
+                .takes_value(true),
+        )
+        .arg(
             Arg::new("timeout")
                 .short('t')
                 .long("timeout")
@@ -226,10 +235,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .parse_default_env()
         .init();
 
-    // Set port
+    // Set main listen port
     let port: u16 = opts.value_of("port").unwrap().parse().unwrap_or_else(|_| {
         eprintln!("specified port isn't in a valid range, setting to 8080");
         8080
+    });
+
+    // Set API listen port
+    let api_port: u16 = opts.value_of("api_port").unwrap().parse().unwrap_or_else(|_| {
+        eprintln!("specified API port isn't in a valid range, setting to 8081");
+        8081
     });
 
     // Create state for axum
@@ -239,23 +254,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Create prometheus handle
     let recorder_handle = setup_metrics_recorder();
 
-    // These should be authenticated
-    let closed = Router::new()
-        .route("/-/config", get(config))
-        .route("/-/reload", post(reload))
-        .route("/-/cache", get(cache_get).delete(cache_delete))
-        .route("/-/mappings", get(mappings_get))
-        .route("/:endpoint", any(proxy))
-        .route("/:endpoint/*path", any(proxy));
+    // API Routes
+    let api = Router::new()
+        .route("/config", get(config))
+        .route("/reload", post(reload))
+        .route("/cache", get(cache_get).delete(cache_delete))
+        .route("/mappings", get(mappings_get))
+        .route("/health", get(health))
+        .route("/echo", post(echo))
+        .route("/help", get(help))
+        .route("/metrics", get(metrics))
+        .layer(TraceLayer::new_for_http())
+        .route_layer(middleware::from_fn(track_metrics))
+        .layer(Extension(state.clone()))
+        .layer(Extension(recorder_handle.clone()));
 
     // These should NOT be authenticated
-    let open = Router::new()
-        .route("/", get(root))
-        .route("/-/health", get(health))
-        .route("/-/echo", post(echo))
-        .route("/-/help", get(help))
-        .route("/-/metrics", get(metrics));
-
     let app = match opts.is_present("username") {
         true => {
             let username = opts
@@ -267,31 +281,42 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .expect("Missing username")
                 .to_string();
             Router::new()
-                .merge(closed)
+                .route("/", get(root))
                 .layer(RequireAuthorizationLayer::basic(&username, &password))
-                .merge(open)
+                .route("/:endpoint", any(proxy))
+                .route("/:endpoint/*path", any(proxy))
+                .layer(TraceLayer::new_for_http())
+                .route_layer(middleware::from_fn(track_metrics))
+                .layer(Extension(state))
+                .layer(Extension(recorder_handle))
+        },
+        false => {
+            Router::new()
+                .route("/", get(root))
+                .route("/:endpoint", any(proxy))
+                .route("/:endpoint/*path", any(proxy))
                 .layer(TraceLayer::new_for_http())
                 .route_layer(middleware::from_fn(track_metrics))
                 .layer(Extension(state))
                 .layer(Extension(recorder_handle))
         }
-        false => Router::new()
-            .merge(closed)
-            .merge(open)
-            .layer(TraceLayer::new_for_http())
-            .route_layer(middleware::from_fn(track_metrics))
-            .layer(Extension(state))
-            .layer(Extension(recorder_handle)),
     };
 
     // add a fallback service for handling routes to unknown paths
     let app = app.fallback(handler_404.into_service());
+    let api = api.fallback(handler_404.into_service());
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
-    log::info!("\"Listening on {}\"", addr);
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service_with_connect_info::<SocketAddr>())
-        .await?;
+    log::info!("\"App listening on {}\"", addr);
+    let server1 = axum::Server::bind(&addr)
+        .serve(app.into_make_service_with_connect_info::<SocketAddr>());
+
+    let addr = SocketAddr::from(([0, 0, 0, 0], api_port));
+    log::info!("\"API listening on {}\"", addr);
+    let server2 = axum::Server::bind(&addr)
+        .serve(api.into_make_service_with_connect_info::<SocketAddr>());
+
+    tokio::try_join!(server1, server2)?;
 
     Ok(())
 }
