@@ -21,8 +21,8 @@ static_config:
       url: http://localhost:8080
       security:
         client:
-        - basic:
-            username: user
+          basic:
+          - username: user
             password: testing
     level_three:
       endpoint_four:

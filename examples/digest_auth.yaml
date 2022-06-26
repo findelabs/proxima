@@ -7,6 +7,6 @@ static_config:
         password: testing
     security:
       client:
-      - basic:
-          username: user
+        basic:
+        - username: user
           password: testing

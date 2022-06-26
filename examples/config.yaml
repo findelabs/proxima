@@ -13,8 +13,8 @@ static_config:
     url: http://localhost:8082
     security:
       client:
-      - digest:
-          username: user
+        digest:
+        - username: user
           password: mypassword
           whitelist:
             methods:
