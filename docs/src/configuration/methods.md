@@ -40,14 +40,13 @@ static_config:
         - GET
         - POST
       client:
-      - basic:      # This will work
-        username: myuser_one
+        basic:      # This will work
+      - username: myuser_one
         password: mypassword
         whitelist:
           methods:
           - GET
-      - basic:      # But this will not
-        username: myuser_two
+      - username: myuser_two
         password: mypassword
         whitelist:
           methods:
