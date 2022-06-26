@@ -48,7 +48,10 @@ impl AuthorizedClients {
                     "proxima_security_client_authentication_failed_count",
                     "type" => "absent"
                 );
+ 
+                // We need to return a special header if the endpoint accepts Digest auth
                 if self.digest.is_some() {
+                    log::debug!("Returning Digest error header");
                     return Err(ProximaError::UnauthorizedClientDigest)
                 } else {
                     return Err(ProximaError::Unauthorized)
@@ -121,15 +124,15 @@ pub fn display_security(item: &Option<Security>) -> bool {
 impl Whitelist {
     pub fn authorize(&self, method: &Method) -> Result<(), ProximaError> {
         if let Some(ref methods) = self.methods {
-            log::debug!("The method whitelist allows: {:?}", methods);
+            log::debug!("\"The method whitelist allows: {:?}\"", methods);
             metrics::increment_counter!("proxima_security_method_attempts_total");
             match methods.contains(&method.to_string()) {
                 true => {
-                    log::debug!("{} is in whitelist", method);
+                    log::debug!("\"{} is in whitelist\"", method);
                 }
                 false => {
                     metrics::increment_counter!("proxima_security_method_blocked_total");
-                    log::info!("Blocked {} method", method);
+                    log::info!("\"Blocked {} method\"", method);
                     return Err(ProximaError::Forbidden);
                 }
             }

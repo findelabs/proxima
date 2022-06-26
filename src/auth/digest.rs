@@ -54,24 +54,27 @@ impl DigestAuth {
                 Err(e) => {
                     log::error!("Error converting client authorization header: {}", e);
                     return Err(ProximaError::UnauthorizedClientDigest);
-                }
-            };
-
-            let context = AuthContext::new(
-                self.username.clone(),
-                self.password.clone(),
-                &client_authorization_header.uri,
-            );
-            let mut server_authorization_header = client_authorization_header.clone();
-            server_authorization_header.digest(&context);
-
-            if server_authorization_header != client_authorization_header {
-                metrics::increment_counter!(
-                    "proxima_security_client_authentication_failed_count",
-                    "type" => "digest"
-                );
-                return Err(ProximaError::UnauthorizedClientDigest);
             }
+        };
+
+        let context = AuthContext::new(
+            self.username.clone(),
+            self.password.clone(),
+            &client_authorization_header.uri,
+        );
+
+        log::trace!("Digest context: {:?}", &context);
+
+        let mut server_authorization_header = client_authorization_header.clone();
+        server_authorization_header.digest(&context);
+
+        if server_authorization_header != client_authorization_header {
+            metrics::increment_counter!(
+                "proxima_security_client_authentication_failed_count",
+                "type" => "digest"
+            );
+            return Err(ProximaError::UnauthorizedClientDigest);
+        }
 
         if let Some(ref whitelist) = self.whitelist {
             log::debug!("Found whitelist");
