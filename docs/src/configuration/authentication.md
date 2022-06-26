@@ -19,11 +19,10 @@ static_config:
     url: http://myurl.net
     security:
       client:
-      - basic:
-          username: client_one
+        basic:
+        - username: client_one
           password: mypasswordone
-      - basic:
-          username: client_two
+        - username: client_two
           password: mypasswordtwo
 ```
 
@@ -39,8 +38,8 @@ static_config:
     url: http://myurl.net
     security:
       client:
-      - jwks:
-          url: https://dev-17129172.okta.com/oauth2/default/v1/keys
+        jwks:
+        - url: https://dev-17129172.okta.com/oauth2/default/v1/keys
           audience: api://default
           scopes:
           - findelabs.test
@@ -74,9 +73,11 @@ static_config:
       basic:                  # Authenticate with remote endpoint with Basic or
         username: client
         password: mypassword
+      # or
       digest:                 # Authenticate with remote endpoint with Digest or
         username: client
         password: mypassword
+      # or
       token:                  # Authenticate with remote endpoint with Token
         token: Y2Rhc2Nkc2NkYXNjc2QK
 
