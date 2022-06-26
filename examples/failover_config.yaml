@@ -1,4 +1,4 @@
-static_config:
+routes:
   endpoint:
     url:
       failover:

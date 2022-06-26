@@ -1,4 +1,4 @@
-static_config:
+routes:
   endpoint_requiring_basic:
     url: http://localhost:8080
     authentication:

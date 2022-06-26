@@ -1,4 +1,4 @@
-static_config:
+routes:
   endpoint_one:
     url: http://localhost:8080
   endpoint_two:

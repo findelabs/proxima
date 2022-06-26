@@ -1,4 +1,4 @@
-static_config:
+routes:
   endpoint:
     url: http://localhost:8080
   httpconfig:

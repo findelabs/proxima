@@ -29,7 +29,7 @@ pub type ConfigMap = BTreeMap<String, Entry>;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash, Default)]
 pub struct ConfigFile {
-    pub static_config: ConfigMap,
+    pub routes: ConfigMap,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -161,7 +161,7 @@ impl Config {
     ) -> Config {
         Config {
             config_file: Arc::new(RwLock::new(ConfigFile {
-                static_config: BTreeMap::new(),
+                routes: BTreeMap::new(),
             })),
             location: location.to_string(),
             global_authentication,
@@ -191,7 +191,7 @@ impl Config {
         }
 
         let result = self
-            .fetch(path, self.config_file().await.static_config)
+            .fetch(path, self.config_file().await.routes)
             .await?;
 
         if let (Entry::Endpoint(_), ref path) = result {
@@ -276,7 +276,7 @@ impl Config {
                         return Err(e);
                     }
                 };
-                self.fetch(path, config_file.static_config).await
+                self.fetch(path, config_file.routes).await
             }
             Some(Entry::VaultConfig(entry)) => {
                 log::debug!(

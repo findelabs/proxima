@@ -1,4 +1,4 @@
-static_config:
+routes:
   archivelabs:
     url: https://api.archivelab.org/v1
     timeout: 5000
