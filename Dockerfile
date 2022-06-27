@@ -15,4 +15,4 @@ WORKDIR /app
 COPY --from=builder /app/bin/ ./
 
 ENTRYPOINT ["/app/proxima"]
-EXPOSE 8080
+EXPOSE 8080 8081
