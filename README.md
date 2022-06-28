@@ -76,7 +76,7 @@ OPTIONS:
 
 ### Proxima Performance
 
-Proxima utilizes a two-stage caching mechanism to store remote endpoints, as well as mappings where each unique request path is mapped to a cache entry. This racically speeds up mapping a new request to a specific endpoint, as Proxima will have to crawl through the config when multiple subfolders are specified. 
+Proxima utilizes a two-stage caching mechanism to store both remote endpoints, as well as a mappings cache, where each unique request path is mapped to a cache entry. This radically speeds up mapping a new request to a specific endpoint, as Proxima will have to crawl through the config when multiple subfolders are specified. 
 
 This dual caching method allows for the caching of remote endpoints, such as those sourced from Hashicorp Vault, reducing the necessary calls to serve a proxy request to a single remote call, with subsequent calls to the same URL being sourced from Proxima's internal cache. 
 
