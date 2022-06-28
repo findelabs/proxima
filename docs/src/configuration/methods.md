@@ -49,7 +49,7 @@ routes:
             methods:
             - GET
             
-        # This will fail
+        # This will fail since PUT is not a globally whitelisted endpoint method
         - username: myuser_two
           password: mypassword
           whitelist:
