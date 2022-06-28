@@ -4,7 +4,7 @@ Proxima has a default connection timeout of 60 seconds that can be overridden wi
 
 If 60 seconds is considered too long for your remote endpoint, you can override the setting like the following (in ms):
 ```yaml
-static_config:
+routes:
   my_endpoint:
     url: http://google.com
     timeout: 5000
