@@ -11,5 +11,7 @@
   - [Method Whitelisting](./configuration/methods.md)
   - [URL Failover](./configuration/urlfailover.md)
   - [Vault](./configuration/vault.md)
-- [REST API](./rest.md)
+- [Administration](./administration/index.md)
+  - [Endpoint Caching](./administration/caching.md)
+  - [REST API](./administration/rest.md)
 - [Metrics](./metrics.md)
