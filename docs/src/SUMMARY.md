@@ -10,5 +10,6 @@
   - [Timeouts](./configuration/timeouts.md)
   - [Method Whitelisting](./configuration/methods.md)
   - [URL Failover](./configuration/urlfailover.md)
+  - [Vault](./configuration/vault.md)
 - [REST API](./rest.md)
 - [Metrics](./metrics.md)
