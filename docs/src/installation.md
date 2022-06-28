@@ -1,6 +1,6 @@
 # Overview
 
-Proxima is a cloud-ready L7 proxy that can be quickly easily configured via yaml config, and can source dynamic endpoints through http calls, or through Hashicorp Vault.
+Proxima is a simple L7 proxy, commonly used as an API gateway, acting as a single entry point for your microservices. Proxima supports connecting to backend endpoints over http/https, and can source dynamic endpoints through http calls, or through Hashicorp Vault.
 
 # Docker
 
