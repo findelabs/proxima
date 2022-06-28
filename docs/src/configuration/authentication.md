@@ -33,7 +33,7 @@ Proxima can authenticate users' JWT's by caching the JWKS from other authenticat
 Here is an example on how to configure an endpoint with jwks client authentication:
 
 ```yaml
-static_config:
+routes:
   endpoint_test:
     url: http://myurl.net
     security:
@@ -52,7 +52,7 @@ With this configuration, after a user generates a token via the Okta /token endp
 If a remote endpoint requires authentication, for example Basic, simply specify a new authentication block within the endpoint yaml:
 
 ```yaml
-static_config:
+routes:
   endpoint_basic:
     url: http://myurl.net
     authentication:
@@ -66,19 +66,19 @@ Proxima currently supports Basic and Digest for username/password authentication
 Here are some examples on how to specify each of these authentication types, for an endpoint. Keep in mind that the authentication block only supports one type of authentication for an endpoint:
 
 ```yaml
-static_config:
+routes:
   endpoint_test:
     url: http://myurl.net
     authentication:
       basic:                  # Authenticate with remote endpoint with Basic or
-        username: client
+      - username: client
         password: mypassword
       # or
       digest:                 # Authenticate with remote endpoint with Digest or
-        username: client
+      - username: client
         password: mypassword
       # or
-      token:                  # Authenticate with remote endpoint with Token
-        token: Y2Rhc2Nkc2NkYXNjc2QK
+      bearer:                 # Authenticate with remote endpoint with Token
+      - token: Y2Rhc2Nkc2NkYXNjc2QK
 
 
