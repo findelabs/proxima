@@ -1,7 +1,13 @@
-# Installation
+# Overview
 
-Proxima is a cloud-ready L7 proxy that can be quickly deployed via docker images pushed regularly to [github](https://github.com/findelabs/proxima).
+Proxima is a cloud-ready L7 proxy that can be quickly easily configured via yaml config, and can source dynamic endpoints through http calls, or through Hashicorp Vault.
 
-You can also compile Proxima manually by pulling down the [repo](https://github.com/findelabs/proxima) and running `cargo build --release` within.
+# Docker
+
+You can pull down Proxima images at [docker](https://hub.docker.com/repository/docker/findelabs/proxima).
+
+# Compile
+
+You can compile Proxima by running `cargo build --release` after pulling down the [repo](https://github.com/findelabs/proxima).
 
 Alternatively, you may run `cargo install --git https://github.com/findelabs/proxima.git`.
