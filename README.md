@@ -1,6 +1,6 @@
 # Proxima
 
-Ultra fast, simple, http proxy.
+Ultra fast, simple, API gateway.
 
 ### What is Proxima?
 
@@ -24,7 +24,7 @@ remote_endpoint:
       username: imkcdads
       password: s.cdanjfiewionkacnklcdaslcds
 
-  # Require client authentication
+  # Require Basic client authentication
   security:
     client:
       basic:
@@ -94,32 +94,26 @@ Proxima exposes a prometheus metrics endpoint by default, at /-/metrics. The fol
 
 ### Proxima API Endpoints
 
-Proxima exposes a series of endpoints you may hit, listed below:
+Proxima exposes a series of API management endpoints you may hit on a secondary port (default 8081):
+
 ```
-"/-/cache":
+"/cache[?key=name]":
   methods:
-    delete: Delete proxima cache
+    delete: Delete entire proxima cache, or single key
     get: Get proxima cache
-"/-/config":
+"/mappings":
+  methods:
+    get: Get proxima mappings
+"/config":
   methods:
     get: Get proxima configuration
-"/-/echo":
-  methods:
-    get: Echo back json payload (debugging)
-"/-/health":
+"/health":
   methods:
     get: Get the health of the api
-"/-/help":
+"/help":
   methods:
     get: Show this help message
-"/-/reload":
+"/reload":
   methods:
     get: Reload the api's config
-"/:endpoint":
-  methods:
-    get: Show config for specific parent
-"/:endpoint/*path":
-  methods:
-    get: Pass through any request to specified endpoint
-
 ```
