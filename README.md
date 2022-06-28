@@ -3,7 +3,7 @@
 Ultra fast, simple, http proxy.
 
 ### What is Proxima
-Proxima is a simple L7 proxy, used for stitching together multiple http endpoints behind a single endpoint. Proxima supports connecting to backend endpoints over http, or https. View the docs [here](https://findelabs.github.io/proxima/installation.html)!
+Proxima is a simple L7 proxy, commonly used as an API gateway, acting as a single entry point for your microservices. Proxima supports connecting to backend endpoints over http, or https. View the docs [here](https://findelabs.github.io/proxima/installation.html)!
 
 ### How do I configure Proxima
 
@@ -73,28 +73,37 @@ You can also pull a config from a remote https endpoint by specifying a url with
 
 ### Proxima Usage
 ```
-proxima 0.5.27
+proxima 0.7.1
 Daniel F. <Verticaleap>
 proxima
 
 USAGE:
-    proxima [FLAGS] [OPTIONS] --config <config>
-
-FLAGS:
-        --enforce_http     Enforce http protocol for remote endpoints
-    -h, --help             Prints help information
-        --nodelay          Set socket nodelay
-        --reuse_address    Enable socket reuse
-    -V, --version          Prints version information
+    proxima [OPTIONS] --config <config>
 
 OPTIONS:
-    -c, --config <config>                      Config file [env: PROXIMA_CONFIG=]
-    -p, --config_password <config_password>    Set required password for config endpoint [env: PROXIMA_AUTH_PASSWORD=]
-    -u, --config_username <config_username>    Set required username for config endpoint [env: PROXIMA_AUTH_USERNAME=]
-    -p, --password <password>                  Set required client password [env: PROXIMA_CLIENT_PASSWORD=]
-    -p, --port <port>                          Set port to listen on [env: PROXIMA_LISTEN_PORT=]  [default: 8080]
-    -t, --timeout <timeout>                    Set default global timeout [env: PROXIMA_TIMEOUT=]  [default: 60]
-    -u, --username <username>                  Set required client username [env: PROXIMA_CLIENT_USERNAME=]
+        --accept_invalid_certs        Accept invalid remote certificates
+        --accept_invalid_hostnames    Accept invalid remote hostnames
+    -c, --config                      Config file [env: PROXIMA_CONFIG=] 
+        --config_password             Set required password for config endpoint [env: PROXIMA_AUTH_PASSWORD=]
+        --enforce_http                Enforce http protocol for remote endpoints
+    -h, --help                        Print help information
+        --import_cert                 Import CA certificate [env: PROXIMA_IMPORT_CERT=]
+        --jwt_path                    JWT path [env: JWT_PATH=]
+        --nodelay                     Set socket nodelay
+    -p, --port                        Set port to listen on [env: PROXIMA_LISTEN_PORT=] [default: 8080]
+    -P, --api_port                    Set API port to listen on [env: PROXIMA_API_LISTEN_PORT=] [default: 8081]
+        --password                    Set required client password [env: PROXIMA_CLIENT_PASSWORD=]
+        --reuse_address               Enable socket reuse
+    -t, --timeout                     Set default global timeout [env: PROXIMA_TIMEOUT=] [default: 60]
+    -u, --config_username             Set required username for config endpoint [env: PROXIMA_AUTH_USERNAME=]
+        --username                    Set required client username [env: PROXIMA_CLIENT_USERNAME=]
+    -V, --version                     Print version information
+        --vault_kubernetes_role       Vault kubernetes role [env: VAULT_KUBERNETES_ROLE=]
+        --vault_login_path            Vault login path [env: VAULT_LOGIN_PATH=]
+        --vault_mount                 Vault engine mount path [env: VAULT_MOUNT=]
+        --vault_role_id               Vault role_id [env: VAULT_ROLE_ID=]
+        --vault_secret_id             Vault secret_id [env: VAULT_SECRET_ID=]
+        --vault_url                   Vault url [env: VAULT_URL=]
 ```
 
 ### Promima Metrics
