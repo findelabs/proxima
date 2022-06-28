@@ -6,11 +6,11 @@ In the future, we will be including many more configuration options within this 
 
 ### Configuration Syntax
 
-The configuration file of Proxima always starts with a `static_config` block, under which all remote endpoints reside. Proxima can handle multi-level endpoints as well.
+The configuration file of Proxima always starts with a `routes` block, under which all remote endpoints reside. Proxima can handle multi-level endpoints as well.
 
 For example, to have Proxima send any clients requesting `/host/yahoo` to yahoo.com, and `/host/google` to google.com, your config.yaml would look something like:
 ```yaml
-static_config:
+routes:
   host:
     yahoo:
       url: http://yahoo.com
@@ -23,9 +23,11 @@ static_config:
 Each endpoint block can contain a series of optional fields:
 
 - Endpoint timeouts (timeout)
-- Client Authentication (lock)
-- Remote URL Authentication
-- Method Whitelist
+- Security (security)
+  - Client Authentication (security.client)  
+  - Method Whitelisting  (security.whitelist.method)
+- Remote URL Authentication  (authentication)
+
 
 ### Dynamic Loading
 
