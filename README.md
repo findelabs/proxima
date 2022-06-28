@@ -17,7 +17,7 @@ Each endpoint can also authenticate users against the remote URL specified. This
 ```
 routes:
   remote_endpoint:
-    url: http://localhost:8081/endpoint
+    url: http://remote-server:8080
   
     # Specify creds for remote url
     authentication:
