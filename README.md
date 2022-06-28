@@ -15,25 +15,26 @@ A Proxima endpoint is great at handling client security, to include authenticati
 Each endpoint can also authenticate users against the remote URL specified. This is great for masking authentication to remote API's requiring API keys. Using Proxima, you can use a single API key to authenticate to a remote endpoint, yet still requiring unique credentials for internal clients. An example of this is below:
 
 ```
-remote_endpoint:
-  url: http://localhost:8081/endpoint
+routes:
+  remote_endpoint:
+    url: http://localhost:8081/endpoint
   
-  # Specify creds for remote url
-  authentication:
-    basic:
-      username: imkcdads
-      password: s.cdanjfiewionkacnklcdaslcds
-
-  # Require Basic client authentication
-  security:
-    client:
+    # Specify creds for remote url
+    authentication:
       basic:
-      - username: admin
-        password: admin
-      - username: client_one
-        password: passwd_one
-      - username: client_two
-        password: passwd_two
+        username: imkcdads
+        password: s.cdanjfiewionkacnklcdaslcds
+
+    # Require Basic client authentication
+    security:
+      client:
+        basic:
+        - username: admin
+          password: admin
+        - username: client_one
+          password: passwd_one
+        - username: client_two
+          password: passwd_two
 ```
 
 More security options are shown under the examples directory.
