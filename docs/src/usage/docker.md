@@ -5,7 +5,7 @@ Findelabs pushes new images to [docker.com](https://hub.docker.com/r/findelabs/p
 You will need to provide Proxima with a basic configuration file in order to start. Below is a bare-bones config:
 ```bash
 cat << EOF > config.yaml
-static_config:
+routes:
   endpoint:
     url: https://google.com
 EOF
