@@ -1,11 +1,11 @@
 # REST API
 
-Proxima exposes a series of admin API paths under `/-/`:
+Proxima exposes a series of admin API paths on a secondary port, by default 8081.
 
 ## Show Config
 Get Proxima's current config
 
-**URL** : `/-/config`
+**URL** : `/config`
 
 **Method** : `GET`
 
@@ -17,7 +17,7 @@ Get Proxima's current config
 
 ```json
 {
-  "static_config": {
+  "routes": {
     "archivelabs": {
       "timeout": 5000,
       "url": "https://api.archivelab.org/v1"
@@ -35,7 +35,7 @@ Get Proxima's current config
 ## Show Health
 Get Proxima's current health
 
-**URL** : `/-/health`
+**URL** : `/health`
 
 **Method** : `GET`
 
@@ -54,7 +54,7 @@ Get Proxima's current health
 ## Reload Config
 Reload Proxima Config
 
-**URL** : `/-/reload`
+**URL** : `/reload`
 
 **Method** : `POST`
 
@@ -63,10 +63,10 @@ Reload Proxima Config
 **Code** : `200 OK`
 
 ---
-## Get Cache
-Get the current url cache.
+## Get Mappings Cache
+Get the current mappings cache.
 
-**URL** : `/-/cache`
+**URL** : `/mappings`
 
 **Method** : `GET`
 
@@ -78,15 +78,35 @@ Get the current url cache.
 
 ```json
 {
-  "archivelabs": "https://api.archivelab.org/v1/",
-  "archivelabs/arcade": "https://api.archivelab.org/v1/arcade"
+  "/archivelabs": "archivelabs",
+  "/inshortsapi": "inshortsapi"
+}
+```
+---
+## Get Cache
+Get the current url cache.
+
+**URL** : `/cache`
+
+**Method** : `GET`
+
+#### Success Response:
+
+**Code** : `200 OK`
+
+**Sample Response**
+
+```json
+{
+  "archivelabs": "https://api.archivelab.org/v1",
+  "inshortsapi": "https://inshortsapi.vercel.app/news"
 }
 ```
 ---
 ## Delete Cache
 Delete Proxima's cache
 
-**URL** : `/-/cache`
+**URL** : `/cache`
 
 **Method** : `DELETE`
 
@@ -105,7 +125,7 @@ Delete Proxima's cache
 ## Delete Cache Entry
 Get the current url cache hashmap.
 
-**URL** : `/-/cache?key=[key]`
+**URL** : `/cache?key=[key]`
 
 **Method** : `DELETE`
 
