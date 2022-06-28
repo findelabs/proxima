@@ -3,7 +3,7 @@
 You can globally whitelist specific methods for an endpoint, as shown below:
 
 ```yaml
-static_config:
+routes:
   endpoint_basic:
     url: http://myurl.net
     security:
@@ -31,7 +31,7 @@ The following methods can currently be whitelisted:
 You can also whitelist specific methods for specific clients under security.clients[].whitelist, as shown below. Keep in mind that if you also have specified a list of globally whitelisted methods for the endpoint, the clients will only be able to access a subset of those methods.
 
 ```yaml
-static_config:
+routes:
   endpoint_basic:
     url: http://myurl.net
     security:
@@ -40,16 +40,20 @@ static_config:
         - GET
         - POST
       client:
-        basic:      # This will work
-      - username: myuser_one
-        password: mypassword
-        whitelist:
-          methods:
-          - GET
-      - username: myuser_two
-        password: mypassword
-        whitelist:
-          methods:
-          - PUT
+        basic:
+        
+        # This will work
+        - username: myuser_one
+          password: mypassword
+          whitelist:
+            methods:
+            - GET
+            
+        # This will fail
+        - username: myuser_two
+          password: mypassword
+          whitelist:
+            methods:
+            - PUT
 ```
 
