@@ -2,74 +2,41 @@
 
 Ultra fast, simple, http proxy.
 
-### What is Proxima
+### What is Proxima?
+
 Proxima is a simple L7 proxy, commonly used as an API gateway, acting as a single entry point for your microservices. Proxima supports connecting to backend endpoints over http, or https. View the docs [here](https://findelabs.github.io/proxima/installation.html)!
 
-### How do I configure Proxima
+### How do I configure Proxima?
 
-Currently, you configure the endpoints behind proxima using either a static configuration file, or by pointing Proxima at a http endpoint, where the config can be scraped. 
+Proxima is configured via a simple yaml file, which specifies all routes and subroutes that Proxima will serve. Additionally, you can point Proxima endpoints at remote http sites from which to pull dynamic endpoints. You can also read secrets from Hashicorp Vault, formatting the secrets with handlebars templates.
 
-Proxima is great at handling endpoint authentication for users. If a remote url requires authentication, simply specify basic, digest, or token authentication fields for the url. Basic auth would look something like this:
+A Proxima endpoint is great at handling client security, to include authentication and method whitelisting. The security field allows for multiple types of client authentication on a single endpoint, including basic, digest, bearer, and JWT via JWKS.
+
+Each endpoint can also authenticate users against the remote URL specified. This is great for masking authentication to remote API's requiring API keys. Using Proxima, you can use a single API key to authenticate to a remote endpoint, yet still requiring unique credentials for internal clients. An example of this is below:
+
 ```
 remote_endpoint:
   url: http://localhost:8081/endpoint
+  
+  # Specify creds for remote url
   authentication:
     basic:
-      username: admin
-      password: testing
-```
+      username: imkcdads
+      password: s.cdanjfiewionkacnklcdaslcds
 
-Proxima can also lock down specific endpoints using basic, digest, or token authentication. This configuration looks exactly like the authentication settings shown above, however, we specify lock, not authentication. The example below will require any client hitting proxima to use digest authentication:
-```
-locked_endpoint:
-  url: http://localhost:8081/endpoint
+  # Require client authentication
   security:
     client:
-      digest:
-      - username: admin
-        password: testing
-```
-
-There are example configs under examples, but the general shape should look something like:
-
-```
-static_config:
-  # This remote endpoint requires basic authentication, which will be handled by proxima
-  endpoint_requiring_basic:
-    url: http://localhost:8080
-    timeout: 5000   # Timeout after 5 seconds
-    authentication:
       basic:
-        username: user
-        password: testing
-
-  # This remote endpoint requires digest authentication
-  endpoint_requiring_digest:
-    url: http://localhost:8080
-    authentication:
-      digest:
-        username: user
-        password: testing
-
-  # This endpoint requires token authentication
-  endpoint_requiring_bearer:
-    url: http://localhost:8080
-    authentication:
-      bearer:
-        token: dGhpc2lzdGhlYmVzdHRlc3Rpbmd0b2tlbmV2ZXJ0aGFua3lvdXZlcnltdWNoCg==
-
-  # This is a multi-level set of endpoints
-  level_two:
-    endpoint_one:
-      url: http://localhost:8080
-    endpoint_two:
-      url: http://localhost:8080
-    level_three:
-      endpoint_four:
-        url: http://localhost:8080
+      - username: admin
+        password: admin
+      - username: client_one
+        password: passwd_one
+      - username: client_two
+        password: passwd_two
 ```
 
-You can also pull a config from a remote https endpoint by specifying a url with the --config flag.
+More security options are shown under the examples directory.
 
 ### Proxima Usage
 ```
