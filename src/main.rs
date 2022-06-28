@@ -303,14 +303,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     };
 
     // add a fallback service for handling routes to unknown paths
-    let app = app.fallback(handler_404.into_service());
+    let proxy = app.fallback(handler_404.into_service());
     let api = api.fallback(handler_404.into_service());
 
+    // Create server for main proxy
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
-    log::info!("\"App listening on {}\"", addr);
+    log::info!("\"Proxy listening on {}\"", addr);
     let server1 = axum::Server::bind(&addr)
-        .serve(app.into_make_service_with_connect_info::<SocketAddr>());
+        .serve(proxy.into_make_service_with_connect_info::<SocketAddr>());
 
+    // Create server for API
     let addr = SocketAddr::from(([0, 0, 0, 0], api_port));
     log::info!("\"API listening on {}\"", addr);
     let server2 = axum::Server::bind(&addr)
