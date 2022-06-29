@@ -1,7 +1,7 @@
 use hyper::Method;
 use serde::{Deserialize, Serialize};
 use hyper::HeaderMap;
-use ipnetwork::Ipv4Network;
+use ipnetwork::IpNetwork;
 use std::net::SocketAddr;
 
 //use crate::auth::client::ClientAuthList;
@@ -24,7 +24,7 @@ pub struct Security {
 #[serde(deny_unknown_fields)]
 pub struct Whitelist {
     pub methods: Option<Vec<String>>,
-    pub networks: Option<Vec<Ipv4Network>>
+    pub networks: Option<Vec<IpNetwork>>
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -129,7 +129,7 @@ pub fn display_security(item: &Option<Security>) -> bool {
 }
 
 impl Whitelist {
-    pub fn authorize(&self, method: &Method, client_addr: SocketAddr) -> Result<(), ProximaError> {
+    pub fn authorize(&self, method: &Method, client_addr: &SocketAddr) -> Result<(), ProximaError> {
         // Authorize methods
         if let Some(ref methods) = self.methods {
             log::debug!("\"The method whitelist allows: {:?}\"", methods);
@@ -147,19 +147,18 @@ impl Whitelist {
         }
 
         // Authorize client IP, placeholder to compile
-        if let Some(ref methods) = self.methods {
-            log::debug!("\"The IP whitelist allows: {:?}\"", methods);
-            metrics::increment_counter!("proxima_security_method_attempts_total");
-            match methods.contains(&method.to_string()) {
-                true => {
-                    log::debug!("\"{} is in whitelist\"", method);
-                }
-                false => {
-                    metrics::increment_counter!("proxima_security_method_blocked_total");
-                    log::info!("\"Blocked {} method\"", method);
-                    return Err(ProximaError::Forbidden);
+        if let Some(ref networks) = self.networks {
+            log::debug!("\"The IP whitelist allows: {:?}\"", networks);
+            metrics::increment_counter!("proxima_security_network_authorize_attempts_total");
+            for network in networks {
+                if network.contains(client_addr.ip()) {
+                    log::debug!("\"client IP {} is in IP whitelisted network {}\"", client_addr, network);
+                    return Ok(())
                 }
             }
+            metrics::increment_counter!("proxima_security_network_blocked_total");
+            log::info!("\"Blocked client {}\"", client_addr);
+            return Err(ProximaError::Forbidden);
         }
         Ok(())
     }

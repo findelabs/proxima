@@ -1,4 +1,11 @@
 routes:
+  api:
+    url: http://localhost:8081
+    security:
+      client:
+        basic:
+        - username: admin
+          password: admin
   endpoint_requiring_basic:
     url: http://localhost:8080
     authentication:

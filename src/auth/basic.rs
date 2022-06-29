@@ -23,7 +23,7 @@ impl BasicAuthList {
         &self,
         header: &HeaderValue,
         method: &Method,
-        client_addr: SocketAddr
+        client_addr: &SocketAddr
     ) -> Result<(), ProximaError> {
         log::debug!("Looping over basic users");
         let Self(internal) = self;

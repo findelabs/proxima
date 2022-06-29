@@ -230,10 +230,6 @@ impl State {
             Err(e) => return Err(e),
         };
 
-        // Authorize clients
-        self.authorize_client(&config_entry, &request_headers, &method)
-            .await?;
-
         // Detect client IP
         let client = if let Some(x_forwarded) = &request_headers.get("x-forwarded-for") {
             match x_forwarded.to_str() {
@@ -255,8 +251,15 @@ impl State {
             client_addr
         };
 
-        // Verify Whitelists
-        self.authorize_whitelist(&config_entry, &method, &client_addr).await?;
+        // Debug client addr
+        log::debug!("Client socket determined to be {}", &client);
+
+        // Verify global whitelist
+        self.authorize_whitelist(&config_entry, &method, &client).await?;
+
+        // Authorize client, and check for client whitelist
+        self.authorize_client(&config_entry, &request_headers, &method, &client)
+            .await?;
 
         // Wrap Body if there is one
         let body = match payload {

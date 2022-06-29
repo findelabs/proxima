@@ -13,6 +13,7 @@ use std::sync::{Arc, Mutex};
 use url::Url;
 use hyper::header::HeaderValue;
 use hyper::Method;
+use std::net::SocketAddr;
 
 use crate::error::Error as ProximaError;
 use crate::security::Whitelist;
@@ -54,14 +55,15 @@ impl JwksAuthList {
     pub async fn authorize(
         &self,
         header: &HeaderValue,
-        method: &Method
+        method: &Method,
+        client_addr: &SocketAddr
     ) -> Result<(), ProximaError> {
         log::debug!("Looping over jwks users");
         let Self(internal) = self;
 
         for user in internal.iter() {
             log::debug!("\"Checking if connecting client matches {:?}\"", user);
-            match user.authorize(header, method).await {
+            match user.authorize(header, method, client_addr).await {
                 Ok(_) => return Ok(()),
                 Err(_) => {
                     continue;
@@ -88,7 +90,8 @@ impl JwksAuth {
     pub async fn authorize(
         &self,
         header: &HeaderValue,
-        method: &Method
+        method: &Method,
+        client_addr: &SocketAddr
     ) -> Result<(), ProximaError> {
         let authorize = header.to_str().expect("Cannot convert header to string");
         let token: Vec<&str> = authorize.split(' ').collect();
@@ -101,7 +104,7 @@ impl JwksAuth {
         }
         if let Some(ref whitelist) = self.whitelist {
             log::debug!("Found whitelist");
-            whitelist.authorize(method)?
+            whitelist.authorize(method, client_addr)?
         }
         Ok(())
     }
