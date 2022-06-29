@@ -133,7 +133,7 @@ impl Whitelist {
         // Authorize methods
         if let Some(ref methods) = self.methods {
             log::debug!("\"The method whitelist allows: {:?}\"", methods);
-            metrics::increment_counter!("proxima_security_method_attempts_total");
+            metrics::increment_counter!("proxima_security_method_authorize_attempts_total");
             match methods.contains(&method.to_string()) {
                 true => {
                     log::debug!("\"{} is in whitelist\"", method);
