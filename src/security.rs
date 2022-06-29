@@ -1,6 +1,8 @@
 use hyper::Method;
 use serde::{Deserialize, Serialize};
 use hyper::HeaderMap;
+use ipnetwork::IpNetwork;
+use std::net::SocketAddr;
 
 //use crate::auth::client::ClientAuthList;
 use crate::error::Error as ProximaError;
@@ -22,6 +24,7 @@ pub struct Security {
 #[serde(deny_unknown_fields)]
 pub struct Whitelist {
     pub methods: Option<Vec<String>>,
+    pub networks: Option<Vec<IpNetwork>>
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -38,6 +41,7 @@ impl AuthorizedClients {
         &self,
         headers: &HeaderMap,
         method: &Method,
+        client_addr: &SocketAddr
     ) -> Result<(), ProximaError> {
         // Check if Authorization header exists
         let header = match headers.get("AUTHORIZATION") {
@@ -69,23 +73,23 @@ impl AuthorizedClients {
             Some("Basic") => {
                 log::debug!("Found Basic Authorization header");
                 match &self.basic {
-                    Some(list) => list.authorize(header, method).await,
+                    Some(list) => list.authorize(header, method, client_addr).await,
                     None => Err(ProximaError::UnauthorizedClientBasic)
                 }
             },
             Some("Digest") => {
                 log::debug!("Found Digest Authorization header");
                 match &self.digest {
-                    Some(list) => list.authorize(header, method).await,
+                    Some(list) => list.authorize(header, method, client_addr).await,
                     None => Err(ProximaError::UnauthorizedClientDigest)
                 }
             }
             Some("Bearer") => {
                 log::debug!("Found Bearer Authorization header");
                 if let Some(list) = &self.bearer {
-                    if let Err(_) = list.authorize(header, method).await {
+                    if let Err(_) = list.authorize(header, method, client_addr).await {
                         if let Some(list) = &self.jwks {
-                            list.authorize(header, method).await
+                            list.authorize(header, method, client_addr).await
                         } else {
                             log::debug!("Client authentication failed for both Bearer and JWKS types");
                             Err(ProximaError::UnauthorizedClient)
@@ -125,7 +129,8 @@ pub fn display_security(item: &Option<Security>) -> bool {
 }
 
 impl Whitelist {
-    pub fn authorize(&self, method: &Method) -> Result<(), ProximaError> {
+    pub fn authorize(&self, method: &Method, client_addr: &SocketAddr) -> Result<(), ProximaError> {
+        // Authorize methods
         if let Some(ref methods) = self.methods {
             log::debug!("\"The method whitelist allows: {:?}\"", methods);
             metrics::increment_counter!("proxima_security_method_attempts_total");
@@ -139,6 +144,21 @@ impl Whitelist {
                     return Err(ProximaError::Forbidden);
                 }
             }
+        }
+
+        // Authorize client IP, placeholder to compile
+        if let Some(ref networks) = self.networks {
+            log::debug!("\"The IP whitelist allows: {:?}\"", networks);
+            metrics::increment_counter!("proxima_security_network_authorize_attempts_total");
+            for network in networks {
+                if network.contains(client_addr.ip()) {
+                    log::debug!("\"client IP {} is in IP whitelisted network {}\"", client_addr, network);
+                    return Ok(())
+                }
+            }
+            metrics::increment_counter!("proxima_security_network_blocked_total");
+            log::info!("\"Blocked client {}\"", client_addr);
+            return Err(ProximaError::Forbidden);
         }
         Ok(())
     }

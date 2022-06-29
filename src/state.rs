@@ -4,9 +4,11 @@ use axum::{
 };
 use clap::ArgMatches;
 use hyper::{Body, HeaderMap, Method};
+use std::net::SocketAddr;
 use serde_json::json;
 use serde_json::Value;
 use std::error::Error;
+use hyper::header::FORWARDED;
 
 use crate::auth::{basic::BasicAuth, server::ServerAuth};
 use crate::config;
@@ -139,16 +141,17 @@ impl State {
         }
     }
 
-    pub async fn whitelist(
+    pub async fn authorize_whitelist(
         &mut self,
         endpoint: &Endpoint,
         method: &Method,
+        client_addr: &SocketAddr
     ) -> Result<(), ProximaError> {
         // If endpoint has a method whitelock, verify
         if let Some(ref security) = endpoint.security {
             if let Some(ref whitelist) = security.whitelist {
                 log::debug!("Found whitelist");
-                whitelist.authorize(method)?
+                whitelist.authorize(method, client_addr)?
             }
         }
         Ok(())
@@ -159,6 +162,7 @@ impl State {
         endpoint: &Endpoint,
         headers: &HeaderMap,
         method: &Method,
+        client_addr: &SocketAddr
     ) -> Result<(), ProximaError> {
         // If endpoint is locked down, verify credentials
         if let Some(ref security) = endpoint.security {
@@ -170,7 +174,7 @@ impl State {
                             "Endpoint is locked, but proxima is using global authentication"
                         );
                     }
-                    false => client.authorize(headers, method).await?
+                    false => client.authorize(headers, method, client_addr).await?
                 }
             }
         }
@@ -184,6 +188,7 @@ impl State {
         query: Option<String>,
         request_headers: HeaderMap,
         payload: Option<BodyStream>,
+        client_addr: SocketAddr
     ) -> Result<Response<Body>, ProximaError> {
         let (config_entry, path) = match self.config.get(path.clone()).await {
             // If we receive an entry, forward request.
@@ -225,12 +230,36 @@ impl State {
             Err(e) => return Err(e),
         };
 
-        // Authorize clients
-        self.authorize_client(&config_entry, &request_headers, &method)
-            .await?;
+        // Detect client IP
+        let client = if let Some(x_forwarded) = &request_headers.get("x-forwarded-for") {
+            match x_forwarded.to_str() {
+                Ok(s) => s.parse().unwrap_or(client_addr),
+                Err(e) => { 
+                    log::error!("Unable to parse x-forwarded-for header: {}", e);
+                    client_addr
+                }
+            }
+        } else if let Some(forwarded) = &request_headers.get(FORWARDED) {
+            match forwarded.to_str() {
+                Ok(s) => s.parse().unwrap_or(client_addr),
+                Err(e) => { 
+                    log::error!("Unable to parse forwarded header: {}", e);
+                    client_addr
+                }
+            }
+        } else {
+            client_addr
+        };
 
-        // Verify Whitelists
-        self.whitelist(&config_entry, &method).await?;
+        // Debug client addr
+        log::debug!("Client socket determined to be {}", &client);
+
+        // Verify global whitelist
+        self.authorize_whitelist(&config_entry, &method, &client).await?;
+
+        // Authorize client, and check for client whitelist
+        self.authorize_client(&config_entry, &request_headers, &method, &client)
+            .await?;
 
         // Wrap Body if there is one
         let body = match payload {

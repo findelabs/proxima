@@ -4,6 +4,7 @@ use crate::error::Error as ProximaError;
 use hyper::header::HeaderValue;
 use digest_auth::{AuthContext, AuthorizationHeader};
 use hyper::Method;
+use std::net::SocketAddr;
 
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -23,14 +24,15 @@ impl DigestAuthList {
     pub async fn authorize(
         &self,
         header: &HeaderValue,
-        method: &Method
+        method: &Method,
+        client_addr: &SocketAddr
     ) -> Result<(), ProximaError> {
         log::debug!("Looping over digest users");
         let Self(internal) = self;
 
         for user in internal.iter() {
             log::debug!("\"Checking if connecting client matches {:?}\"", user);
-            match user.authorize(header, method).await {
+            match user.authorize(header, method, client_addr).await {
                 Ok(_) => return Ok(()),
                 Err(_) => {
                     continue;
@@ -46,7 +48,8 @@ impl DigestAuth {
     pub async fn authorize(
         &self,
         header: &HeaderValue,
-        method: &Method
+        method: &Method,
+        client_addr: &SocketAddr
     ) -> Result<(), ProximaError> {
         let client_authorization_header =
             match AuthorizationHeader::parse(header.to_str().unwrap()) {
@@ -78,7 +81,7 @@ impl DigestAuth {
 
         if let Some(ref whitelist) = self.whitelist {
             log::debug!("Found whitelist");
-            whitelist.authorize(method)?
+            whitelist.authorize(method, client_addr)?
         }
 
         Ok(())

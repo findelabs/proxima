@@ -1,6 +1,6 @@
 [package]
 name = "proxima"
-version = "0.7.2"
+version = "0.7.4"
 description = "ultra fast, simple, API gateway"
 edition = "2021"
 
@@ -32,4 +32,4 @@ rand = "0.8"
 jsonwebtoken = "8"
 vault-client-rs = { git = "https://github.com/findelabs/vault-client-rs.git", branch = "master" }
 handlebars = "4"
-
+ipnetwork = "0.19"

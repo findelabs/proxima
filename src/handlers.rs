@@ -67,7 +67,7 @@ pub async fn proxy(
         query.clone().unwrap_or_else(|| "".to_string())
     );
     state
-        .response(method, path, query, all_headers, payload)
+        .response(method, path, query, all_headers, payload, addr)
         .await
 }
 
@@ -125,7 +125,6 @@ pub async fn cache_get(
 
 pub async fn cache_delete(
     Extension(mut state): Extension<State>,
-    //    Path(entry): Path<String>,
     RequestMethod(method): RequestMethod,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     Query(params): Query<CacheParams>,
