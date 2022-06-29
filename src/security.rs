@@ -99,7 +99,10 @@ impl AuthorizedClients {
             }
             None => {
                 log::debug!("Found No Authorization header");
-                Err(ProximaError::Unauthorized)
+                match self.basic {
+                    Some(_) => Err(ProximaError::UnauthorizedClientBasic),
+                    None => Err(ProximaError::Unauthorized)
+                }
             }
             _ => {
                 log::debug!("Found Unknown Authorization header {}", scheme.unwrap());
