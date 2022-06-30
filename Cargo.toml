@@ -1,6 +1,6 @@
 [package]
 name = "proxima"
-version = "0.7.5"
+version = "0.7.6"
 description = "ultra fast, simple, API gateway"
 edition = "2021"
 
