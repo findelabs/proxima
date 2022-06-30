@@ -284,8 +284,11 @@ impl Config {
                     &path.key().unwrap_or_else(|| "None".to_string())
                 );
 
+                // Get last char from secret
+                let last_char = &entry.secret.chars().last().expect("Unable to get last char");
+
                 // Here we are if we find a single secret
-                if entry.directory == false {
+                if last_char != &'/' {
                     log::debug!("Single secret Vault Endpoint found, attempting to get secret from cache");
 
                     // Check the cache for the secret
