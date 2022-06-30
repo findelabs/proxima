@@ -15,6 +15,8 @@ use crate::config::Entry;
 pub struct VaultConfig {
     pub template: String,
     pub secret: String,
+    #[serde(default)]
+    pub directory: bool
 }
 
 impl Hash for VaultConfig {
