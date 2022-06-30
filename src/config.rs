@@ -288,9 +288,6 @@ impl Config {
                 if entry.directory == false {
                     log::debug!("Single secret Vault Endpoint found, attempting to get secret from cache");
 
-                    // Get secret name
-                    let secret = &path.current();
-
                     // Check the cache for the secret
                     if let Some(key) = path.key() {
                         if let Some(hit) = self.cache.get(&key).await {
@@ -300,12 +297,9 @@ impl Config {
                             return Ok((Entry::Endpoint(hit), path));
                         }
     
-                        log::debug!("Attempting to get secret named {} from Vault", &secret);
-                        let entry = entry.get(self.vault_client()?, &secret).await?;
-    
-                        // Move path forward
-                        path.next()?;
-    
+                        log::debug!("Attempting to get secret at path {} from Vault", &entry.secret);
+                        let entry = entry.get(self.vault_client()?, "").await?;
+
                         // If vault secret is Endpoint variant, cache endpoint
                         if let Entry::Endpoint(ref e) = entry {
                             self.cache.set(&path.key().expect("odd"), &e).await;
