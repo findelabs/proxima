@@ -26,6 +26,7 @@ Each endpoint block can contain a series of optional fields:
 - Security (security)
   - Client Authentication (security.client)  
   - Method Whitelisting  (security.whitelist.method)
+  - Network Whitelisting  (security.whitelist.method)
 - Remote URL Authentication  (authentication)
 
 

@@ -1,6 +1,6 @@
-### Endpoint Method Whitelisting
+# Method Whitelisting
 
-You can globally whitelist specific methods for an endpoint, as shown below:
+You can whitelist specific methods for all clients for an endpoint.
 
 ```yaml
 routes:
@@ -26,9 +26,9 @@ The following methods can currently be whitelisted:
 - Patch
 
 
-### Whitelisting Client Methods
+### Client Whitelists
 
-You can also whitelist specific methods for specific clients under security.clients[].whitelist, as shown below. Keep in mind that if you also have specified a list of globally whitelisted methods for the endpoint, the clients will only be able to access a subset of those methods.
+You can also whitelist specific methods for specific clients under security.clients[].whitelist, as shown below. Keep in mind that clients will only be able to use methods included in the global endpoint configuration.
 
 ```yaml
 routes:
