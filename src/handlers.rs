@@ -155,17 +155,31 @@ pub async fn health(
 }
 
 pub async fn root(
+    Extension(mut state): Extension<State>,
+    payload: Option<BodyStream>,
+    path: ProxyPath,
     RequestMethod(method): RequestMethod,
+    all_headers: HeaderMap,
+    RawQuery(query): RawQuery,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
-) -> Json<Value> {
+) -> Response<Body> {
     log::debug!(
-        "{{\"fn\": \"root\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/\"}}",
-        &method,
+        "{{\"fn\": \"root\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"{}\", \"query\": \"{}\"}}",
+        &method.as_str(),
         &addr,
+        &path.path(),
+        query.clone().unwrap_or_else(|| "".to_string())
     );
-    Json(
-        json!({ "version": crate_version!(), "name": crate_name!(), "description": crate_description!()}),
-    )
+    match state
+        .response(method, path, query, all_headers, payload, addr)
+        .await {
+        Ok(p) => p,
+        Err(e) => {
+            log::debug!("No root endpoint found: {}", e);
+            let body = json!({ "version": crate_version!(), "name": crate_name!(), "description": crate_description!()}).to_string();
+            Response::new(body.into())
+        }
+    }
 }
 
 pub async fn echo(

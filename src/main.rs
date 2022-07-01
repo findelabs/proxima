@@ -282,7 +282,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .to_string();
             Router::new()
                 .layer(RequireAuthorizationLayer::basic(&username, &password))
-                .route("/", any(proxy))
+                .route("/", any(root))
                 .route("/:endpoint", any(proxy))
                 .route("/:endpoint/*path", any(proxy))
                 .layer(TraceLayer::new_for_http())
@@ -292,7 +292,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         },
         false => {
             Router::new()
-                .route("/", any(proxy))
+                .route("/", any(root))
                 .route("/:endpoint", any(proxy))
                 .route("/:endpoint/*path", any(proxy))
                 .layer(TraceLayer::new_for_http())
