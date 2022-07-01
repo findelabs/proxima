@@ -92,19 +92,20 @@ impl fmt::Display for Endpoint {
     }
 }
 
-impl<'a> Endpoint {
-    pub async fn url(&self) -> String {
-        match self.url.path().await {
-            "/" => self.url.to_string(),
-            _ => {
-                log::debug!("Adding / suffix to path");
-                let mut path = self.url.to_string();
-                path.push('/');
-                path
-            }
-        }
-    }
-}
+//impl<'a> Endpoint {
+//    pub async fn url(&self) -> String {
+//        println!("self.url.path(): {}", self.url.path().await);
+//        match self.url.path().await {
+//            "/" => self.url.to_string(),
+//            _ => {
+//                log::debug!("Adding / suffix to path");
+//                let mut path = self.url.to_string();
+//                path.push('/');
+//                path
+//            }
+//        }
+//    }
+//}
 
 impl Config {
     pub async fn config_file(&self) -> ConfigFile {
@@ -228,6 +229,7 @@ impl Config {
             }
         };
 
+        println!("searching for {}", &path.current());
         // If endpoint is not found in cache, check configmap
         match config.get(&path.current()) {
             Some(Entry::ConfigMap(entry)) => {

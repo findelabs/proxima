@@ -55,7 +55,7 @@ impl<'a> UrlFailover {
         url
     }
 
-    pub fn url(&'a self) -> &'a Url {
+    pub fn current(&'a self) -> &'a Url {
         let current = self.next.lock().unwrap();
         let url = self.failover.get(*current).unwrap();
         log::debug!("UrlFailover getting current url: {}", &url);
@@ -64,7 +64,7 @@ impl<'a> UrlFailover {
 
     pub fn path(&self) -> &str {
         log::trace!("UrlFailover getting path");
-        self.url().path()
+        self.current().path()
     }
 }
 
@@ -80,7 +80,7 @@ impl Urls {
 impl fmt::Display for UrlFailover {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         log::trace!("Printing out UrlFailover");
-        write!(f, "{}", self.url())
+        write!(f, "{}", self.current())
     }
 }
 

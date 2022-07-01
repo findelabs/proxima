@@ -19,33 +19,42 @@ pub struct ProxyPath {
 
 impl ProxyPath {
     pub fn new(path: &str) -> ProxyPath {
-        // Create String so that we can manipulate it
-        let mut path_string = path.to_string();
-
-        // Remove prefix of /
-        #[allow(clippy::iter_nth_zero)]
-        if let Some('/') = path_string.chars().nth(0) {
-            log::trace!("Stripping / prefix");
-            path_string.remove(0);
-        };
-
-        // Remove suffix of /
-        if let Some('/') = path_string.chars().last() {
-            log::trace!("Stripping / suffix");
-            path_string.pop();
-        };
-
-        log::trace!("Final path string: {}", &path_string);
-        let vec: Vec<String> = path_string.split('/').map(str::to_string).collect();
-
-        log::debug!("Final path array: {:?}", &vec);
-        let max = vec.len() - 1;
-
-        ProxyPath {
-            path: path.to_string(),
-            vec: vec,
-            count: Arc::new(RwLock::new(-1)),
-            max: max as i32,
+        if path != "/" {
+            // Create String so that we can manipulate it
+            let mut path_string = path.to_string();
+    
+            // Remove prefix of /
+            #[allow(clippy::iter_nth_zero)]
+            if let Some('/') = path_string.chars().nth(0) {
+                log::trace!("Stripping / prefix");
+                path_string.remove(0);
+            };
+    
+            // Remove suffix of /
+            if let Some('/') = path_string.chars().last() {
+                log::trace!("Stripping / suffix");
+                path_string.pop();
+            };
+    
+            log::trace!("Final path string: {}", &path_string);
+            let vec: Vec<String> = path_string.split('/').map(str::to_string).collect();
+    
+            log::debug!("Final path array: {:?}", &vec);
+            let max = vec.len() - 1;
+    
+            ProxyPath {
+                path: path.to_string(),
+                vec: vec,
+                count: Arc::new(RwLock::new(-1)),
+                max: max as i32,
+            }
+        } else {
+            ProxyPath {
+                path: path.to_string(),
+                vec: vec![path.to_string()],
+                count: Arc::new(RwLock::new(-1)),
+                max: 1
+            }
         }
     }
 

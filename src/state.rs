@@ -197,7 +197,7 @@ impl State {
                 Entry::Endpoint(endpoint) => {
                     log::debug!(
                         "Found an endpoint {}, with path {}",
-                        endpoint.url().await,
+                        endpoint.url.path().await,
                         remainder.suffix()
                     );
                     (endpoint, remainder)

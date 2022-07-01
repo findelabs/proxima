@@ -5,6 +5,7 @@ use axum::{
 use hyper::{Body, HeaderMap, Method};
 use std::time::Duration;
 use hyper::header::HeaderValue;
+use url::Url;
 
 use crate::config::Endpoint;
 use crate::error::Error as ProximaError;
@@ -28,7 +29,7 @@ const TIMEOUT_DEFAULT: u64 = 60000;
 impl ProxyRequest {
     pub async fn single(
         mut self,
-        url: String,
+        url: &Url,
         queries: Option<String>,
     ) -> Result<Response<Body>, ProximaError> {
         let host_and_path = format!(
@@ -98,14 +99,13 @@ impl ProxyRequest {
 
         // Tried improving this, may take some more work
         match self.endpoint.url.clone() {
-            Urls::Url(_) => {
+            Urls::Url(u) => {
                 log::debug!("Got a single url");
-                let url = self.endpoint.url().await;
-                self.single(url, queries).await
+                self.single(&u, queries).await
             }
             Urls::UrlFailover(urlfailover) => {
                 log::debug!("Got a failover url");
-                let url = self.endpoint.url().await;
+                let url = urlfailover.current();
                 match self.single(url, queries).await {
                     Ok(response) => Ok(response),
                     Err(e) => {

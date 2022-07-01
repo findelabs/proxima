@@ -281,8 +281,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .expect("Missing username")
                 .to_string();
             Router::new()
-                .route("/", get(root))
                 .layer(RequireAuthorizationLayer::basic(&username, &password))
+                .route("/", any(proxy))
                 .route("/:endpoint", any(proxy))
                 .route("/:endpoint/*path", any(proxy))
                 .layer(TraceLayer::new_for_http())
@@ -292,7 +292,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         },
         false => {
             Router::new()
-                .route("/", get(root))
+                .route("/", any(proxy))
                 .route("/:endpoint", any(proxy))
                 .route("/:endpoint/*path", any(proxy))
                 .layer(TraceLayer::new_for_http())
