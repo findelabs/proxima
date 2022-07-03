@@ -53,10 +53,13 @@ impl AuthorizedClients {
                     "type" => "absent"
                 );
  
-                // We need to return a special header if the endpoint accepts Digest auth
+                // We need to return a special header if the endpoint accepts Digest auth or Basic auth
                 if self.digest.is_some() {
                     log::debug!("Returning Digest error header");
                     return Err(ProximaError::UnauthorizedClientDigest)
+                } else if self.basic.is_some() {
+                    log::debug!("Returning Basic error header");
+                    return Err(ProximaError::UnauthorizedClientBasic)
                 } else {
                     return Err(ProximaError::Unauthorized)
                 }
@@ -99,13 +102,6 @@ impl AuthorizedClients {
                     }
                 } else {
                     Err(ProximaError::UnauthorizedClient)
-                }
-            }
-            None => {
-                log::debug!("Found No Authorization header");
-                match self.basic {
-                    Some(_) => Err(ProximaError::UnauthorizedClientBasic),
-                    None => Err(ProximaError::Unauthorized)
                 }
             }
             _ => {
