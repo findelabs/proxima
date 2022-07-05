@@ -229,7 +229,7 @@ impl Config {
             }
         };
 
-        println!("searching for {}", &path.current());
+//        println!("searching for {}", &path.current());
         // If endpoint is not found in cache, check configmap
         match config.get(&path.current()) {
             Some(Entry::ConfigMap(entry)) => {
