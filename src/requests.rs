@@ -32,9 +32,18 @@ impl ProxyRequest {
         url: &Url,
         queries: Option<String>,
     ) -> Result<Response<Body>, ProximaError> {
+
+        // This needs to be done as urls with paths do not end with a forward slash,
+        // but urls with no paths do
+        let seperator = match url.path() {
+            "/" => "",
+            _ => "/"
+        };
+
         let host_and_path = format!(
-            "{}{}{}",
+            "{}{}{}{}",
             url,
+            seperator,
             self.path.suffix(),
             queries.unwrap_or_else(|| "".to_string())
         );
