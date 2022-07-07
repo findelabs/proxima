@@ -43,33 +43,25 @@ impl AuthorizedClients {
         method: &Method,
         client_addr: &SocketAddr
     ) -> Result<(), ProximaError> {
-        // Check if Authorization header exists
-        let header = match headers.get("AUTHORIZATION") {
-            Some(header) => header,
-            None => {
-                log::debug!("Endpoint is locked, but no authorization header found");
-                metrics::increment_counter!(
-                    "proxima_security_client_authentication_failed_count",
-                    "type" => "absent"
-                );
- 
-                // We need to return a special header if the endpoint accepts Digest auth or Basic auth
-                if self.digest.is_some() {
-                    log::debug!("Returning Digest error header");
-                    return Err(ProximaError::UnauthorizedClientDigest)
-                } else if self.basic.is_some() {
-                    log::debug!("Returning Basic error header");
-                    return Err(ProximaError::UnauthorizedClientBasic)
-                } else {
-                    return Err(ProximaError::Unauthorized)
-                }
-            }
-        };
 
-        // Check what header type is being passed
-        let authorize = header.to_str().expect("Cannot convert header to string");
-        let auth_scheme_vec: Vec<&str> = authorize.split(' ').collect();
-        let scheme = auth_scheme_vec.into_iter().nth(0);
+        // Test for Basic authorization
+        if let Some(basic) = &self.basic {
+            if let Err(ProximaError::UnauthorizedClientBasic) = basic.authorize(headers, method, client_addr).await {
+                return Err(ProximaError::UnauthorizedClientBasic) 
+            }
+        }
+                
+        // Test for Digestauthorization
+        if let Some(digest) = &self.digest{
+            if let Err(e) = basic.authorize(headers, method, client_addr).await
+            match basic.authorize(headers, method, client_addr).await {
+                Err(ProximaError::UnmatchedHeader) => {
+                    log::debug!("Could not match header for Basic auth");
+                },
+                _ return Err(ProximaError::UnauthorizedClientBasic) 
+            }
+        }
+                
 
         // Match known schemas
         match scheme {

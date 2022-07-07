@@ -5,6 +5,7 @@ use hyper::header::HeaderValue;
 use digest_auth::{AuthContext, AuthorizationHeader};
 use hyper::Method;
 use std::net::SocketAddr;
+use hyper::HeaderMap;
 
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -23,12 +24,36 @@ pub struct DigestAuthList(Vec<DigestAuth>);
 impl DigestAuthList {
     pub async fn authorize(
         &self,
-        header: &HeaderValue,
+        headers: &HeaderMap,
         method: &Method,
         client_addr: &SocketAddr
     ) -> Result<(), ProximaError> {
         log::debug!("Looping over digest users");
         let Self(internal) = self;
+
+        let header = match headers.get("AUTHORIZATION") {
+            Some(header) => header,
+            None => {
+                log::debug!("Endpoint is locked, but no digestauthorization header found");
+                metrics::increment_counter!(
+                    "proxima_security_client_authentication_failed_count",
+                    "type" => "absent"
+                );
+                return Err(ProximaError::UnauthorizedClientDigest)
+            }
+        };
+
+        // Check if the header is Digest
+        let authorize = header.to_str().expect("Cannot convert header to string");
+        let auth_scheme_vec: Vec<&str> = authorize.split(' ').collect();
+        let scheme = auth_scheme_vec.into_iter().nth(0);
+
+        // If header is not Digest , return err
+        if let Some("Digest") = scheme {
+            log::debug!("Found correct scheme for auth type: Digest");
+        } else {
+            return Err(ProximaError::UnmatchedHeader)
+        }
 
         for user in internal.iter() {
             log::debug!("\"Checking if connecting client matches {:?}\"", user);
