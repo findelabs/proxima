@@ -44,63 +44,74 @@ impl AuthorizedClients {
         client_addr: &SocketAddr
     ) -> Result<(), ProximaError> {
 
-        // Test for Basic authorization
-        if let Some(basic) = &self.basic {
-            if let Err(ProximaError::UnauthorizedClientBasic) = basic.authorize(headers, method, client_addr).await {
-                return Err(ProximaError::UnauthorizedClientBasic) 
-            }
-        }
-                
-        // Test for Digestauthorization
-        if let Some(digest) = &self.digest{
-            if let Err(e) = basic.authorize(headers, method, client_addr).await
-            match basic.authorize(headers, method, client_addr).await {
-                Err(ProximaError::UnmatchedHeader) => {
-                    log::debug!("Could not match header for Basic auth");
-                },
-                _ return Err(ProximaError::UnauthorizedClientBasic) 
-            }
-        }
-                
+//        // Test for Basic authorization
+//        if let Some(basic) = &self.basic {
+//            if let Err(ProximaError::UnauthorizedClientBasic) = basic.authorize(headers, method, client_addr).await {
+//                return Err(ProximaError::UnauthorizedClientBasic) 
+//            }
+//        }
 
-        // Match known schemas
-        match scheme {
-            Some("Basic") => {
-                log::debug!("Found Basic Authorization header");
-                match &self.basic {
-                    Some(list) => list.authorize(header, method, client_addr).await,
-                    None => Err(ProximaError::UnauthorizedClientBasic)
+        // Test for Basic authorization
+        if let Some(auth) = &self.basic {
+            if let Err(e) = auth.authorize(headers, method, client_addr).await {
+                match e {
+                    ProximaError::UnmatchedHeader => {
+                        log::debug!("Could not match header for Basic auth");
+                    },
+                    _ => return Err(e)
                 }
-            },
-            Some("Digest") => {
-                log::debug!("Found Digest Authorization header");
-                match &self.digest {
-                    Some(list) => list.authorize(header, method, client_addr).await,
-                    None => Err(ProximaError::UnauthorizedClientDigest)
-                }
-            }
-            Some("Bearer") => {
-                log::debug!("Found Bearer Authorization header");
-                if let Some(list) = &self.bearer {
-                    if let Err(_) = list.authorize(header, method, client_addr).await {
-                        if let Some(list) = &self.jwks {
-                            list.authorize(header, method, client_addr).await
-                        } else {
-                            log::debug!("Client authentication failed for both Bearer and JWKS types");
-                            Err(ProximaError::UnauthorizedClient)
-                        }
-                    } else {
-                        Ok(())
-                    }
-                } else {
-                    Err(ProximaError::UnauthorizedClient)
-                }
-            }
-            _ => {
-                log::debug!("Found Unknown Authorization header {}", scheme.unwrap());
-                Err(ProximaError::Unauthorized)
+            } else {
+                return Ok(())
             }
         }
+                
+        // Test for Digest authorization
+        if let Some(auth) = &self.digest {
+            if let Err(e) = auth.authorize(headers, method, client_addr).await {
+                match e {
+                    ProximaError::UnmatchedHeader => {
+                        log::debug!("Could not match header for Digest auth");
+                    },
+                    _ => return Err(e)
+                }
+            } else {
+                return Ok(())
+            }
+        }
+                
+        // Test for Bearer authorization
+        if let Some(auth) = &self.bearer {
+            if let Err(e) = auth.authorize(headers, method, client_addr).await {
+                match e {
+                    ProximaError::UnmatchedHeader => {
+                        log::debug!("Could not match header for Bearer auth");
+                    },
+                    _ => if self.jwks.is_some() {
+                        log::debug!("Bearer token could not be authenticated, but jwks is also enabled on this endpoint, continuing");
+                        } else {
+                            return Err(e)
+                        }
+                }
+            } else {
+                return Ok(())
+            }
+        }
+
+        // Test for JWKS authorization
+        if let Some(auth) = &self.jwks {
+            if let Err(e) = auth.authorize(headers, method, client_addr).await {
+                match e {
+                    ProximaError::UnmatchedHeader => {
+                        log::debug!("Could not match header for JWKS auth");
+                    },
+                    _ => return Err(e)
+                }
+            } else {
+                return Ok(())
+            }
+        }
+
+        Err(ProximaError::Unauthorized)
     }
 }
 
