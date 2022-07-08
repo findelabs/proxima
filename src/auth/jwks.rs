@@ -12,6 +12,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
 use url::Url;
 use hyper::header::HeaderValue;
+use hyper::HeaderMap;
 use hyper::Method;
 use std::net::SocketAddr;
 
@@ -54,12 +55,36 @@ pub struct JwksAuthList(Vec<JwksAuth>);
 impl JwksAuthList {
     pub async fn authorize(
         &self,
-        header: &HeaderValue,
+        headers: &HeaderMap,
         method: &Method,
         client_addr: &SocketAddr
     ) -> Result<(), ProximaError> {
         log::debug!("Looping over jwks users");
         let Self(internal) = self;
+
+        let header = match headers.get("AUTHORIZATION") {
+            Some(header) => header,
+            None => {
+                log::debug!("Endpoint is locked, but no bearer authorization header found");
+                metrics::increment_counter!(
+                    "proxima_security_client_authentication_failed_count",
+                    "type" => "absent"
+                );
+                return Err(ProximaError::UnauthorizedClient)
+            }
+        };
+
+        // Check if the header is JWKS
+        let authorize = header.to_str().expect("Cannot convert header to string");
+        let auth_scheme_vec: Vec<&str> = authorize.split(' ').collect();
+        let scheme = auth_scheme_vec.into_iter().nth(0);
+
+        // If header is not Bearer, return err
+        if let Some("Bearer") = scheme {
+            log::debug!("Found correct scheme for auth type: Bearer");
+        } else {
+            return Err(ProximaError::UnmatchedHeader)
+        }
 
         for user in internal.iter() {
             log::debug!("\"Checking if connecting client matches {:?}\"", user);
