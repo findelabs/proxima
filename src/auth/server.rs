@@ -59,7 +59,7 @@ impl<'a> ServerAuth {
                 Ok(headers)
             }
             ServerAuth::api_key(auth) => {
-                log::debug!("Generating API keyauth headers");
+                log::debug!("Generating API key auth headers");
                 let header_bearer_auth = match HeaderValue::from_str(&auth.token()) {
                     Ok(a) => a,
                     Err(e) => {
@@ -67,6 +67,7 @@ impl<'a> ServerAuth {
                         return Err(ProximaError::BadToken);
                     }
                 };
+                log::debug!("Key: {}, Value: {:?}", auth.headername(), header_bearer_auth);
                 headers.insert(auth.headername(), header_bearer_auth);
                 Ok(headers)
             }
