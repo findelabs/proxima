@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use crate::security::Whitelist;
 use crate::error::Error as ProximaError;
-//use hyper::header::HeaderValue;
+use hyper::header::HeaderName;
 use hyper::Method;
 use std::net::SocketAddr;
 use hyper::HeaderMap;
@@ -21,7 +21,7 @@ pub struct ApiKeyAuth {
 pub struct ApiKeyAuthList(Vec<ApiKeyAuth>);
 
 // Default API Key Header name
-const KEY: &str = "x-api-key";
+pub const KEY: &str = "x-api-key";
 
 impl ApiKeyAuthList {
     pub async fn authorize(
@@ -37,13 +37,17 @@ impl ApiKeyAuthList {
             log::debug!("\"Checking if connecting client matches {:?}\"", user);
             match user.authorize(headers, method, client_addr).await {
                 Ok(_) => return Ok(()),
-                Err(_) => {
-                    continue;
+                Err(e) => match e {
+                    ProximaError::UnmatchedHeader => continue,
+                    _ => return Err(e)
                 }
             }
         }
+
+        // We return an unmatched header error here, as if a header did match, and failed
+        // to match a token, we would have already returned said error
         log::debug!("\"Client could not be authenticated\"");
-        Err(ProximaError::UnauthorizedClient)
+        Err(ProximaError::UnmatchedHeader)
     }
 }
 
@@ -52,10 +56,21 @@ impl ApiKeyAuth {
         self.token.clone()
     }
 
-    pub fn key(&self) -> String {
+    pub fn headername(&self) -> HeaderName {
+        let default = HeaderName::from_bytes(KEY.as_bytes()).unwrap();
         match &self.key {
-            Some(k) => k.to_string(),
-            None => KEY.to_string()
+            Some(k) => {
+                let lowercase = k.to_lowercase();
+                let bytes = lowercase.as_bytes();
+                match HeaderName::from_bytes(bytes) {
+                    Ok(n) => n,
+                    Err(e) => {
+                        log::error!("Error converting api key to header: {}", e);
+                        default
+                    }
+                }
+            }
+            None => default
         }
     }
 
@@ -86,7 +101,6 @@ impl ApiKeyAuth {
                 return Err(ProximaError::UnmatchedHeader)
             }
         };
-
 
         let token = header.to_str().expect("Cannot convert header to string");
 

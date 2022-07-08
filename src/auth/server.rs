@@ -67,7 +67,7 @@ impl<'a> ServerAuth {
                         return Err(ProximaError::BadToken);
                     }
                 };
-                headers.insert(&auth.key(), header_bearer_auth);
+                headers.insert(auth.headername(), header_bearer_auth);
                 Ok(headers)
             }
             ServerAuth::digest(auth) => {

@@ -60,22 +60,9 @@ impl AuthorizedClients {
             }
         }
                 
-        // Test for Digest authorization
-        if let Some(auth) = &self.digest {
-            if let Err(e) = auth.authorize(headers, method, client_addr).await {
-                match e {
-                    ProximaError::UnmatchedHeader => {
-                        log::debug!("Could not match header for Digest auth");
-                    },
-                    _ => return Err(e)
-                }
-            } else {
-                return Ok(())
-            }
-        }
-                
         // Test for API Key authorization
         if let Some(auth) = &self.api_key {
+            log::debug!("Got to api keys");
             if let Err(e) = auth.authorize(headers, method, client_addr).await {
                 match e {
                     ProximaError::UnmatchedHeader => {
@@ -120,6 +107,22 @@ impl AuthorizedClients {
             }
         }
 
+        // Test for Digest authorization. Because Digest auth requires specific headers be returned to the client,
+        // this test must always be last, at least for now
+        if let Some(auth) = &self.digest {
+            if let Err(e) = auth.authorize(headers, method, client_addr).await {
+                match e {
+                    ProximaError::UnmatchedHeader => {
+                        log::debug!("Could not match header for Digest auth");
+                    },
+                    // This is a unique response, as bad digest logins require special response headers
+                    _ => return Err(ProximaError::UnauthorizedClientDigest)
+                }
+            } else {
+                return Ok(())
+            }
+        }
+                
         // If we get here, no authentication was matched, return error
         Err(ProximaError::Unauthorized)
     }
