@@ -4,3 +4,4 @@ pub mod server;
 pub mod basic;
 pub mod digest;
 pub mod bearer;
+pub mod api_key;

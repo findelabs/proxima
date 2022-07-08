@@ -8,6 +8,7 @@ use std::hash::Hash;
 use crate::auth::basic;
 use crate::auth::digest;
 use crate::auth::bearer;
+use crate::auth::api_key;
 use crate::error::Error as ProximaError;
 use crate::https::ClientBuilder;
 
@@ -20,6 +21,8 @@ pub enum ServerAuth {
     bearer(bearer::BearerAuth),
     #[allow(non_camel_case_types)]
     digest(digest::DigestAuth),
+    #[allow(non_camel_case_types)]
+    api_key(api_key::ApiKeyAuth),
 }
 
 impl<'a> ServerAuth {
@@ -53,6 +56,18 @@ impl<'a> ServerAuth {
                     }
                 };
                 headers.insert(AUTHORIZATION, header_bearer_auth);
+                Ok(headers)
+            }
+            ServerAuth::api_key(auth) => {
+                log::debug!("Generating API keyauth headers");
+                let header_bearer_auth = match HeaderValue::from_str(&auth.token()) {
+                    Ok(a) => a,
+                    Err(e) => {
+                        log::error!("{{\"error\":\"{}\"", e);
+                        return Err(ProximaError::BadToken);
+                    }
+                };
+                headers.insert(&auth.key(), header_bearer_auth);
                 Ok(headers)
             }
             ServerAuth::digest(auth) => {

@@ -9,6 +9,7 @@ use crate::error::Error as ProximaError;
 use crate::auth::basic::BasicAuthList;
 use crate::auth::digest::DigestAuthList;
 use crate::auth::bearer::BearerAuthList;
+use crate::auth::api_key::ApiKeyAuthList;
 use crate::auth::jwks::JwksAuthList;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -33,7 +34,8 @@ pub struct AuthorizedClients {
     pub basic: Option<BasicAuthList>,
     pub digest: Option<DigestAuthList>,
     pub bearer: Option<BearerAuthList>,
-    pub jwks: Option<JwksAuthList>
+    pub jwks: Option<JwksAuthList>,
+    pub api_key: Option<ApiKeyAuthList>
 }
 
 impl AuthorizedClients {
@@ -43,13 +45,6 @@ impl AuthorizedClients {
         method: &Method,
         client_addr: &SocketAddr
     ) -> Result<(), ProximaError> {
-
-//        // Test for Basic authorization
-//        if let Some(basic) = &self.basic {
-//            if let Err(ProximaError::UnauthorizedClientBasic) = basic.authorize(headers, method, client_addr).await {
-//                return Err(ProximaError::UnauthorizedClientBasic) 
-//            }
-//        }
 
         // Test for Basic authorization
         if let Some(auth) = &self.basic {
@@ -79,6 +74,20 @@ impl AuthorizedClients {
             }
         }
                 
+        // Test for API Key authorization
+        if let Some(auth) = &self.api_key {
+            if let Err(e) = auth.authorize(headers, method, client_addr).await {
+                match e {
+                    ProximaError::UnmatchedHeader => {
+                        log::debug!("Could not match header for API key auth");
+                    },
+                    _ => return Err(e)
+                }
+            } else {
+                return Ok(())
+            }
+        }
+
         // Test for Bearer authorization
         if let Some(auth) = &self.bearer {
             if let Err(e) = auth.authorize(headers, method, client_addr).await {
@@ -111,6 +120,7 @@ impl AuthorizedClients {
             }
         }
 
+        // If we get here, no authentication was matched, return error
         Err(ProximaError::Unauthorized)
     }
 }
