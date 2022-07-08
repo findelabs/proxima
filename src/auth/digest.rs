@@ -34,7 +34,7 @@ impl DigestAuthList {
         let header = match headers.get("AUTHORIZATION") {
             Some(header) => header,
             None => {
-                log::debug!("Endpoint is locked, but no digestauthorization header found");
+                log::debug!("Endpoint is locked, but no digest authorization header found");
                 metrics::increment_counter!(
                     "proxima_security_client_authentication_failed_count",
                     "type" => "absent"
