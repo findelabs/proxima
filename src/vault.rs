@@ -8,8 +8,11 @@ use std::collections::BTreeMap;
 use std::hash::{Hash, Hasher};
 use vault_client_rs::client::Client as VaultClient;
 
+use crate::config::Endpoint;
+use crate::path::ProxyPath;
 use crate::config::ConfigMap;
 use crate::config::Entry;
+use crate::cache::Cache;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct VaultConfig {
@@ -25,28 +28,58 @@ impl Hash for VaultConfig {
 }
 
 impl VaultConfig {
-    pub async fn config(&self, mut vault: VaultClient) -> Result<ConfigMap, ProximaError> {
+    pub async fn config(&self, mut vault: VaultClient, mut path: ProxyPath, cache: Cache<Endpoint>) -> Result<ConfigMap, ProximaError> {
         let list = vault.list(&self.secret).await?;
+
+        // Move path to previous
+        let cache_search = match path.previous() {
+            Ok(_) => true,
+            Err(_) => false
+        };
+
+        // Create new map
         let mut map = BTreeMap::new();
+
+        // Loop over keys in folder
         for key in list.keys().await {
             let key_str = key.as_str().expect("Could not extract string");
             let secret_path = format!("{}{}", self.secret, &key_str);
-            let secret = match vault.get(&secret_path).await {
-                Ok(s) => s,
-                Err(e) => {
-                    log::error!("Error getting secret {}: {}", &secret_path, e);
-                    continue;
+
+            // cache_search will be true is there is a previous path entry
+            if cache_search {
+                let cache_path = format!("{}/{}", path.key().expect("Failed getting key"), key_str);
+                match cache.get(&cache_path).await {
+                    Some(endpoint) => {
+                        map.insert(key_str.to_string(), Entry::Endpoint(endpoint));
+                    },
+                    None => {
+                        let secret = match vault.get(&secret_path).await {
+                            Ok(s) => s,
+                            Err(e) => {
+                                log::error!("Error getting secret {}: {}", &secret_path, e);
+                                continue;
+                            }
+                        };
+                        match self.template(secret.data().await).await {
+                            Ok(t) => {
+                                map.insert(key_str.to_string(), t);
+                            }
+                            Err(e) => {
+                                log::error!("Error generating template: {}", e);
+                                continue;
+                            }
+                        }
+                    }
                 }
+            } else {
+                match vault.get(&secret_path).await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        log::error!("Error getting secret {}: {}", &secret_path, e);
+                        continue;
+                    }
+                };
             };
-            match self.template(secret.data().await).await {
-                Ok(t) => {
-                    map.insert(key_str.to_string(), t);
-                }
-                Err(e) => {
-                    log::error!("Error generating template: {}", e);
-                    continue;
-                }
-            }
         }
         Ok(map)
     }
