@@ -69,17 +69,6 @@ impl ProxyPath {
         }
     }
 
-    pub fn previous(&mut self) -> Result<(), ProximaError> {
-        let mut count = self.count.write().unwrap();
-        if *count > 0 {
-            *count = *count - 1;
-            drop(count);
-            Ok(())
-        } else {
-            Err(ProximaError::UnknownEndpoint)
-        }
-    }
-
     pub fn count(&self) -> i32 {
         let count = self.count.read().unwrap();
         *count
