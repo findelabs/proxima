@@ -123,8 +123,13 @@ impl AuthorizedClients {
             }
         }
                 
-        // If we get here, no authentication was matched, return error
-        Err(ProximaError::Unauthorized)
+        // If we get here, no authentication was matched, return error.
+        // If Basic auth is included, pass along x-auth header
+        if let Some(_) = &self.basic {
+            Err(ProximaError::UnauthorizedClientBasic)
+        } else {
+            Err(ProximaError::Unauthorized)
+        }
     }
 }
 
