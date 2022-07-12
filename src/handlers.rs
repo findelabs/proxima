@@ -77,7 +77,7 @@ pub async fn reload(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) {
     log::debug!(
-        "{{\"fn\": \"reload\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/reload\"}}",
+        "{{\"fn\": \"reload\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/reload\"}}",
         &method,
         &addr,
     );
@@ -90,7 +90,7 @@ pub async fn config(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Json<Value> {
     log::debug!(
-        "{{\"fn\": \"config\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/config\"}}",
+        "{{\"fn\": \"config\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/config\"}}",
         &method,
         &addr,
     );
@@ -103,7 +103,7 @@ pub async fn mappings_get(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Json<Value> {
     log::debug!(
-        "{{\"fn\": \"cache\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/cache\"}}",
+        "{{\"fn\": \"cache\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/cache\"}}",
         &method,
         &addr,
     );
@@ -116,7 +116,7 @@ pub async fn cache_get(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Json<Value> {
     log::debug!(
-        "{{\"fn\": \"cache\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/cache\"}}",
+        "{{\"fn\": \"cache\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/cache\"}}",
         &method,
         &addr,
     );
@@ -130,7 +130,7 @@ pub async fn cache_delete(
     Query(params): Query<CacheParams>,
 ) -> Json<Value> {
     log::debug!(
-        "{{\"fn\": \"cache\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/cache\"}}",
+        "{{\"fn\": \"cache\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/cache\"}}",
         &method,
         &addr
     );
@@ -147,7 +147,7 @@ pub async fn health(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Json<Value> {
     log::debug!(
-        "{{\"fn\": \"health\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/health\"}}",
+        "{{\"fn\": \"health\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/health\"}}",
         &method,
         &addr,
     );
@@ -188,7 +188,7 @@ pub async fn echo(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Json<Value> {
     log::debug!(
-        "{{\"fn\": \"echo\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/echo\"}}",
+        "{{\"fn\": \"echo\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/echo\"}}",
         &method,
         &addr,
     );
@@ -200,11 +200,11 @@ pub async fn help(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Json<Value> {
     log::debug!(
-        "{{\"fn\": \"help\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/-/help\"}}",
+        "{{\"fn\": \"help\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/help\"}}",
         &method,
         &addr,
     );
-    let payload = json!({"/-/cache":{"methods":{"get":"Get proxima cache","delete":"Delete proxima cache"}},"/-/config":{"methods":{"get":"Get proxima configuration"}},"/-/echo":{"methods":{"get":"Echo back json payload (debugging)"}},"/-/health":{"methods":{"get":"Get the health of proxima"}},"/-/help":{"methods":{"get":"Show this help message"}},"/-/reload":{"methods":{"get":"Reload proxima's config"}},"/:endpoint":{"methods":{"get":"Show config for specific parent"}},"/:endpoint/*path":{"methods":{"get":"Pass through any request to specified endpoint"}}});
+    let payload = json!({"/cache":{"methods":{"get":"Get proxima cache","delete":"Delete proxima cache"}},"/config":{"methods":{"get":"Get proxima configuration"}},"/echo":{"methods":{"get":"Echo back json payload (debugging)"}},"/health":{"methods":{"get":"Get the health of proxima"}},"/help":{"methods":{"get":"Show this help message"}},"/reload":{"methods":{"get":"Reload proxima's config"}},"/:endpoint":{"methods":{"get":"Show config for specific parent"}},"/:endpoint/*path":{"methods":{"get":"Pass through any request to specified endpoint"}}});
     Json(payload)
 }
 
