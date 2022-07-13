@@ -16,7 +16,7 @@ use crate::cache::Cache;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct VaultConfig {
-    pub template: String,
+    pub template: Option<String>,
     pub secret: String,
 }
 
@@ -93,16 +93,20 @@ impl VaultConfig {
 
     #[async_recursion]
     pub async fn template(&self, secret: Map<String, Value>) -> Result<Entry, ProximaError> {
-        let handlebars = self.handlebars().await?;
-        let output = handlebars.render("secret", &secret)?;
-        log::debug!("Rendered string: {}", &output);
-
-        let v: Entry = serde_json::from_str(&output)?;
-        Ok(v)
+        if let Some(_template) = &self.template {
+            let handlebars = self.handlebars().await?;
+            let output = handlebars.render("secret", &secret)?;
+            log::debug!("Rendered string: {}", &output);
+            let v: Entry = serde_json::from_str(&output)?;
+            Ok(v)
+        } else {
+            let v: Entry = serde_json::from_value(serde_json::Value::Object(secret))?;
+            Ok(v)
+        }
     }
 
     pub async fn handlebars(&self) -> Result<Handlebars<'_>, ProximaError> {
-        let bytes = base64::decode(&self.template)?;
+        let bytes = base64::decode(&self.template.as_ref().expect("fn called without checking that self.template is some"))?;
         let template_decoded = std::str::from_utf8(&bytes)?;
         let mut handlebars = Handlebars::new();
         handlebars.register_template_string("secret", template_decoded)?;
