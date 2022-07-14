@@ -63,6 +63,18 @@ pub enum Entry {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(deny_unknown_fields)]
+#[serde(rename_all = "snake_case")]
+pub struct EndpointType {
+    #[allow(non_camel_case_types)]
+    http_config(HttpConfig),
+    #[allow(non_camel_case_types)]
+    vault(VaultConfig),
+    #[allow(non_camel_case_types)]
+    proxy(Proxy),
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+#[serde(deny_unknown_fields)]
 pub struct HttpConfig {
     pub remote: Url,
     #[serde(skip_serializing_if = "Option::is_none")]
