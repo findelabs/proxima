@@ -24,7 +24,9 @@ pub struct Security {
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct Whitelist {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub methods: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub networks: Option<Vec<IpNetwork>>
 }
 
