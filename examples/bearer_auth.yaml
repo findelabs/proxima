@@ -1,10 +1,11 @@
 routes:
   endpoint_one:
-    url: http://localhost:8080
-    authentication:
-      bearer:
-        token: dGhpc2lzdGhlYmVzdHRlc3Rpbmd0b2tlbmV2ZXJ0aGFua3lvdXZlcnltdWNoCg==
-    security:
-      client:
+    proxy:
+      url: http://localhost:8080
+      authentication:
         bearer:
-        - token: dGhpc2lzdGhlYmVzdHRlc3Rpbmd0b2tlbmV2ZXJ0aGFua3lvdXZlcnltdWNoCg==
+          token: dGhpc2lzdGhlYmVzdHRlc3Rpbmd0b2tlbmV2ZXJ0aGFua3lvdXZlcnltdWNoCg==
+      security:
+        client:
+          bearer:
+          - token: dGhpc2lzdGhlYmVzdHRlc3Rpbmd0b2tlbmV2ZXJ0aGFua3lvdXZlcnltdWNoCg==

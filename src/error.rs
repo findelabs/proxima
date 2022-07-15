@@ -16,7 +16,7 @@ pub enum Error {
     NotFound,
     Unknown,
     BadToken,
-    UnknownEndpoint,
+    UnknownProxy,
     BadUserPasswd,
     Connection,
     UnparseableUrl,
@@ -57,7 +57,7 @@ impl fmt::Display for Error {
             Error::BadUserPasswd => {
                 f.write_str("{\"error\": \"Unparsable username and password provided\"}")
             }
-            Error::UnknownEndpoint => f.write_str("{\"error\": \"unknown endpoint\"}"),
+            Error::UnknownProxy => f.write_str("{\"error\": \"unknown endpoint\"}"),
             Error::Connection => f.write_str("{\"error\": \"Error connecting to rest endpoint\"}"),
             Error::UnparseableUrl => f.write_str("{\"error\": \"Error parsing uri\"}"),
             Error::ConnectionTimeout => f.write_str("{\"error\": \"Connection timeout\"}"),
@@ -90,7 +90,7 @@ impl IntoResponse for Error {
             .expect("Failed to get headers from response");
 
         let status_code = match self {
-            Error::UnknownEndpoint => StatusCode::NOT_FOUND,
+            Error::UnknownProxy => StatusCode::NOT_FOUND,
             Error::Forbidden => StatusCode::FORBIDDEN,
             Error::Unauthorized | Error::UnauthorizedClient => StatusCode::UNAUTHORIZED,
             Error::UnauthorizedClientDigest => {
