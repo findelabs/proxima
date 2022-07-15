@@ -1,12 +1,13 @@
 routes:
   endpoint_one:
-    url: http://localhost:8080
-    authentication:
-      digest:
-        username: user
-        password: testing
-    security:
-      client:
-        basic:
-        - username: user
+    proxy:
+      url: http://localhost:8080
+      authentication:
+        digest:
+          username: user
           password: testing
+      security:
+        client:
+          basic:
+          - username: user
+            password: testing

@@ -8,8 +8,8 @@ use std::collections::BTreeMap;
 use std::hash::{Hash, Hasher};
 use vault_client_rs::client::Client as VaultClient;
 
+use crate::config::Proxy;
 use crate::config::Endpoint;
-use crate::config::Entry;
 use crate::path::ProxyPath;
 use crate::config::ConfigMap;
 use crate::config::Route;
@@ -29,7 +29,7 @@ impl Hash for VaultConfig {
 }
 
 impl VaultConfig {
-    pub async fn config(&self, mut vault: VaultClient, path: ProxyPath, cache: Cache<Endpoint>) -> Result<ConfigMap, ProximaError> {
+    pub async fn config(&self, mut vault: VaultClient, path: ProxyPath, cache: Cache<Proxy>) -> Result<ConfigMap, ProximaError> {
         let list = vault.list(&self.secret).await?;
 
         let cache_prefix = path.key().unwrap_or("/".to_owned());
@@ -49,7 +49,7 @@ impl VaultConfig {
             match cache.get(&cache_path).await {
                 Some(endpoint) => {
                     log::debug!("Found {} in cache", &cache_path);
-                    map.insert(key_str.to_string(), Route::Entry(Entry::Endpoint(endpoint)));
+                    map.insert(key_str.to_string(), Route::Endpoint(Endpoint::Proxy(endpoint)));
                 },
                 None => {
                     let secret = match vault.get(&secret_path).await {
@@ -61,9 +61,9 @@ impl VaultConfig {
                     };
                     match self.template(secret.data().await).await {
                         Ok(route) => {
-                            // If vault secret is Endpoint variant, cache endpoint
-                            if let Route::Entry(ref entry) = route {
-                                if let Entry::Endpoint(ref endpoint) = entry {
+                            // If vault secret is Proxy variant, cache endpoint
+                            if let Route::Endpoint(ref entry) = route {
+                                if let Endpoint::Proxy(ref endpoint) = entry {
                                     cache.set(&cache_path, &endpoint).await;
                                 }
                             }

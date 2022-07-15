@@ -1,6 +1,8 @@
 routes:
   endpoint:
-    url: http://localhost:8080
+    proxy:
+      url: http://localhost:8080
   httpconfig:
-    remote: http://localhost:8080/-/config
+    http_config:
+      url: http://localhost:8080/-/config
 

@@ -65,7 +65,7 @@ impl ProxyPath {
             drop(count);
             Ok(())
         } else {
-            Err(ProximaError::UnknownEndpoint)
+            Err(ProximaError::UnknownProxy)
         }
     }
 
@@ -170,10 +170,11 @@ impl ProxyPath {
     //    }
 
     pub fn suffix(&self) -> String {
-        //        println!("{} vs {}", self.count(), self.max);
+        log::debug!("{} vs {}", self.count(), self.max);
         if self.count() < self.max {
             let start = self.count() + 1;
             let slice = self.vec[start as usize..].to_vec().join("/");
+            log::debug!("Returning suffix of {}", &slice);
             slice
         } else {
             "".to_string()

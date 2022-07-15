@@ -1,13 +1,18 @@
 routes:
   endpoint_one:
-    url: http://localhost:8080
+    proxy:
+      url: http://localhost:8080
   endpoint_two:
-    url: http://localhost:8080
+    proxy:
+      url: http://localhost:8080
   level_two:
     endpoint_three:
-      url: http://localhost:8080
+      proxy:
+        url: http://localhost:8080
     endpoint_four:
-      url: http://localhost:8080
+      proxy:
+        url: http://localhost:8080
     level_three:
       endpoint_five:
-        url: http://localhost:8080
+        proxy:
+          url: http://localhost:8080

@@ -1,36 +1,44 @@
 routes:
   api:
-    url: http://localhost:8081
-    security:
-      client:
-        basic:
-        - username: admin
-          password: admin
-  endpoint_requiring_basic:
-    url: http://localhost:8080
-    authentication:
-      basic:
-        username: user
-        password: testing
-  endpoint_requiring_bearer:
-    url: http://localhost:8080
-    authentication:
-      bearer:
-        token: dGhpc2lzdGhlYmVzdHRlc3Rpbmd0b2tlbmV2ZXJ0aGFua3lvdXZlcnltdWNoCg==
-  remote_config:
-    remote: http://localhost:8080/-/config
-  level_two:
-    httpconfig:
-      remote: http://localhost:8080/-/config
-    endpoint_one:
-      url: http://localhost:8080
-    endpoint_two:
-      url: http://localhost:8080
+    proxy:
+      url: http://localhost:8081
       security:
         client:
           basic:
-          - username: user
-            password: testing
+          - username: admin
+            password: admin
+  endpoint_requiring_basic:
+    proxy:
+      url: http://localhost:8080
+      authentication:
+        basic:
+          username: user
+          password: testing
+  endpoint_requiring_bearer:
+    proxy:
+      url: http://localhost:8080
+      authentication:
+        bearer:
+          token: dGhpc2lzdGhlYmVzdHRlc3Rpbmd0b2tlbmV2ZXJ0aGFua3lvdXZlcnltdWNoCg==
+  remote_config:
+    http_config:
+      url: http://localhost:8080/-/config
+  level_two:
+    httpconfig:
+      http_config:
+        url: http://localhost:8080/-/config
+    endpoint_one:
+      proxy:
+        url: http://localhost:8080
+    endpoint_two:
+      proxy:
+        url: http://localhost:8080
+        security:
+          client:
+            basic:
+            - username: user
+              password: testing
     level_three:
       endpoint_four:
-        url: http://localhost:8080
+        proxy:
+          url: http://localhost:8080

@@ -7,7 +7,7 @@ use std::time::Duration;
 use hyper::header::HeaderValue;
 use url::Url;
 
-use crate::config::Endpoint;
+use crate::config::Proxy;
 use crate::error::Error as ProximaError;
 use crate::https::HttpsClient;
 use crate::path::ProxyPath;
@@ -15,7 +15,7 @@ use crate::urls::Urls;
 
 pub struct ProxyRequest {
     pub client: HttpsClient,
-    pub endpoint: Endpoint,
+    pub endpoint: Proxy,
     pub method: Method,
     pub path: ProxyPath,
     pub body: Body,
@@ -47,6 +47,7 @@ impl ProxyRequest {
             self.path.suffix(),
             queries.unwrap_or_else(|| "".to_string())
         );
+
         let uri = match Uri::try_from(host_and_path) {
             Ok(u) => u,
             Err(e) => {

@@ -12,7 +12,7 @@ use hyper::header::FORWARDED;
 
 use crate::auth::{basic::BasicAuth, server::ServerAuth};
 use crate::config;
-use crate::config::{Config, Endpoint, Route, Entry};
+use crate::config::{Config, Proxy, Route, Endpoint};
 use crate::error::Error as ProximaError;
 use crate::https::{ClientBuilder, HttpsClient};
 use crate::path::ProxyPath;
@@ -143,7 +143,7 @@ impl State {
 
     pub async fn authorize_whitelist(
         &mut self,
-        endpoint: &Endpoint,
+        endpoint: &Proxy,
         method: &Method,
         client_addr: &SocketAddr
     ) -> Result<(), ProximaError> {
@@ -159,7 +159,7 @@ impl State {
 
     pub async fn authorize_client(
         &mut self,
-        endpoint: &Endpoint,
+        endpoint: &Proxy,
         headers: &HeaderMap,
         method: &Method,
         client_addr: &SocketAddr
@@ -167,11 +167,11 @@ impl State {
         // If endpoint is locked down, verify credentials
         if let Some(ref security) = endpoint.security {
             if let Some(ref client) = security.client {
-                log::debug!("Endpoint is locked");
+                log::debug!("Proxy is locked");
                 match self.config.global_authentication {
                     true => {
                         log::error!(
-                            "Endpoint is locked, but proxima is using global authentication"
+                            "Proxy is locked, but proxima is using global authentication"
                         );
                     }
                     false => client.authorize(headers, method, client_addr).await?
@@ -202,9 +202,9 @@ impl State {
                         .body(body)
                         .unwrap());
                 }
-                Route::Entry(entry) => {
+                Route::Endpoint(entry) => {
                     match entry {
-                        Entry::Endpoint(endpoint) => {
+                        Endpoint::Proxy(endpoint) => {
                             log::debug!(
                                 "Found an endpoint {}, with path {}",
                                 endpoint.url.path().await,
@@ -212,7 +212,7 @@ impl State {
                             );
                             (endpoint, remainder)
                         }
-                        Entry::HttpConfig(map) => {
+                        Endpoint::HttpConfig(map) => {
                             let config = serde_json::to_string(&map).expect("Cannot convert to JSON");
                             let body = Body::from(config);
                             return Ok(Response::builder()
@@ -220,7 +220,7 @@ impl State {
                                 .body(body)
                                 .unwrap());
                         }
-                        Entry::VaultConfig(map) => {
+                        Endpoint::VaultConfig(map) => {
                             let config = serde_json::to_string(&map).expect("Cannot convert to JSON");
                             let body = Body::from(config);
                             return Ok(Response::builder()

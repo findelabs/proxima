@@ -1,4 +1,4 @@
-//use crate::config::Endpoint;
+//use crate::config::Proxy;
 use serde_json::map::Map;
 use serde_json::Value;
 use std::collections::HashMap;
