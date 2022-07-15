@@ -12,7 +12,7 @@ use hyper::header::FORWARDED;
 
 use crate::auth::{basic::BasicAuth, server::ServerAuth};
 use crate::config;
-use crate::config::{Config, Endpoint, Entry};
+use crate::config::{Config, Endpoint, Route, Entry};
 use crate::error::Error as ProximaError;
 use crate::https::{ClientBuilder, HttpsClient};
 use crate::path::ProxyPath;
@@ -190,19 +190,11 @@ impl State {
         payload: Option<BodyStream>,
         client_addr: SocketAddr
     ) -> Result<Response<Body>, ProximaError> {
-        let (config_entry, path) = match self.config.get(path.clone()).await {
+        let (endpoint, path) = match self.config.get(path.clone()).await {
             // If we receive an entry, forward request.
             // If we receive a ConfigMap, return as json to client
-            Ok((entry, remainder)) => match entry {
-                Entry::Endpoint(endpoint) => {
-                    log::debug!(
-                        "Found an endpoint {}, with path {}",
-                        endpoint.url.path().await,
-                        remainder.suffix()
-                    );
-                    (endpoint, remainder)
-                }
-                Entry::ConfigMap(map) => {
+            Ok((route, remainder)) => match route {
+                Route::ConfigMap(map) => {
                     let config = serde_json::to_string(&map).expect("Cannot convert to JSON");
                     let body = Body::from(config);
                     return Ok(Response::builder()
@@ -210,21 +202,33 @@ impl State {
                         .body(body)
                         .unwrap());
                 }
-                Entry::HttpConfig(map) => {
-                    let config = serde_json::to_string(&map).expect("Cannot convert to JSON");
-                    let body = Body::from(config);
-                    return Ok(Response::builder()
-                        .status(StatusCode::OK)
-                        .body(body)
-                        .unwrap());
-                }
-                Entry::VaultConfig(map) => {
-                    let config = serde_json::to_string(&map).expect("Cannot convert to JSON");
-                    let body = Body::from(config);
-                    return Ok(Response::builder()
-                        .status(StatusCode::OK)
-                        .body(body)
-                        .unwrap());
+                Route::Entry(entry) => {
+                    match entry {
+                        Entry::Endpoint(endpoint) => {
+                            log::debug!(
+                                "Found an endpoint {}, with path {}",
+                                endpoint.url.path().await,
+                                remainder.suffix()
+                            );
+                            (endpoint, remainder)
+                        }
+                        Entry::HttpConfig(map) => {
+                            let config = serde_json::to_string(&map).expect("Cannot convert to JSON");
+                            let body = Body::from(config);
+                            return Ok(Response::builder()
+                                .status(StatusCode::OK)
+                                .body(body)
+                                .unwrap());
+                        }
+                        Entry::VaultConfig(map) => {
+                            let config = serde_json::to_string(&map).expect("Cannot convert to JSON");
+                            let body = Body::from(config);
+                            return Ok(Response::builder()
+                                .status(StatusCode::OK)
+                                .body(body)
+                                .unwrap());
+                        }
+                    }
                 }
             },
             Err(e) => return Err(e),
@@ -255,10 +259,10 @@ impl State {
         log::debug!("Client socket determined to be {}", &client);
 
         // Verify global whitelist
-        self.authorize_whitelist(&config_entry, &method, &client).await?;
+        self.authorize_whitelist(&endpoint, &method, &client).await?;
 
         // Authorize client, and check for client whitelist
-        self.authorize_client(&config_entry, &request_headers, &method, &client)
+        self.authorize_client(&endpoint, &request_headers, &method, &client)
             .await?;
 
         // Wrap Body if there is one
@@ -275,7 +279,7 @@ impl State {
 
         let request = ProxyRequest {
             client: self.client.clone(),
-            endpoint: config_entry,
+            endpoint,
             method,
             path,
             body,

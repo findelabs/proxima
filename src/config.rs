@@ -25,7 +25,7 @@ use crate::urls::Urls;
 use crate::vault::VaultConfig;
 
 type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
-pub type ConfigMap = BTreeMap<String, Entry>;
+pub type ConfigMap = BTreeMap<String, Route>;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash, Default)]
 pub struct ConfigFile {
@@ -50,27 +50,11 @@ pub struct Config {
 #[warn(non_camel_case_types)]
 #[serde(deny_unknown_fields)]
 #[serde(untagged)]
-pub enum Entry {
+pub enum Route {
     #[allow(non_camel_case_types)]
     ConfigMap(Box<ConfigMap>),
     #[allow(non_camel_case_types)]
-    Endpoint(Endpoint),
-    #[allow(non_camel_case_types)]
-    HttpConfig(HttpConfig),
-    #[allow(non_camel_case_types)]
-    VaultConfig(VaultConfig),
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
-#[serde(deny_unknown_fields)]
-#[serde(rename_all = "snake_case")]
-pub struct EndpointType {
-    #[allow(non_camel_case_types)]
-    http_config(HttpConfig),
-    #[allow(non_camel_case_types)]
-    vault(VaultConfig),
-    #[allow(non_camel_case_types)]
-    proxy(Proxy),
+    Entry(Entry),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -79,6 +63,18 @@ pub struct HttpConfig {
     pub remote: Url,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authentication: Option<ServerAuth>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+#[serde(deny_unknown_fields)]
+#[serde(rename_all = "snake_case")]
+pub enum Entry {
+    #[allow(non_camel_case_types)]
+    HttpConfig(HttpConfig),
+    #[allow(non_camel_case_types)]
+    VaultConfig(VaultConfig),
+    #[allow(non_camel_case_types)]
+    Endpoint(Endpoint),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -173,7 +169,7 @@ impl Config {
         }
     }
 
-    pub async fn cache_get(&self, mut path: ProxyPath) -> Result<(Entry, ProxyPath), ProximaError> {
+    pub async fn cache_get(&self, mut path: ProxyPath) -> Result<(Route, ProxyPath), ProximaError> {
         let path_str = path.path();
         log::debug!("Starting cache_get for {}", &path_str);
         if let Some(mapping) = self.mappings.get(&path_str).await {
@@ -184,7 +180,7 @@ impl Config {
 
                 // Spin path fowward, so that only the remainder is passed along
                 path.forward(&mapping)?;
-                return Ok((Entry::Endpoint(endpoint), path));
+                return Ok((Route::Entry(Entry::Endpoint(endpoint)), path));
             }
         }
 
@@ -192,7 +188,7 @@ impl Config {
             .fetch(path, self.config_file().await.routes)
             .await?;
 
-        if let (Entry::Endpoint(_), ref path) = result {
+        if let (Route::Entry(Entry::Endpoint(_)), ref path) = result {
             // Set cache and mappings
             log::debug!("Adding {} to mappings", path.path());
             self.mappings
@@ -209,12 +205,12 @@ impl Config {
         &self,
         mut path: ProxyPath,
         config: ConfigMap,
-    ) -> Result<(Entry, ProxyPath), ProximaError> {
+    ) -> Result<(Route, ProxyPath), ProximaError> {
         // If there are no more hops, return configmap
         if path.next_hop().is_some() {
             path.next()?;
         } else {
-            return Ok((Entry::ConfigMap(Box::new(config)), path));
+            return Ok((Route::ConfigMap(Box::new(config)), path));
         };
 
         // Check if cache contains endpoint
@@ -222,13 +218,13 @@ impl Config {
             log::debug!("Starting fetch with cache search for {}", &key);
             if let Some(hit) = self.cache.get(&key).await {
                 log::debug!("Got cache hit for {}", &key);
-                return Ok((Entry::Endpoint(hit), path));
+                return Ok((Route::Entry(Entry::Endpoint(hit)), path));
             }
         };
 
         // If endpoint is not found in cache, check configmap
         match config.get(&path.current()) {
-            Some(Entry::ConfigMap(entry)) => {
+            Some(Route::ConfigMap(entry)) => {
                 log::debug!(
                     "Found ConfigMap at {}",
                     &path.key().unwrap_or_else(|| "None".to_string())
@@ -241,128 +237,136 @@ impl Config {
                         log::debug!("Got cache hit for {}", &key);
                         // Move path forward
                         path.next()?;
-                        return Ok((Entry::Endpoint(hit), path));
+                        return Ok((Route::Entry(Entry::Endpoint(hit)), path));
                     }
                 };
 
                 self.fetch(path, *entry.clone()).await
-            }
-            Some(Entry::HttpConfig(entry)) => {
-                log::debug!(
-                    "Found HttpConfig at {}",
-                    &path.key().unwrap_or_else(|| "None".to_string())
-                );
-                if let Some(key) = path.next_key() {
-                    log::debug!("Searching cache for next hop of {}", &key);
-                    if let Some(hit) = self.cache.get(&key).await {
-                        log::debug!("Got cache hit for {}", &key);
-                        // Move path forward
-                        path.next()?;
-
-                        return Ok((Entry::Endpoint(hit), path));
-                    }
-                };
-
-                // Get the http config as config_file
-                let config_file = match self
-                    .parse(Some(entry.remote.clone()), entry.authentication.clone())
-                    .await
-                {
-                    Ok(c) => c,
-                    Err(e) => {
-                        log::error!("Error parsing remote config: {}", e.to_string());
-                        return Err(e);
-                    }
-                };
-                self.fetch(path, config_file.routes).await
-            }
-            Some(Entry::VaultConfig(entry)) => {
-                log::debug!(
-                    "Found VaultConfig at {}",
-                    &path.key().unwrap_or_else(|| "None".to_string())
-                );
-
-                // Get last char from secret
-                let last_char = &entry.secret.chars().last().expect("Unable to get last char");
-
-                // Here we are if we find a single secret
-                if last_char != &'/' {
-                    log::debug!("Single secret Vault Endpoint found, attempting to get secret from cache");
-
-                    // Check the cache for the secret
-                    if let Some(key) = path.key() {
-                        if let Some(hit) = self.cache.get(&key).await {
-                            log::debug!("Got cache hit for {}", &key);
-                            // Move path forward
-                            path.next()?;
-                            return Ok((Entry::Endpoint(hit), path));
-                        }
-    
-                        log::debug!("Attempting to get secret at path {} from Vault", &entry.secret);
-                        let entry = entry.get(self.vault_client()?, "").await?;
-
-                        // If vault secret is Endpoint variant, cache endpoint
-                        if let Entry::Endpoint(ref e) = entry {
-                            self.cache.set(&path.key().expect("odd"), &e).await;
+            },
+            Some(Route::Entry(entry)) => {
+                match entry {
+                    Entry::HttpConfig(entry) => {
+                        log::debug!(
+                            "Found HttpConfig at {}",
+                            &path.key().unwrap_or_else(|| "None".to_string())
+                        );
+                        if let Some(key) = path.next_key() {
+                            log::debug!("Searching cache for next hop of {}", &key);
+                            if let Some(hit) = self.cache.get(&key).await {
+                                log::debug!("Got cache hit for {}", &key);
+                                // Move path forward
+                                path.next()?;
+        
+                                return Ok((Route::Entry(Entry::Endpoint(hit)), path));
+                            }
                         };
-    
-                        return Ok((entry, path))
-                    } else {
-                        return Err(ProximaError::UnknownEndpoint)
+        
+                        // Get the http config as config_file
+                        let config_file = match self
+                            .parse(Some(entry.remote.clone()), entry.authentication.clone())
+                            .await
+                        {
+                            Ok(c) => c,
+                            Err(e) => {
+                                log::error!("Error parsing remote config: {}", e.to_string());
+                                return Err(e);
+                            }
+                        };
+                        self.fetch(path, config_file.routes).await
                     }
-                } else {
-                    // We found a directory of vault secrets
-                    if let Some(key) = path.next_key() {
-                        log::debug!("Searching cache for next hop of {}", &key);
-                        if let Some(hit) = self.cache.get(&key).await {
-                            log::debug!("Got cache hit for {}", &key);
-                            // Move path forward
-                            path.next()?;
-                            return Ok((Entry::Endpoint(hit), path));
-                        }
-                    };
-    
-                    // Check to see if there are any other subfolders requested,
-                    // or else return the full vault config
-                    match path.next_hop() {
-                        Some(h) => {
-                            let entry = entry.get(self.vault_client()?, &h).await?;
-                            // Move path forward
-                            path.next()?;
-    
-                            // If vault secret is Endpoint variant, cache endpoint
-                            if let Entry::Endpoint(ref e) = entry {
-                                self.cache.set(&path.key().expect("odd"), &e).await;
+                    Entry::VaultConfig(entry) => {
+                        log::debug!(
+                            "Found VaultConfig at {}",
+                            &path.key().unwrap_or_else(|| "None".to_string())
+                        );
+        
+                        // Get last char from secret
+                        let last_char = &entry.secret.chars().last().expect("Unable to get last char");
+        
+                        // Here we are if we find a single secret
+                        if last_char != &'/' {
+                            log::debug!("Single secret Vault Endpoint found, attempting to get secret from cache");
+        
+                            // Check the cache for the secret
+                            if let Some(key) = path.key() {
+                                if let Some(hit) = self.cache.get(&key).await {
+                                    log::debug!("Got cache hit for {}", &key);
+                                    // Move path forward
+                                    path.next()?;
+                                    return Ok((Route::Entry(Entry::Endpoint(hit)), path));
+                                }
+            
+                                log::debug!("Attempting to get secret at path {} from Vault", &entry.secret);
+                                let route = entry.get(self.vault_client()?, "").await?;
+        
+                                // If vault secret is Endpoint variant, cache endpoint
+                                if let Route::Entry(ref entry) = route {
+                                    if let Entry::Endpoint(ref endpoint) = entry  {
+                                        self.cache.set(&path.key().expect("odd"), &endpoint).await;
+                                    }
+                                };
+            
+                                return Ok((route, path))
+                            } else {
+                                return Err(ProximaError::UnknownEndpoint)
+                            }
+                        } else {
+                            // We found a directory of vault secrets
+                            if let Some(key) = path.next_key() {
+                                log::debug!("Searching cache for next hop of {}", &key);
+                                if let Some(hit) = self.cache.get(&key).await {
+                                    log::debug!("Got cache hit for {}", &key);
+                                    // Move path forward
+                                    path.next()?;
+                                    return Ok((Route::Entry(Entry::Endpoint(hit)), path));
+                                }
                             };
-    
-                            Ok((entry, path))
+            
+                            // Check to see if there are any other subfolders requested,
+                            // or else return the full vault config
+                            match path.next_hop() {
+                                Some(h) => {
+                                    let route = entry.get(self.vault_client()?, &h).await?;
+                                    // Move path forward
+                                    path.next()?;
+            
+                                    // If vault secret is Endpoint variant, cache endpoint
+                                    if let Route::Entry(ref entry) = route {
+                                        if let Entry::Endpoint(ref endpoint) = entry  {
+                                            self.cache.set(&path.key().expect("odd"), &endpoint).await;
+                                        }
+                                    };
+            
+                                    Ok((route, path))
+                                }
+                                None => {
+                                    let configmap = entry.config(self.vault_client()?, path.clone(), self.cache.clone()).await?;
+                                    Ok((Route::ConfigMap(Box::new(configmap)), path))
+                                }
+                            }
                         }
-                        None => {
-                            let configmap = entry.config(self.vault_client()?, path.clone(), self.cache.clone()).await?;
-                            Ok((Entry::ConfigMap(Box::new(configmap)), path))
-                        }
+                    }
+                    Entry::Endpoint(entry) => {
+                        log::debug!(
+                            "Found Endpoint at {}",
+                            &path.key().unwrap_or_else(|| "None".to_string())
+                        );
+        
+                        // Save entry into cache
+                        let key = &path.key().expect("weird");
+                        log::debug!("Adding {} to cache", key);
+                        self.cache.set(key, &entry).await;
+        
+                        // Return endpoint
+                        Ok((Route::Entry(Entry::Endpoint(entry.clone())), path))
                     }
                 }
-            }
-            Some(Entry::Endpoint(entry)) => {
-                log::debug!(
-                    "Found Endpoint at {}",
-                    &path.key().unwrap_or_else(|| "None".to_string())
-                );
-
-                // Save entry into cache
-                let key = &path.key().expect("weird");
-                log::debug!("Adding {} to cache", key);
-                self.cache.set(key, &entry).await;
-
-                // Return endpoint
-                Ok((Entry::Endpoint(entry.clone()), path))
-            }
-            None => Err(ProximaError::UnknownEndpoint),
+            },
+            None => Err(ProximaError::UnknownEndpoint)
         }
     }
 
-    pub async fn get(&self, path: ProxyPath) -> Result<(Entry, ProxyPath), ProximaError> {
+    pub async fn get(&self, path: ProxyPath) -> Result<(Route, ProxyPath), ProximaError> {
         self.renew().await;
         self.cache_get(path).await
     }
