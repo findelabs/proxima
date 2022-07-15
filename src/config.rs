@@ -22,7 +22,7 @@ use crate::https::HttpsClient;
 use crate::path::ProxyPath;
 use crate::security::{display_security, Security};
 use crate::urls::Urls;
-use crate::vault::VaultConfig;
+use crate::vault::Vault;
 
 type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 pub type ConfigMap = BTreeMap<String, Route>;
@@ -72,7 +72,7 @@ pub enum Endpoint {
     #[allow(non_camel_case_types)]
     HttpConfig(HttpConfig),
     #[allow(non_camel_case_types)]
-    VaultConfig(VaultConfig),
+    Vault(Vault),
     #[allow(non_camel_case_types)]
     Proxy(Proxy),
 }
@@ -274,9 +274,9 @@ impl Config {
                         };
                         self.fetch(path, config_file.routes).await
                     }
-                    Endpoint::VaultConfig(entry) => {
+                    Endpoint::Vault(entry) => {
                         log::debug!(
-                            "Found VaultConfig at {}",
+                            "Found Vault at {}",
                             &path.key().unwrap_or_else(|| "None".to_string())
                         );
         

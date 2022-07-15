@@ -16,19 +16,19 @@ use crate::config::Route;
 use crate::cache::Cache;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct VaultConfig {
+pub struct Vault {
     pub template: Option<String>,
     pub secret: String,
 }
 
-impl Hash for VaultConfig {
+impl Hash for Vault {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.template.hash(state);
         self.secret.hash(state);
     }
 }
 
-impl VaultConfig {
+impl Vault {
     pub async fn config(&self, mut vault: VaultClient, path: ProxyPath, cache: Cache<Proxy>) -> Result<ConfigMap, ProximaError> {
         let list = vault.list(&self.secret).await?;
 

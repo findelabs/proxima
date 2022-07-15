@@ -220,7 +220,7 @@ impl State {
                                 .body(body)
                                 .unwrap());
                         }
-                        Endpoint::VaultConfig(map) => {
+                        Endpoint::Vault(map) => {
                             let config = serde_json::to_string(&map).expect("Cannot convert to JSON");
                             let body = Body::from(config);
                             return Ok(Response::builder()
