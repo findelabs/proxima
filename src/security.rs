@@ -1,16 +1,49 @@
-use hyper::Method;
-use serde::{Deserialize, Serialize};
 use hyper::HeaderMap;
+use hyper::Method;
 use ipnetwork::IpNetwork;
+use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 
 //use crate::auth::client::ClientAuthList;
-use crate::error::Error as ProximaError;
+use crate::auth::api_key::ApiKeyAuth;
 use crate::auth::basic::BasicAuthList;
-use crate::auth::digest::DigestAuthList;
 use crate::auth::bearer::BearerAuthList;
-use crate::auth::api_key::ApiKeyAuthList;
+use crate::auth::digest::DigestAuthList;
 use crate::auth::jwks::JwksAuthList;
+use crate::auth::traits::{AuthList, AuthorizeList};
+use crate::error::Error as ProximaError;
+
+//pub trait Authorize {
+//    fn security(&self) -> Option<Security>;
+//
+//    fn authorize(&self, method: &Method, client_addr: &SocketAddr) -> Result<(), ProximaError> {
+//        match &self.security() {
+//            Some(security) => {
+//                match security.whitelist {
+//                    Some(whitelist) => whitelist.authorize(method, client_addr),
+//                    None => Ok(())
+//                }
+//            }
+//            None => Ok(())
+//        }
+//    }
+//}
+//
+//pub trait Authenticate {
+//    fn security(&self) -> Option<Security>;
+//
+//    async fn authenticate(&self, headers: &HeaderMap, method: &Method, client_addr: &SocketAddr) -> Result<(), ProximaError> {
+//        match &self.security() {
+//            Some(security) => {
+//                match security.client {
+//                    Some(clientlist) => clientlist.authorize(method, client_addr).await,
+//                    None => Ok(())
+//                }
+//            }
+//            None => Ok(())
+//        }
+//    }
+//}
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(deny_unknown_fields)]
@@ -27,7 +60,7 @@ pub struct Whitelist {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub methods: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub networks: Option<Vec<IpNetwork>>
+    pub networks: Option<Vec<IpNetwork>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -37,7 +70,7 @@ pub struct AuthorizedClients {
     pub digest: Option<DigestAuthList>,
     pub bearer: Option<BearerAuthList>,
     pub jwks: Option<JwksAuthList>,
-    pub api_key: Option<ApiKeyAuthList>
+    pub api_key: Option<AuthList<ApiKeyAuth>>,
 }
 
 impl AuthorizedClients {
@@ -45,23 +78,22 @@ impl AuthorizedClients {
         &self,
         headers: &HeaderMap,
         method: &Method,
-        client_addr: &SocketAddr
+        client_addr: &SocketAddr,
     ) -> Result<(), ProximaError> {
-
         // Test for Basic authorization
         if let Some(auth) = &self.basic {
             if let Err(e) = auth.authorize(headers, method, client_addr).await {
                 match e {
                     ProximaError::UnmatchedHeader => {
                         log::debug!("Could not match header for Basic auth");
-                    },
-                    _ => return Err(e)
+                    }
+                    _ => return Err(e),
                 }
             } else {
-                return Ok(())
+                return Ok(());
             }
         }
-                
+
         // Test for API Key authorization
         if let Some(auth) = &self.api_key {
             log::debug!("Got to api keys");
@@ -69,11 +101,11 @@ impl AuthorizedClients {
                 match e {
                     ProximaError::UnmatchedHeader => {
                         log::debug!("Could not match header for API key auth");
-                    },
-                    _ => return Err(e)
+                    }
+                    _ => return Err(e),
                 }
             } else {
-                return Ok(())
+                return Ok(());
             }
         }
 
@@ -83,15 +115,17 @@ impl AuthorizedClients {
                 match e {
                     ProximaError::UnmatchedHeader => {
                         log::debug!("Could not match header for Bearer auth");
-                    },
-                    _ => if self.jwks.is_some() {
-                        log::debug!("Bearer token could not be authenticated, but jwks is also enabled on this endpoint, continuing");
+                    }
+                    _ => {
+                        if self.jwks.is_some() {
+                            log::debug!("Bearer token could not be authenticated, but jwks is also enabled on this endpoint, continuing");
                         } else {
-                            return Err(e)
+                            return Err(e);
                         }
+                    }
                 }
             } else {
-                return Ok(())
+                return Ok(());
             }
         }
 
@@ -101,11 +135,11 @@ impl AuthorizedClients {
                 match e {
                     ProximaError::UnmatchedHeader => {
                         log::debug!("Could not match header for JWKS auth");
-                    },
-                    _ => return Err(e)
+                    }
+                    _ => return Err(e),
                 }
             } else {
-                return Ok(())
+                return Ok(());
             }
         }
 
@@ -116,15 +150,15 @@ impl AuthorizedClients {
                 match e {
                     ProximaError::UnmatchedHeader => {
                         log::debug!("Could not match header for Digest auth");
-                    },
+                    }
                     // This is a unique response, as bad digest logins require special response headers
-                    _ => return Err(ProximaError::UnauthorizedClientDigest)
+                    _ => return Err(ProximaError::UnauthorizedClientDigest),
                 }
             } else {
-                return Ok(())
+                return Ok(());
             }
         }
-                
+
         // If we get here, no authentication was matched, return error.
         // If Basic auth is included, pass along x-auth header
         if let Some(_) = &self.basic {
@@ -171,8 +205,12 @@ impl Whitelist {
             metrics::increment_counter!("proxima_security_network_authorize_attempts_total");
             for network in networks {
                 if network.contains(client_addr.ip()) {
-                    log::debug!("\"client IP {} is in IP whitelisted network {}\"", client_addr, network);
-                    return Ok(())
+                    log::debug!(
+                        "\"client IP {} is in IP whitelisted network {}\"",
+                        client_addr,
+                        network
+                    );
+                    return Ok(());
                 }
             }
             metrics::increment_counter!("proxima_security_network_authorize_blocked_count");

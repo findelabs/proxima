@@ -33,3 +33,4 @@ jsonwebtoken = "8"
 vault-client-rs = { git = "https://github.com/findelabs/vault-client-rs.git", branch = "master" }
 handlebars = "4"
 ipnetwork = "0.19"
+async-trait = "0.1.56"

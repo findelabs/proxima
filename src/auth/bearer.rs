@@ -1,10 +1,10 @@
-use serde::{Deserialize, Serialize};
-use crate::security::Whitelist;
 use crate::error::Error as ProximaError;
+use crate::security::Whitelist;
 use hyper::header::HeaderValue;
-use hyper::Method;
-use std::net::SocketAddr;
 use hyper::HeaderMap;
+use hyper::Method;
+use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(deny_unknown_fields)]
@@ -23,7 +23,7 @@ impl BearerAuthList {
         &self,
         headers: &HeaderMap,
         method: &Method,
-        client_addr: &SocketAddr
+        client_addr: &SocketAddr,
     ) -> Result<(), ProximaError> {
         log::debug!("Looping over bearer tokens");
         let Self(internal) = self;
@@ -36,7 +36,7 @@ impl BearerAuthList {
                     "proxima_security_client_authentication_failed_count",
                     "type" => "absent"
                 );
-                return Err(ProximaError::UnmatchedHeader)
+                return Err(ProximaError::UnmatchedHeader);
             }
         };
 
@@ -49,7 +49,7 @@ impl BearerAuthList {
         if let Some("Bearer") = scheme {
             log::debug!("Found correct scheme for auth type: Bearer");
         } else {
-            return Err(ProximaError::UnmatchedHeader)
+            return Err(ProximaError::UnmatchedHeader);
         }
 
         for user in internal.iter() {
@@ -75,7 +75,7 @@ impl BearerAuth {
         &self,
         header: &HeaderValue,
         method: &Method,
-        client_addr: &SocketAddr
+        client_addr: &SocketAddr,
     ) -> Result<(), ProximaError> {
         if let Some(ref whitelist) = self.whitelist {
             log::debug!("Found whitelist");
@@ -86,7 +86,7 @@ impl BearerAuth {
         let header_split: Vec<&str> = header_str.split(' ').collect();
         let token = match header_split.into_iter().nth(1) {
             None => return Err(ProximaError::Unauthorized),
-            Some(t) => t
+            Some(t) => t,
         };
 
         log::debug!("Comparing {} to {}", token, &self.token());

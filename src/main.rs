@@ -242,10 +242,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     });
 
     // Set API listen port
-    let api_port: u16 = opts.value_of("api_port").unwrap().parse().unwrap_or_else(|_| {
-        eprintln!("specified API port isn't in a valid range, setting to 8081");
-        8081
-    });
+    let api_port: u16 = opts
+        .value_of("api_port")
+        .unwrap()
+        .parse()
+        .unwrap_or_else(|_| {
+            eprintln!("specified API port isn't in a valid range, setting to 8081");
+            8081
+        });
 
     // Create state for axum
     let mut state = State::default();
@@ -289,17 +293,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .route_layer(middleware::from_fn(track_metrics))
                 .layer(Extension(state))
                 .layer(Extension(recorder_handle))
-        },
-        false => {
-            Router::new()
-                .route("/", any(root))
-                .route("/:endpoint", any(proxy))
-                .route("/:endpoint/*path", any(proxy))
-                .layer(TraceLayer::new_for_http())
-                .route_layer(middleware::from_fn(track_metrics))
-                .layer(Extension(state))
-                .layer(Extension(recorder_handle))
         }
+        false => Router::new()
+            .route("/", any(root))
+            .route("/:endpoint", any(proxy))
+            .route("/:endpoint/*path", any(proxy))
+            .layer(TraceLayer::new_for_http())
+            .route_layer(middleware::from_fn(track_metrics))
+            .layer(Extension(state))
+            .layer(Extension(recorder_handle)),
     };
 
     // add a fallback service for handling routes to unknown paths
@@ -309,14 +311,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // Create server for main proxy
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
     log::info!("\"Proxy listening on {}\"", addr);
-    let server1 = axum::Server::bind(&addr)
-        .serve(proxy.into_make_service_with_connect_info::<SocketAddr>());
+    let server1 =
+        axum::Server::bind(&addr).serve(proxy.into_make_service_with_connect_info::<SocketAddr>());
 
     // Create server for API
     let addr = SocketAddr::from(([0, 0, 0, 0], api_port));
     log::info!("\"API listening on {}\"", addr);
-    let server2 = axum::Server::bind(&addr)
-        .serve(api.into_make_service_with_connect_info::<SocketAddr>());
+    let server2 =
+        axum::Server::bind(&addr).serve(api.into_make_service_with_connect_info::<SocketAddr>());
 
     tokio::try_join!(server1, server2)?;
 

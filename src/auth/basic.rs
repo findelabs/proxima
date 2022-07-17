@@ -1,10 +1,10 @@
-use serde::{Deserialize, Serialize};
+use crate::error::Error as ProximaError;
 use crate::security::Whitelist;
 use hyper::header::HeaderValue;
-use crate::error::Error as ProximaError;
-use hyper::Method;
-use std::net::SocketAddr;
 use hyper::HeaderMap;
+use hyper::Method;
+use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(deny_unknown_fields)]
@@ -24,7 +24,7 @@ impl BasicAuthList {
         &self,
         headers: &HeaderMap,
         method: &Method,
-        client_addr: &SocketAddr
+        client_addr: &SocketAddr,
     ) -> Result<(), ProximaError> {
         log::debug!("Looping over basic users");
         let Self(internal) = self;
@@ -37,7 +37,7 @@ impl BasicAuthList {
                     "proxima_security_client_authentication_failed_count",
                     "type" => "absent"
                 );
-                return Err(ProximaError::UnmatchedHeader)
+                return Err(ProximaError::UnmatchedHeader);
             }
         };
 
@@ -50,7 +50,7 @@ impl BasicAuthList {
         if let Some("Basic") = scheme {
             log::debug!("Found correct scheme for auth type: Basic");
         } else {
-            return Err(ProximaError::UnmatchedHeader)
+            return Err(ProximaError::UnmatchedHeader);
         }
 
         for user in internal.iter() {
@@ -66,7 +66,6 @@ impl BasicAuthList {
         Err(ProximaError::UnauthorizedClientBasic)
     }
 }
-
 
 impl BasicAuth {
     #[allow(dead_code)]
@@ -92,7 +91,7 @@ impl BasicAuth {
         &self,
         header: &HeaderValue,
         method: &Method,
-        client_addr: &SocketAddr
+        client_addr: &SocketAddr,
     ) -> Result<(), ProximaError> {
         if let Some(ref whitelist) = self.whitelist {
             log::debug!("Found whitelist");

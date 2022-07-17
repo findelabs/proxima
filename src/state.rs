@@ -3,16 +3,16 @@ use axum::{
     http::{Response, StatusCode},
 };
 use clap::ArgMatches;
+use hyper::header::FORWARDED;
 use hyper::{Body, HeaderMap, Method};
-use std::net::SocketAddr;
 use serde_json::json;
 use serde_json::Value;
 use std::error::Error;
-use hyper::header::FORWARDED;
+use std::net::SocketAddr;
 
 use crate::auth::{basic::BasicAuth, server::ServerAuth};
 use crate::config;
-use crate::config::{Config, Proxy, Route, Endpoint};
+use crate::config::{Config, Endpoint, Proxy, Route};
 use crate::error::Error as ProximaError;
 use crate::https::{ClientBuilder, HttpsClient};
 use crate::path::ProxyPath;
@@ -145,7 +145,7 @@ impl State {
         &mut self,
         endpoint: &Proxy,
         method: &Method,
-        client_addr: &SocketAddr
+        client_addr: &SocketAddr,
     ) -> Result<(), ProximaError> {
         // If endpoint has a method whitelock, verify
         if let Some(ref security) = endpoint.security {
@@ -162,19 +162,17 @@ impl State {
         endpoint: &Proxy,
         headers: &HeaderMap,
         method: &Method,
-        client_addr: &SocketAddr
+        client_addr: &SocketAddr,
     ) -> Result<(), ProximaError> {
         // If endpoint is locked down, verify credentials
         if let Some(ref security) = endpoint.security {
-            if let Some(ref client) = security.client {
+            if let Some(ref clientlist) = security.client {
                 log::debug!("Proxy is locked");
                 match self.config.global_authentication {
                     true => {
-                        log::error!(
-                            "Proxy is locked, but proxima is using global authentication"
-                        );
+                        log::error!("Proxy is locked, but proxima is using global authentication");
                     }
-                    false => client.authorize(headers, method, client_addr).await?
+                    false => clientlist.authorize(headers, method, client_addr).await?,
                 }
             }
         }
@@ -188,29 +186,28 @@ impl State {
         query: Option<String>,
         request_headers: HeaderMap,
         payload: Option<BodyStream>,
-        client_addr: SocketAddr
+        client_addr: SocketAddr,
     ) -> Result<Response<Body>, ProximaError> {
-
         // Check if path exists in config
         match self.config.get(path.clone()).await {
-
             // Looks like we found a match
             Ok((route, remainder)) => match route {
-
                 // Return these variants without checking for security
                 Route::ConfigMap(map) => {
                     return Ok(Response::builder()
                         .status(StatusCode::OK)
-                        .body(Body::from(serde_json::to_string(&map).expect("Cannot convert to JSON")))
+                        .body(Body::from(
+                            serde_json::to_string(&map).expect("Cannot convert to JSON"),
+                        ))
                         .unwrap())
-                },
+                }
                 Route::Endpoint(entry) => {
-
                     // Detect client IP
-                    let client = if let Some(x_forwarded) = &request_headers.get("x-forwarded-for") {
+                    let client = if let Some(x_forwarded) = &request_headers.get("x-forwarded-for")
+                    {
                         match x_forwarded.to_str() {
                             Ok(s) => s.parse().unwrap_or(client_addr),
-                            Err(e) => { 
+                            Err(e) => {
                                 log::error!("Unable to parse x-forwarded-for header: {}", e);
                                 client_addr
                             }
@@ -218,7 +215,7 @@ impl State {
                     } else if let Some(forwarded) = &request_headers.get(FORWARDED) {
                         match forwarded.to_str() {
                             Ok(s) => s.parse().unwrap_or(client_addr),
-                            Err(e) => { 
+                            Err(e) => {
                                 log::error!("Unable to parse forwarded header: {}", e);
                                 client_addr
                             }
@@ -234,15 +231,19 @@ impl State {
                         Endpoint::HttpConfig(map) => {
                             return Ok(Response::builder()
                                 .status(StatusCode::OK)
-                                .body(Body::from(serde_json::to_string(&map).expect("Cannot convert to JSON")))
+                                .body(Body::from(
+                                    serde_json::to_string(&map).expect("Cannot convert to JSON"),
+                                ))
                                 .unwrap())
-                        },
+                        }
                         Endpoint::Vault(map) => {
                             return Ok(Response::builder()
                                 .status(StatusCode::OK)
-                                .body(Body::from(serde_json::to_string(&map).expect("Cannot convert to JSON")))
+                                .body(Body::from(
+                                    serde_json::to_string(&map).expect("Cannot convert to JSON"),
+                                ))
                                 .unwrap())
-                        },
+                        }
                         Endpoint::Proxy(endpoint) => {
                             log::debug!(
                                 "Found an endpoint {}, with path {}",
@@ -251,7 +252,8 @@ impl State {
                             );
 
                             // Verify global whitelist
-                            self.authorize_whitelist(&endpoint, &method, &client).await?;
+                            self.authorize_whitelist(&endpoint, &method, &client)
+                                .await?;
 
                             // Authorize client, and check for client whitelist
                             self.authorize_client(&endpoint, &request_headers, &method, &client)
@@ -281,14 +283,12 @@ impl State {
                             request.go().await
                         }
                         Endpoint::Static(endpoint) => {
-                            log::debug!(
-                                "Found static entry"
-                            );
+                            log::debug!("Found static entry");
 
                             return Ok(Response::builder()
                                 .status(StatusCode::OK)
                                 .body(Body::from(endpoint.body))
-                                .unwrap())
+                                .unwrap());
                         }
                     }
                 }

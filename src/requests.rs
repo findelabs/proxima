@@ -2,9 +2,9 @@ use axum::{
     http::uri::Uri,
     http::{Request, Response},
 };
+use hyper::header::HeaderValue;
 use hyper::{Body, HeaderMap, Method};
 use std::time::Duration;
-use hyper::header::HeaderValue;
 use url::Url;
 
 use crate::config::Proxy;
@@ -32,12 +32,11 @@ impl ProxyRequest {
         url: &Url,
         queries: Option<String>,
     ) -> Result<Response<Body>, ProximaError> {
-
         // This needs to be done as urls with paths do not end with a forward slash,
         // but urls with no paths do
         let seperator = match url.path() {
             "/" => "",
-            _ => "/"
+            _ => "/",
         };
 
         let host_and_path = format!(

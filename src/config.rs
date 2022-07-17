@@ -27,27 +27,6 @@ use crate::vault::Vault;
 type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 pub type ConfigMap = BTreeMap<String, Route>;
 
-//pub trait Endpoint {
-//    fn security(&self) -> Option<Security>; 
-//
-//    fn authorize(&self, headers: &HeaderMap) -> Result<(), ProximaError> {
-//        match &self.security() {
-//            Some(security) => {
-//                security.authorize()
-//            }
-//            None => Ok(())
-//        }
-//    }
-//    fn authenticate(&self, headers: &HeaderMap) -> Result<(), ProximaError> {
-//        match &self.security() {
-//            Some(security) => {
-//                security.authorize()
-//            }
-//            None => Ok(())
-//        }
-//    }
-//}
-
 #[derive(Serialize, Deserialize, Debug, Clone, Hash, Default)]
 pub struct ConfigFile {
     pub routes: ConfigMap,
@@ -91,7 +70,7 @@ pub struct HttpConfig {
 pub struct Static {
     pub body: String,
     #[serde(skip_serializing_if = "display_security")]
-    pub security: Option<Security>
+    pub security: Option<Security>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -215,9 +194,7 @@ impl Config {
             }
         }
 
-        let result = self
-            .fetch(path, self.config_file().await.routes)
-            .await?;
+        let result = self.fetch(path, self.config_file().await.routes).await?;
 
         if let (Route::Endpoint(Endpoint::Proxy(_)), ref path) = result {
             // Set cache and mappings
@@ -273,7 +250,7 @@ impl Config {
                 };
 
                 self.fetch(path, *entry.clone()).await
-            },
+            }
             Some(Route::Endpoint(entry)) => {
                 match entry {
                     Endpoint::HttpConfig(entry) => {
@@ -287,11 +264,11 @@ impl Config {
                                 log::debug!("Got cache hit for {}", &key);
                                 // Move path forward
                                 path.next()?;
-        
+
                                 return Ok((Route::Endpoint(Endpoint::Proxy(hit)), path));
                             }
                         };
-        
+
                         // Get the http config as config_file
                         let config_file = match self
                             .parse(Some(entry.url.clone()), entry.authentication.clone())
@@ -310,14 +287,18 @@ impl Config {
                             "Found Vault at {}",
                             &path.key().unwrap_or_else(|| "None".to_string())
                         );
-        
+
                         // Get last char from secret
-                        let last_char = &entry.secret.chars().last().expect("Unable to get last char");
-        
+                        let last_char = &entry
+                            .secret
+                            .chars()
+                            .last()
+                            .expect("Unable to get last char");
+
                         // Here we are if we find a single secret
                         if last_char != &'/' {
                             log::debug!("Single secret Vault Proxy found, attempting to get secret from cache");
-        
+
                             // Check the cache for the secret
                             if let Some(key) = path.key() {
                                 if let Some(hit) = self.cache.get(&key).await {
@@ -326,20 +307,23 @@ impl Config {
                                     path.next()?;
                                     return Ok((Route::Endpoint(Endpoint::Proxy(hit)), path));
                                 }
-            
-                                log::debug!("Attempting to get secret at path {} from Vault", &entry.secret);
+
+                                log::debug!(
+                                    "Attempting to get secret at path {} from Vault",
+                                    &entry.secret
+                                );
                                 let route = entry.get(self.vault_client()?, "").await?;
-        
+
                                 // If vault secret is Proxy variant, cache endpoint
                                 if let Route::Endpoint(ref entry) = route {
-                                    if let Endpoint::Proxy(ref endpoint) = entry  {
+                                    if let Endpoint::Proxy(ref endpoint) = entry {
                                         self.cache.set(&path.key().expect("odd"), &endpoint).await;
                                     }
                                 };
-            
-                                return Ok((route, path))
+
+                                return Ok((route, path));
                             } else {
-                                return Err(ProximaError::UnknownProxy)
+                                return Err(ProximaError::UnknownProxy);
                             }
                         } else {
                             // We found a directory of vault secrets
@@ -352,7 +336,7 @@ impl Config {
                                     return Ok((Route::Endpoint(Endpoint::Proxy(hit)), path));
                                 }
                             };
-            
+
                             // Check to see if there are any other subfolders requested,
                             // or else return the full vault config
                             match path.next_hop() {
@@ -360,18 +344,26 @@ impl Config {
                                     let route = entry.get(self.vault_client()?, &h).await?;
                                     // Move path forward
                                     path.next()?;
-            
+
                                     // If vault secret is Proxy variant, cache endpoint
                                     if let Route::Endpoint(ref entry) = route {
-                                        if let Endpoint::Proxy(ref endpoint) = entry  {
-                                            self.cache.set(&path.key().expect("odd"), &endpoint).await;
+                                        if let Endpoint::Proxy(ref endpoint) = entry {
+                                            self.cache
+                                                .set(&path.key().expect("odd"), &endpoint)
+                                                .await;
                                         }
                                     };
-            
+
                                     Ok((route, path))
                                 }
                                 None => {
-                                    let configmap = entry.config(self.vault_client()?, path.clone(), self.cache.clone()).await?;
+                                    let configmap = entry
+                                        .config(
+                                            self.vault_client()?,
+                                            path.clone(),
+                                            self.cache.clone(),
+                                        )
+                                        .await?;
                                     Ok((Route::ConfigMap(Box::new(configmap)), path))
                                 }
                             }
@@ -382,12 +374,12 @@ impl Config {
                             "Found Proxy at {}",
                             &path.key().unwrap_or_else(|| "None".to_string())
                         );
-        
+
                         // Save entry into cache
                         let key = &path.key().expect("weird");
                         log::debug!("Adding {} to cache", key);
                         self.cache.set(key, &entry).await;
-        
+
                         // Return endpoint
                         Ok((Route::Endpoint(Endpoint::Proxy(entry.clone())), path))
                     }
@@ -396,18 +388,18 @@ impl Config {
                             "Found Static at {}",
                             &path.key().unwrap_or_else(|| "None".to_string())
                         );
-        
-//                        // Save entry into cache
-//                        let key = &path.key().expect("weird");
-//                        log::debug!("Adding {} to cache", key);
-//                        self.cache.set(key, &entry).await;
-        
+
+                        //                        // Save entry into cache
+                        //                        let key = &path.key().expect("weird");
+                        //                        log::debug!("Adding {} to cache", key);
+                        //                        self.cache.set(key, &entry).await;
+
                         // Return endpoint
                         Ok((Route::Endpoint(Endpoint::Static(entry.clone())), path))
                     }
                 }
-            },
-            None => Err(ProximaError::UnknownProxy)
+            }
+            None => Err(ProximaError::UnknownProxy),
         }
     }
 

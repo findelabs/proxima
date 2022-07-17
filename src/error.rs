@@ -64,7 +64,9 @@ impl fmt::Display for Error {
             Error::JwtDecode => f.write_str("{\"error\": \"Unable to decode JWT\"}"),
             Error::MissingVaultClient => f.write_str("{\"error\": \"Missing vault client\"}"),
             Error::PathCount => f.write_str("{\"error\": \"Path count too large\"}"),
-            Error::UnmatchedHeader=> f.write_str("{\"error\": \"Incorrect header for auth type\"}"),
+            Error::UnmatchedHeader => {
+                f.write_str("{\"error\": \"Incorrect header for auth type\"}")
+            }
             Error::Hyper(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::SerdeJson(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::SerdeYaml(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),

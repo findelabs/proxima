@@ -172,7 +172,8 @@ pub async fn root(
     );
     match state
         .response(method, path, query, all_headers, payload, addr)
-        .await {
+        .await
+    {
         Ok(p) => p,
         Err(e) => {
             log::debug!("No root endpoint found: {}", e);

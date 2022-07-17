@@ -5,10 +5,10 @@ use hyper::{Body, HeaderMap, Uri};
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 
-use crate::auth::basic;
-use crate::auth::digest;
-use crate::auth::bearer;
 use crate::auth::api_key;
+use crate::auth::basic;
+use crate::auth::bearer;
+use crate::auth::digest;
 use crate::error::Error as ProximaError;
 use crate::https::ClientBuilder;
 
@@ -67,7 +67,11 @@ impl<'a> ServerAuth {
                         return Err(ProximaError::BadToken);
                     }
                 };
-                log::debug!("Key: {}, Value: {:?}", auth.headername(), header_bearer_auth);
+                log::debug!(
+                    "Key: {}, Value: {:?}",
+                    auth.headername(),
+                    header_bearer_auth
+                );
                 headers.insert(auth.headername(), header_bearer_auth);
                 Ok(headers)
             }

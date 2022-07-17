@@ -77,6 +77,5 @@ impl<'a, T: std::clone::Clone + std::fmt::Display> Cache<T> {
         let count = cache.len() as f64;
 
         metrics::gauge!("proxima_cache_keys", count, "name" => self.name.clone());
-
     }
 }

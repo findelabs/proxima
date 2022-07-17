@@ -8,12 +8,12 @@ use std::collections::BTreeMap;
 use std::hash::{Hash, Hasher};
 use vault_client_rs::client::Client as VaultClient;
 
-use crate::config::Proxy;
-use crate::config::Endpoint;
-use crate::path::ProxyPath;
-use crate::config::ConfigMap;
-use crate::config::Route;
 use crate::cache::Cache;
+use crate::config::ConfigMap;
+use crate::config::Endpoint;
+use crate::config::Proxy;
+use crate::config::Route;
+use crate::path::ProxyPath;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Vault {
@@ -29,7 +29,12 @@ impl Hash for Vault {
 }
 
 impl Vault {
-    pub async fn config(&self, mut vault: VaultClient, path: ProxyPath, cache: Cache<Proxy>) -> Result<ConfigMap, ProximaError> {
+    pub async fn config(
+        &self,
+        mut vault: VaultClient,
+        path: ProxyPath,
+        cache: Cache<Proxy>,
+    ) -> Result<ConfigMap, ProximaError> {
         let list = vault.list(&self.secret).await?;
 
         let cache_prefix = path.key().unwrap_or("/".to_owned());
@@ -49,8 +54,11 @@ impl Vault {
             match cache.get(&cache_path).await {
                 Some(endpoint) => {
                     log::debug!("Found {} in cache", &cache_path);
-                    map.insert(key_str.to_string(), Route::Endpoint(Endpoint::Proxy(endpoint)));
-                },
+                    map.insert(
+                        key_str.to_string(),
+                        Route::Endpoint(Endpoint::Proxy(endpoint)),
+                    );
+                }
                 None => {
                     let secret = match vault.get(&secret_path).await {
                         Ok(s) => s,
@@ -108,7 +116,12 @@ impl Vault {
     }
 
     pub async fn handlebars(&self) -> Result<Handlebars<'_>, ProximaError> {
-        let bytes = base64::decode(&self.template.as_ref().expect("fn called without checking that self.template is some"))?;
+        let bytes = base64::decode(
+            &self
+                .template
+                .as_ref()
+                .expect("fn called without checking that self.template is some"),
+        )?;
         let template_decoded = std::str::from_utf8(&bytes)?;
         let mut handlebars = Handlebars::new();
         handlebars.register_template_string("secret", template_decoded)?;

@@ -2,6 +2,9 @@ use crate::https::HttpsClient;
 use async_recursion::async_recursion;
 use axum::http::Request;
 use chrono::Utc;
+use hyper::header::HeaderValue;
+use hyper::HeaderMap;
+use hyper::Method;
 use hyper::{Body, Uri};
 use jsonwebtoken::jwk::AlgorithmParameters;
 use jsonwebtoken::{decode, decode_header, jwk, DecodingKey, Validation};
@@ -9,12 +12,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
+use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 use url::Url;
-use hyper::header::HeaderValue;
-use hyper::HeaderMap;
-use hyper::Method;
-use std::net::SocketAddr;
 
 use crate::error::Error as ProximaError;
 use crate::security::Whitelist;
@@ -57,7 +57,7 @@ impl JwksAuthList {
         &self,
         headers: &HeaderMap,
         method: &Method,
-        client_addr: &SocketAddr
+        client_addr: &SocketAddr,
     ) -> Result<(), ProximaError> {
         log::debug!("Looping over jwks users");
         let Self(internal) = self;
@@ -70,7 +70,7 @@ impl JwksAuthList {
                     "proxima_security_client_authentication_failed_count",
                     "type" => "absent"
                 );
-                return Err(ProximaError::UnauthorizedClient)
+                return Err(ProximaError::UnauthorizedClient);
             }
         };
 
@@ -83,7 +83,7 @@ impl JwksAuthList {
         if let Some("Bearer") = scheme {
             log::debug!("Found correct scheme for auth type: Bearer");
         } else {
-            return Err(ProximaError::UnmatchedHeader)
+            return Err(ProximaError::UnmatchedHeader);
         }
 
         for user in internal.iter() {
@@ -116,7 +116,7 @@ impl JwksAuth {
         &self,
         header: &HeaderValue,
         method: &Method,
-        client_addr: &SocketAddr
+        client_addr: &SocketAddr,
     ) -> Result<(), ProximaError> {
         let authorize = header.to_str().expect("Cannot convert header to string");
         let token: Vec<&str> = authorize.split(' ').collect();

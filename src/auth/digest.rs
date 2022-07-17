@@ -1,12 +1,11 @@
-use serde::{Deserialize, Serialize};
-use crate::security::Whitelist;
 use crate::error::Error as ProximaError;
-use hyper::header::HeaderValue;
+use crate::security::Whitelist;
 use digest_auth::{AuthContext, AuthorizationHeader};
-use hyper::Method;
-use std::net::SocketAddr;
+use hyper::header::HeaderValue;
 use hyper::HeaderMap;
-
+use hyper::Method;
+use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(deny_unknown_fields)]
@@ -26,7 +25,7 @@ impl DigestAuthList {
         &self,
         headers: &HeaderMap,
         method: &Method,
-        client_addr: &SocketAddr
+        client_addr: &SocketAddr,
     ) -> Result<(), ProximaError> {
         log::debug!("Looping over digest users");
         let Self(internal) = self;
@@ -39,7 +38,7 @@ impl DigestAuthList {
                     "proxima_security_client_authentication_failed_count",
                     "type" => "absent"
                 );
-                return Err(ProximaError::UnauthorizedClientDigest)
+                return Err(ProximaError::UnauthorizedClientDigest);
             }
         };
 
@@ -52,7 +51,7 @@ impl DigestAuthList {
         if let Some("Digest") = scheme {
             log::debug!("Found correct scheme for auth type: Digest");
         } else {
-            return Err(ProximaError::UnmatchedHeader)
+            return Err(ProximaError::UnmatchedHeader);
         }
 
         for user in internal.iter() {
@@ -74,14 +73,14 @@ impl DigestAuth {
         &self,
         header: &HeaderValue,
         method: &Method,
-        client_addr: &SocketAddr
+        client_addr: &SocketAddr,
     ) -> Result<(), ProximaError> {
-        let client_authorization_header =
-            match AuthorizationHeader::parse(header.to_str().unwrap()) {
-                Ok(c) => c,
-                Err(e) => {
-                    log::error!("Error converting client authorization header: {}", e);
-                    return Err(ProximaError::UnauthorizedClientDigest);
+        let client_authorization_header = match AuthorizationHeader::parse(header.to_str().unwrap())
+        {
+            Ok(c) => c,
+            Err(e) => {
+                log::error!("Error converting client authorization header: {}", e);
+                return Err(ProximaError::UnauthorizedClientDigest);
             }
         };
 
