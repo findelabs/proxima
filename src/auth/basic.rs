@@ -1,10 +1,8 @@
-use crate::error::Error as ProximaError;
 use crate::security::Whitelist;
-use hyper::header::HeaderValue;
-use hyper::HeaderMap;
-use hyper::Method;
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
+use async_trait::async_trait;
+
+use crate::auth::traits::{AuthList, Authorize, AuthorizeList};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(deny_unknown_fields)]
@@ -16,54 +14,21 @@ pub struct BasicAuth {
     pub whitelist: Option<Whitelist>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
-pub struct BasicAuthList(Vec<BasicAuth>);
+// Pull in trait
+impl AuthorizeList for AuthList<BasicAuth> {}
 
-impl BasicAuthList {
-    pub async fn authorize(
-        &self,
-        headers: &HeaderMap,
-        method: &Method,
-        client_addr: &SocketAddr,
-    ) -> Result<(), ProximaError> {
-        log::debug!("Looping over basic users");
-        let Self(internal) = self;
+#[async_trait]
+impl Authorize for BasicAuth {
+    fn correct_header(&self) -> String {
+        self.basic()
+    }
 
-        let header = match headers.get("AUTHORIZATION") {
-            Some(header) => header,
-            None => {
-                log::debug!("Endpoint is locked, but no basic authorization header found");
-                metrics::increment_counter!(
-                    "proxima_security_client_authentication_failed_count",
-                    "type" => "absent"
-                );
-                return Err(ProximaError::UnmatchedHeader);
-            }
-        };
+    fn header_name(&self) -> &str {
+        "AUTHORIZATION"
+    }
 
-        // Check if the header is Basic
-        let authorize = header.to_str().expect("Cannot convert header to string");
-        let auth_scheme_vec: Vec<&str> = authorize.split(' ').collect();
-        let scheme = auth_scheme_vec.into_iter().nth(0);
-
-        // If header is not Basic, return err
-        if let Some("Basic") = scheme {
-            log::debug!("Found correct scheme for auth type: Basic");
-        } else {
-            return Err(ProximaError::UnmatchedHeader);
-        }
-
-        for user in internal.iter() {
-            log::debug!("\"Checking if connecting client matches {:?}\"", user);
-            match user.authorize(header, method, client_addr).await {
-                Ok(_) => return Ok(()),
-                Err(_) => {
-                    continue;
-                }
-            }
-        }
-        log::debug!("\"Client could not be authenticated\"");
-        Err(ProximaError::UnauthorizedClientBasic)
+    fn whitelist(&self) -> Option<&Whitelist> {
+        self.whitelist.as_ref()
     }
 }
 
@@ -85,25 +50,5 @@ impl BasicAuth {
         let basic_auth = format!("Basic {}", encoded);
         log::debug!("Using {}", &basic_auth);
         basic_auth
-    }
-
-    pub async fn authorize(
-        &self,
-        header: &HeaderValue,
-        method: &Method,
-        client_addr: &SocketAddr,
-    ) -> Result<(), ProximaError> {
-        if let Some(ref whitelist) = self.whitelist {
-            log::debug!("Found whitelist");
-            whitelist.authorize(method, client_addr)?
-        }
-        if HeaderValue::from_str(&self.basic()).unwrap() != header {
-            metrics::increment_counter!(
-                "proxima_security_client_authentication_failed_count",
-                "type" => "basic"
-            );
-            return Err(ProximaError::UnauthorizedClientBasic);
-        }
-        Ok(())
     }
 }

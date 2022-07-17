@@ -6,44 +6,13 @@ use std::net::SocketAddr;
 
 //use crate::auth::client::ClientAuthList;
 use crate::auth::api_key::ApiKeyAuth;
-use crate::auth::basic::BasicAuthList;
+//use crate::auth::basic::BasicAuthList;
+use crate::auth::basic::BasicAuth;
 use crate::auth::bearer::BearerAuthList;
 use crate::auth::digest::DigestAuthList;
 use crate::auth::jwks::JwksAuthList;
 use crate::auth::traits::{AuthList, AuthorizeList};
 use crate::error::Error as ProximaError;
-
-//pub trait Authorize {
-//    fn security(&self) -> Option<Security>;
-//
-//    fn authorize(&self, method: &Method, client_addr: &SocketAddr) -> Result<(), ProximaError> {
-//        match &self.security() {
-//            Some(security) => {
-//                match security.whitelist {
-//                    Some(whitelist) => whitelist.authorize(method, client_addr),
-//                    None => Ok(())
-//                }
-//            }
-//            None => Ok(())
-//        }
-//    }
-//}
-//
-//pub trait Authenticate {
-//    fn security(&self) -> Option<Security>;
-//
-//    async fn authenticate(&self, headers: &HeaderMap, method: &Method, client_addr: &SocketAddr) -> Result<(), ProximaError> {
-//        match &self.security() {
-//            Some(security) => {
-//                match security.client {
-//                    Some(clientlist) => clientlist.authorize(method, client_addr).await,
-//                    None => Ok(())
-//                }
-//            }
-//            None => Ok(())
-//        }
-//    }
-//}
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(deny_unknown_fields)]
@@ -66,7 +35,7 @@ pub struct Whitelist {
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct AuthorizedClients {
-    pub basic: Option<BasicAuthList>,
+    pub basic: Option<AuthList<BasicAuth>>,
     pub digest: Option<DigestAuthList>,
     pub bearer: Option<BearerAuthList>,
     pub jwks: Option<JwksAuthList>,

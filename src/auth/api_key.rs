@@ -38,7 +38,6 @@ impl Authorize for ApiKeyAuth {
     fn whitelist(&self) -> Option<&Whitelist> {
         self.whitelist.as_ref()
     }
-
 }
 
 impl ApiKeyAuth {
