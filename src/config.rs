@@ -27,6 +27,27 @@ use crate::vault::Vault;
 type BoxResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 pub type ConfigMap = BTreeMap<String, Route>;
 
+//pub trait Endpoint {
+//    fn security(&self) -> Option<Security>; 
+//
+//    fn authorize(&self, headers: &HeaderMap) -> Result<(), ProximaError> {
+//        match &self.security() {
+//            Some(security) => {
+//                security.authorize()
+//            }
+//            None => Ok(())
+//        }
+//    }
+//    fn authenticate(&self, headers: &HeaderMap) -> Result<(), ProximaError> {
+//        match &self.security() {
+//            Some(security) => {
+//                security.authorize()
+//            }
+//            None => Ok(())
+//        }
+//    }
+//}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Hash, Default)]
 pub struct ConfigFile {
     pub routes: ConfigMap,
@@ -67,6 +88,14 @@ pub struct HttpConfig {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(deny_unknown_fields)]
+pub struct Static {
+    pub body: String,
+    #[serde(skip_serializing_if = "display_security")]
+    pub security: Option<Security>
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+#[serde(deny_unknown_fields)]
 #[serde(rename_all = "snake_case")]
 pub enum Endpoint {
     #[allow(non_camel_case_types)]
@@ -75,6 +104,8 @@ pub enum Endpoint {
     Vault(Vault),
     #[allow(non_camel_case_types)]
     Proxy(Proxy),
+    #[allow(non_camel_case_types)]
+    Static(Static),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -359,6 +390,20 @@ impl Config {
         
                         // Return endpoint
                         Ok((Route::Endpoint(Endpoint::Proxy(entry.clone())), path))
+                    }
+                    Endpoint::Static(entry) => {
+                        log::debug!(
+                            "Found Static at {}",
+                            &path.key().unwrap_or_else(|| "None".to_string())
+                        );
+        
+//                        // Save entry into cache
+//                        let key = &path.key().expect("weird");
+//                        log::debug!("Adding {} to cache", key);
+//                        self.cache.set(key, &entry).await;
+        
+                        // Return endpoint
+                        Ok((Route::Endpoint(Endpoint::Static(entry.clone())), path))
                     }
                 }
             },

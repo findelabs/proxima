@@ -190,102 +190,110 @@ impl State {
         payload: Option<BodyStream>,
         client_addr: SocketAddr
     ) -> Result<Response<Body>, ProximaError> {
-        let (endpoint, path) = match self.config.get(path.clone()).await {
-            // If we receive an entry, forward request.
-            // If we receive a ConfigMap, return as json to client
+
+        // Check if path exists in config
+        match self.config.get(path.clone()).await {
+
+            // Looks like we found a match
             Ok((route, remainder)) => match route {
+
+                // Return these variants without checking for security
                 Route::ConfigMap(map) => {
-                    let config = serde_json::to_string(&map).expect("Cannot convert to JSON");
-                    let body = Body::from(config);
                     return Ok(Response::builder()
                         .status(StatusCode::OK)
-                        .body(body)
-                        .unwrap());
-                }
+                        .body(Body::from(serde_json::to_string(&map).expect("Cannot convert to JSON")))
+                        .unwrap())
+                },
                 Route::Endpoint(entry) => {
+
+                    // Detect client IP
+                    let client = if let Some(x_forwarded) = &request_headers.get("x-forwarded-for") {
+                        match x_forwarded.to_str() {
+                            Ok(s) => s.parse().unwrap_or(client_addr),
+                            Err(e) => { 
+                                log::error!("Unable to parse x-forwarded-for header: {}", e);
+                                client_addr
+                            }
+                        }
+                    } else if let Some(forwarded) = &request_headers.get(FORWARDED) {
+                        match forwarded.to_str() {
+                            Ok(s) => s.parse().unwrap_or(client_addr),
+                            Err(e) => { 
+                                log::error!("Unable to parse forwarded header: {}", e);
+                                client_addr
+                            }
+                        }
+                    } else {
+                        client_addr
+                    };
+
+                    // Debug client addr
+                    log::debug!("Client socket determined to be {}", &client);
+
                     match entry {
+                        Endpoint::HttpConfig(map) => {
+                            return Ok(Response::builder()
+                                .status(StatusCode::OK)
+                                .body(Body::from(serde_json::to_string(&map).expect("Cannot convert to JSON")))
+                                .unwrap())
+                        },
+                        Endpoint::Vault(map) => {
+                            return Ok(Response::builder()
+                                .status(StatusCode::OK)
+                                .body(Body::from(serde_json::to_string(&map).expect("Cannot convert to JSON")))
+                                .unwrap())
+                        },
                         Endpoint::Proxy(endpoint) => {
                             log::debug!(
                                 "Found an endpoint {}, with path {}",
                                 endpoint.url.path().await,
                                 remainder.suffix()
                             );
-                            (endpoint, remainder)
+
+                            // Verify global whitelist
+                            self.authorize_whitelist(&endpoint, &method, &client).await?;
+
+                            // Authorize client, and check for client whitelist
+                            self.authorize_client(&endpoint, &request_headers, &method, &client)
+                                .await?;
+
+                            // Wrap Body if there is one
+                            let body = match payload {
+                                Some(p) => {
+                                    log::debug!("Received body: {:#?}", &p);
+                                    Body::wrap_stream(p)
+                                }
+                                None => {
+                                    log::debug!("Did not receive a body");
+                                    Body::empty()
+                                }
+                            };
+
+                            let request = ProxyRequest {
+                                client: self.client.clone(),
+                                endpoint,
+                                method,
+                                path,
+                                body,
+                                request_headers,
+                                query,
+                            };
+                            request.go().await
                         }
-                        Endpoint::HttpConfig(map) => {
-                            let config = serde_json::to_string(&map).expect("Cannot convert to JSON");
-                            let body = Body::from(config);
+                        Endpoint::Static(endpoint) => {
+                            log::debug!(
+                                "Found static entry"
+                            );
+
                             return Ok(Response::builder()
                                 .status(StatusCode::OK)
-                                .body(body)
-                                .unwrap());
-                        }
-                        Endpoint::Vault(map) => {
-                            let config = serde_json::to_string(&map).expect("Cannot convert to JSON");
-                            let body = Body::from(config);
-                            return Ok(Response::builder()
-                                .status(StatusCode::OK)
-                                .body(body)
-                                .unwrap());
+                                .body(Body::from(endpoint.body))
+                                .unwrap())
                         }
                     }
                 }
             },
             Err(e) => return Err(e),
-        };
-
-        // Detect client IP
-        let client = if let Some(x_forwarded) = &request_headers.get("x-forwarded-for") {
-            match x_forwarded.to_str() {
-                Ok(s) => s.parse().unwrap_or(client_addr),
-                Err(e) => { 
-                    log::error!("Unable to parse x-forwarded-for header: {}", e);
-                    client_addr
-                }
-            }
-        } else if let Some(forwarded) = &request_headers.get(FORWARDED) {
-            match forwarded.to_str() {
-                Ok(s) => s.parse().unwrap_or(client_addr),
-                Err(e) => { 
-                    log::error!("Unable to parse forwarded header: {}", e);
-                    client_addr
-                }
-            }
-        } else {
-            client_addr
-        };
-
-        // Debug client addr
-        log::debug!("Client socket determined to be {}", &client);
-
-        // Verify global whitelist
-        self.authorize_whitelist(&endpoint, &method, &client).await?;
-
-        // Authorize client, and check for client whitelist
-        self.authorize_client(&endpoint, &request_headers, &method, &client)
-            .await?;
-
-        // Wrap Body if there is one
-        let body = match payload {
-            Some(p) => {
-                log::debug!("Received body: {:#?}", &p);
-                Body::wrap_stream(p)
-            }
-            None => {
-                log::debug!("Did not receive a body");
-                Body::empty()
-            }
-        };
-
-        let request = ProxyRequest {
-            client: self.client.clone(),
-            endpoint,
-            method,
-            path,
-            body,
-            request_headers,
-            query,
-        };
-        request.go().await
+        }
     }
 }
