@@ -19,8 +19,11 @@ impl AuthorizeList for AuthList<BasicAuth> {}
 
 #[async_trait]
 impl Authorize for BasicAuth {
+
+    const AUTHORIZATION_TYPE: Option<&'static str> = Some("basic");
+
     fn correct_header(&self) -> String {
-        self.basic()
+        self.base64_value()
     }
 
     fn header_name(&self) -> &str {
@@ -38,16 +41,17 @@ impl BasicAuth {
         self.username.clone()
     }
 
-    #[allow(dead_code)]
-    pub fn password(&self) -> String {
-        self.password.clone()
+    pub fn base64_value(&self) -> String {
+        let user_pass = format!("{}:{}", self.username, self.password);
+        let encoded = base64::encode(user_pass);
+        encoded
     }
 
     pub fn basic(&self) -> String {
         log::debug!("Generating Basic auth");
         let user_pass = format!("{}:{}", self.username, self.password);
         let encoded = base64::encode(user_pass);
-        let basic_auth = format!("Basic {}", encoded);
+        let basic_auth = format!("basic {}", encoded);
         log::debug!("Using {}", &basic_auth);
         basic_auth
     }

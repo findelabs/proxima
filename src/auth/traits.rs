@@ -41,6 +41,15 @@ pub trait AuthorizeList: IntoIterator + Clone {
 
 #[async_trait]
 pub trait Authorize {
+
+    const AUTHORIZATION_TYPE: Option<&'static str>;
+
+    fn header_name(&self) -> &str;
+
+    fn correct_header(&self) -> String;
+
+    fn whitelist(&self) -> Option<&Whitelist>;
+
     async fn authorize(
         &self,
         headers: &HeaderMap,
@@ -51,8 +60,35 @@ pub trait Authorize {
         let client_header_value = self.client_header_value(headers)?;
         let correct_header = self.correct_header();
 
-        log::debug!("Comparing {} to {}", &client_header_value, &correct_header);
-        if &client_header_value != &correct_header {
+        // If we require a specific authorization header type, check for type
+        let parsed_header_value = if let Some(auth_type) = Self::AUTHORIZATION_TYPE {
+            let (header_sub_type, header_sub_value) = match client_header_value.split_once(' ') {
+                None => {
+                    log::debug!("Failed getting header sub type");
+                    return Err(ProximaError::UnmatchedHeader)
+                },
+                Some((t, v)) => (t.to_lowercase(),v),
+            };
+
+            log::debug!("Checking if clients header sub type {} matches auth type {}", &header_sub_type, &auth_type);
+
+            // We didn't find a matching auth type, return err
+            if header_sub_type != auth_type {
+                return Err(ProximaError::UnmatchedHeader);
+            }
+
+            // Return sub value, since AUTHORIZATION_TYPE is defined
+            header_sub_value
+
+        } else {
+
+            // Else, we return the full client header value, since AUTHORIZATION_TYPE is not set
+            client_header_value
+        };
+
+        log::debug!("Comparing {} to {}", &parsed_header_value, &correct_header);
+        if parsed_header_value != correct_header {
+            log::debug!("Looks like these headers do not match");
             let labels = [
                 ("type", self.header_name().to_owned()),
             ];
@@ -71,14 +107,9 @@ pub trait Authorize {
         Ok(())
     }
 
-    fn header_name(&self) -> &str;
-
-    fn correct_header(&self) -> String;
-
-    fn whitelist(&self) -> Option<&Whitelist>;
-
     fn client_header_value<'a>(&'a self, headers: &'a HeaderMap) -> Result<&str, ProximaError> {
         let header_name = self.header_name();
+        log::debug!("Attempting to get {} header", &header_name);
         let header = match headers.get(header_name) {
             Some(header) => header,
             None => {
@@ -94,8 +125,7 @@ pub trait Authorize {
             }
         };
 
-        let token = header.to_str().expect("Cannot convert header to string");
-        Ok(token)
+        Ok(header.to_str().expect("Cannot convert header to string"))
     }
 }
 

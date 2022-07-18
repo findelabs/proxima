@@ -24,6 +24,8 @@ impl AuthorizeList for AuthList<ApiKeyAuth> {}
 
 #[async_trait]
 impl Authorize for ApiKeyAuth {
+    const AUTHORIZATION_TYPE: Option<&'static str> = None; 
+
     fn correct_header(&self) -> String {
         self.token.clone()
     }
@@ -38,6 +40,7 @@ impl Authorize for ApiKeyAuth {
     fn whitelist(&self) -> Option<&Whitelist> {
         self.whitelist.as_ref()
     }
+
 }
 
 impl ApiKeyAuth {

@@ -8,7 +8,7 @@ use std::net::SocketAddr;
 use crate::auth::api_key::ApiKeyAuth;
 //use crate::auth::basic::BasicAuthList;
 use crate::auth::basic::BasicAuth;
-use crate::auth::bearer::BearerAuthList;
+use crate::auth::bearer::BearerAuth;
 use crate::auth::digest::DigestAuthList;
 use crate::auth::jwks::JwksAuthList;
 use crate::auth::traits::{AuthList, AuthorizeList};
@@ -37,7 +37,7 @@ pub struct Whitelist {
 pub struct AuthorizedClients {
     pub basic: Option<AuthList<BasicAuth>>,
     pub digest: Option<DigestAuthList>,
-    pub bearer: Option<BearerAuthList>,
+    pub bearer: Option<AuthList<BearerAuth>>,
     pub jwks: Option<JwksAuthList>,
     pub api_key: Option<AuthList<ApiKeyAuth>>,
 }
