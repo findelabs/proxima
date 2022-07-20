@@ -2,7 +2,9 @@ use crate::security::Whitelist;
 use async_trait::async_trait;
 use hyper::header::HeaderName;
 use serde::{Deserialize, Serialize};
+use hyper::HeaderMap;
 
+use crate::error::Error as ProximaError;
 use crate::auth::traits::{AuthList, Authorize, AuthorizeList};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -26,10 +28,6 @@ impl AuthorizeList for AuthList<ApiKeyAuth> {}
 impl Authorize for ApiKeyAuth {
     const AUTHORIZATION_TYPE: Option<&'static str> = None; 
 
-    fn correct_header(&self) -> String {
-        self.token.clone()
-    }
-
     fn header_name(&self) -> &str {
         match &self.key {
             Some(k) => k.as_str(),
@@ -41,6 +39,18 @@ impl Authorize for ApiKeyAuth {
         self.whitelist.as_ref()
     }
 
+    fn authenticate_client(&self, client_header: &str, _headers: &HeaderMap) -> Result<(), ProximaError> {
+
+        let correct_header = self.token();
+
+        log::debug!("Comparing {} to {}", &client_header, &correct_header);
+        if client_header != correct_header {
+            return Err(ProximaError::UnauthorizedClient);
+        } else {
+            log::debug!("Client is authenticated");
+            Ok(())
+        }
+    }
 }
 
 impl ApiKeyAuth {

@@ -46,7 +46,7 @@ pub trait Authorize {
 
     fn header_name(&self) -> &str;
 
-    fn correct_header(&self) -> String;
+    fn authenticate_client(&self, header: &str, headers: &HeaderMap) -> Result<(), ProximaError>;
 
     fn whitelist(&self) -> Option<&Whitelist>;
 
@@ -58,37 +58,27 @@ pub trait Authorize {
     ) -> Result<(), ProximaError> {
 
         let client_header_value = self.client_header_value(headers)?;
-        let correct_header = self.correct_header();
 
         // If we require a specific authorization header type, check for type
-        let parsed_header_value = if let Some(auth_type) = Self::AUTHORIZATION_TYPE {
-            let (header_sub_type, header_sub_value) = match client_header_value.split_once(' ') {
+        if let Some(auth_type) = Self::AUTHORIZATION_TYPE {
+            match client_header_value.split_once(' ') {
                 None => {
                     log::debug!("Failed getting header sub type");
                     return Err(ProximaError::UnmatchedHeader)
                 },
-                Some((t, v)) => (t.to_lowercase(),v),
-            };
-
-            log::debug!("Checking if clients header sub type {} matches auth type {}", &header_sub_type, &auth_type);
-
-            // We didn't find a matching auth type, return err
-            if header_sub_type != auth_type {
-                return Err(ProximaError::UnmatchedHeader);
+                Some((t,_)) => {
+                    log::debug!("Checking if clients header sub type {} matches auth type {}", &t, &auth_type);
+                    // We didn't find a matching auth type, return err
+                    if t.to_lowercase() != auth_type.to_lowercase() {
+                        return Err(ProximaError::UnmatchedHeader);
+                    }
+                    log::debug!("Found correct header sub type")
+                }
             }
+        }
 
-            // Return sub value, since AUTHORIZATION_TYPE is defined
-            header_sub_value
-
-        } else {
-
-            // Else, we return the full client header value, since AUTHORIZATION_TYPE is not set
-            client_header_value
-        };
-
-        log::debug!("Comparing {} to {}", &parsed_header_value, &correct_header);
-        if parsed_header_value != correct_header {
-            log::debug!("Looks like these headers do not match");
+        if let Err(e) = self.authenticate_client(client_header_value, headers) {
+            log::debug!("Client is not authenticated");
             let labels = [
                 ("type", self.header_name().to_owned()),
             ];
@@ -96,7 +86,7 @@ pub trait Authorize {
                 "proxima_security_client_authentication_failed_count",
                 &labels
             );
-            return Err(ProximaError::UnauthorizedClient);
+            return Err(e);
         }
 
         if let Some(ref whitelist) = self.whitelist() {
@@ -121,7 +111,14 @@ pub trait Authorize {
                     "proxima_security_client_authentication_failed_count",
                     &labels
                 );
-                return Err(ProximaError::UnmatchedHeader);
+
+                match Self::AUTHORIZATION_TYPE {
+                    Some("digest") => {
+                        log::debug!("Returning digest login error");
+                        return Err(ProximaError::UnauthorizedClientDigest)
+                    },
+                    _ => return Err(ProximaError::UnmatchedHeader)
+                }
             }
         };
 

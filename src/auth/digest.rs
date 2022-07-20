@@ -1,11 +1,11 @@
 use crate::error::Error as ProximaError;
 use crate::security::Whitelist;
 use digest_auth::{AuthContext, AuthorizationHeader};
-use hyper::header::HeaderValue;
 use hyper::HeaderMap;
-use hyper::Method;
 use serde::{Deserialize, Serialize};
-use std::net::SocketAddr;
+use async_trait::async_trait;
+
+use crate::auth::traits::{AuthList, Authorize, AuthorizeList};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(deny_unknown_fields)]
@@ -17,65 +17,17 @@ pub struct DigestAuth {
     pub whitelist: Option<Whitelist>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
-pub struct DigestAuthList(Vec<DigestAuth>);
+// Pull in trait
+impl AuthorizeList for AuthList<DigestAuth> {}
 
-impl DigestAuthList {
-    pub async fn authorize(
-        &self,
-        headers: &HeaderMap,
-        method: &Method,
-        client_addr: &SocketAddr,
-    ) -> Result<(), ProximaError> {
-        log::debug!("Looping over digest users");
-        let Self(internal) = self;
+#[async_trait]
+impl Authorize for DigestAuth {
 
-        let header = match headers.get("AUTHORIZATION") {
-            Some(header) => header,
-            None => {
-                log::debug!("Endpoint is locked, but no digest authorization header found");
-                metrics::increment_counter!(
-                    "proxima_security_client_authentication_failed_count",
-                    "type" => "absent"
-                );
-                return Err(ProximaError::UnauthorizedClientDigest);
-            }
-        };
+    const AUTHORIZATION_TYPE: Option<&'static str> = Some("digest");
 
-        // Check if the header is Digest
-        let authorize = header.to_str().expect("Cannot convert header to string");
-        let auth_scheme_vec: Vec<&str> = authorize.split(' ').collect();
-        let scheme = auth_scheme_vec.into_iter().nth(0);
+    fn authenticate_client(&self, client_header: &str, _headers: &HeaderMap) -> Result<(), ProximaError> {
 
-        // If header is not Digest , return err
-        if let Some("Digest") = scheme {
-            log::debug!("Found correct scheme for auth type: Digest");
-        } else {
-            return Err(ProximaError::UnmatchedHeader);
-        }
-
-        for user in internal.iter() {
-            log::debug!("\"Checking if connecting client matches {:?}\"", user);
-            match user.authorize(header, method, client_addr).await {
-                Ok(_) => return Ok(()),
-                Err(_) => {
-                    continue;
-                }
-            }
-        }
-        log::debug!("\"Client could not be authenticated\"");
-        Err(ProximaError::UnauthorizedClientDigest)
-    }
-}
-
-impl DigestAuth {
-    pub async fn authorize(
-        &self,
-        header: &HeaderValue,
-        method: &Method,
-        client_addr: &SocketAddr,
-    ) -> Result<(), ProximaError> {
-        let client_authorization_header = match AuthorizationHeader::parse(header.to_str().unwrap())
+        let client_authorization_header = match AuthorizationHeader::parse(client_header)
         {
             Ok(c) => c,
             Err(e) => {
@@ -87,7 +39,7 @@ impl DigestAuth {
         let context = AuthContext::new(
             self.username.clone(),
             self.password.clone(),
-            &client_authorization_header.uri,
+            client_authorization_header.clone().uri,
         );
 
         log::trace!("Digest context: {:?}", &context);
@@ -96,18 +48,17 @@ impl DigestAuth {
         server_authorization_header.digest(&context);
 
         if server_authorization_header != client_authorization_header {
-            metrics::increment_counter!(
-                "proxima_security_client_authentication_failed_count",
-                "type" => "digest"
-            );
             return Err(ProximaError::UnauthorizedClientDigest);
         }
 
-        if let Some(ref whitelist) = self.whitelist {
-            log::debug!("Found whitelist");
-            whitelist.authorize(method, client_addr)?
-        }
-
         Ok(())
+    }
+
+    fn header_name(&self) -> &str {
+        "AUTHORIZATION"
+    }
+
+    fn whitelist(&self) -> Option<&Whitelist> {
+        self.whitelist.as_ref()
     }
 }

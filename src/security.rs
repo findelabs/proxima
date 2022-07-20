@@ -9,7 +9,7 @@ use crate::auth::api_key::ApiKeyAuth;
 //use crate::auth::basic::BasicAuthList;
 use crate::auth::basic::BasicAuth;
 use crate::auth::bearer::BearerAuth;
-use crate::auth::digest::DigestAuthList;
+use crate::auth::digest::DigestAuth;
 use crate::auth::jwks::JwksAuthList;
 use crate::auth::traits::{AuthList, AuthorizeList};
 use crate::error::Error as ProximaError;
@@ -36,7 +36,7 @@ pub struct Whitelist {
 #[serde(deny_unknown_fields)]
 pub struct AuthorizedClients {
     pub basic: Option<AuthList<BasicAuth>>,
-    pub digest: Option<DigestAuthList>,
+    pub digest: Option<AuthList<DigestAuth>>,
     pub bearer: Option<AuthList<BearerAuth>>,
     pub jwks: Option<JwksAuthList>,
     pub api_key: Option<AuthList<ApiKeyAuth>>,
