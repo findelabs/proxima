@@ -15,12 +15,12 @@ use tokio::sync::RwLock;
 use url::Url;
 use vault_client_rs::client::Client as VaultClient;
 
-use crate::security::EndpointSecurity;
 use crate::auth::server::ServerAuth;
 use crate::cache::Cache;
 use crate::error::Error as ProximaError;
 use crate::https::HttpsClient;
 use crate::path::ProxyPath;
+use crate::security::EndpointSecurity;
 use crate::security::{display_security, Security};
 use crate::urls::Urls;
 use crate::vault::Vault;
@@ -71,7 +71,7 @@ pub struct HttpConfig {
 pub struct Static {
     pub body: String,
     #[serde(skip_serializing_if = "display_security")]
-    pub security: Option<Security>
+    pub security: Option<Security>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]

@@ -11,7 +11,6 @@ use env_logger::{Builder, Target};
 use log::LevelFilter;
 use std::io::Write;
 use std::net::SocketAddr;
-use tower_http::auth::RequireAuthorizationLayer;
 use tower_http::trace::TraceLayer;
 
 mod auth;
@@ -66,22 +65,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .help("Set default global timeout")
                 .default_value("60")
                 .env("PROXIMA_TIMEOUT")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::new("username")
-                .long("username")
-                .help("Set required client username")
-                .env("PROXIMA_CLIENT_USERNAME")
-                .requires("password")
-                .takes_value(true),
-        )
-        .arg(
-            Arg::new("password")
-                .long("password")
-                .help("Set required client password")
-                .requires("username")
-                .env("PROXIMA_CLIENT_PASSWORD")
                 .takes_value(true),
         )
         .arg(
@@ -273,36 +256,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .layer(Extension(state.clone()))
         .layer(Extension(recorder_handle.clone()));
 
-    // These should NOT be authenticated
-    let app = match opts.is_present("username") {
-        true => {
-            let username = opts
-                .value_of("username")
-                .expect("Missing username")
-                .to_string();
-            let password = opts
-                .value_of("password")
-                .expect("Missing username")
-                .to_string();
-            Router::new()
-                .layer(RequireAuthorizationLayer::basic(&username, &password))
-                .route("/", any(root))
-                .route("/:endpoint", any(proxy))
-                .route("/:endpoint/*path", any(proxy))
-                .layer(TraceLayer::new_for_http())
-                .route_layer(middleware::from_fn(track_metrics))
-                .layer(Extension(state))
-                .layer(Extension(recorder_handle))
-        }
-        false => Router::new()
-            .route("/", any(root))
-            .route("/:endpoint", any(proxy))
-            .route("/:endpoint/*path", any(proxy))
-            .layer(TraceLayer::new_for_http())
-            .route_layer(middleware::from_fn(track_metrics))
-            .layer(Extension(state))
-            .layer(Extension(recorder_handle)),
-    };
+    let app = Router::new()
+        .route("/", any(root))
+        .route("/:endpoint", any(proxy))
+        .route("/:endpoint/*path", any(proxy))
+        .layer(TraceLayer::new_for_http())
+        .route_layer(middleware::from_fn(track_metrics))
+        .layer(Extension(state))
+        .layer(Extension(recorder_handle));
 
     // add a fallback service for handling routes to unknown paths
     let proxy = app.fallback(handler_404.into_service());

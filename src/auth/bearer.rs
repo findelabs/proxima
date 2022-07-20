@@ -1,10 +1,10 @@
 use crate::security::Whitelist;
-use serde::{Deserialize, Serialize};
 use async_trait::async_trait;
 use hyper::HeaderMap;
+use serde::{Deserialize, Serialize};
 
-use crate::error::Error as ProximaError;
 use crate::auth::traits::{AuthList, Authorize, AuthorizeList};
+use crate::error::Error as ProximaError;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(deny_unknown_fields)]
@@ -20,18 +20,20 @@ impl AuthorizeList for AuthList<BearerAuth> {}
 
 #[async_trait]
 impl Authorize for BearerAuth {
-
     const AUTHORIZATION_TYPE: Option<&'static str> = Some("bearer");
 
     fn header_name(&self) -> &str {
         "AUTHORIZATION"
     }
 
-    fn authenticate_client(&self, client_header: &str, _headers: &HeaderMap) -> Result<(), ProximaError> {
-
+    fn authenticate_client(
+        &self,
+        client_header: &str,
+        _headers: &HeaderMap,
+    ) -> Result<(), ProximaError> {
         let header_value = match client_header.split_once(' ') {
             None => return Err(ProximaError::UnmatchedHeader),
-            Some((_,v)) => v
+            Some((_, v)) => v,
         };
 
         let correct_header = self.token();

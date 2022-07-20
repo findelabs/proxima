@@ -1,9 +1,9 @@
 use crate::error::Error as ProximaError;
 use crate::security::Whitelist;
+use async_trait::async_trait;
 use digest_auth::{AuthContext, AuthorizationHeader};
 use hyper::HeaderMap;
 use serde::{Deserialize, Serialize};
-use async_trait::async_trait;
 
 use crate::auth::traits::{AuthList, Authorize, AuthorizeList};
 
@@ -22,13 +22,14 @@ impl AuthorizeList for AuthList<DigestAuth> {}
 
 #[async_trait]
 impl Authorize for DigestAuth {
-
     const AUTHORIZATION_TYPE: Option<&'static str> = Some("digest");
 
-    fn authenticate_client(&self, client_header: &str, _headers: &HeaderMap) -> Result<(), ProximaError> {
-
-        let client_authorization_header = match AuthorizationHeader::parse(client_header)
-        {
+    fn authenticate_client(
+        &self,
+        client_header: &str,
+        _headers: &HeaderMap,
+    ) -> Result<(), ProximaError> {
+        let client_authorization_header = match AuthorizationHeader::parse(client_header) {
             Ok(c) => c,
             Err(e) => {
                 log::error!("Error converting client authorization header: {}", e);

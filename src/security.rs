@@ -1,9 +1,9 @@
+use async_trait::async_trait;
 use hyper::HeaderMap;
 use hyper::Method;
 use ipnetwork::IpNetwork;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
-use async_trait::async_trait;
 
 use crate::auth::api_key::ApiKeyAuth;
 use crate::auth::basic::BasicAuth;
@@ -43,7 +43,6 @@ pub struct AuthorizedClients {
 
 #[async_trait]
 pub trait EndpointSecurity {
-
     fn security(&self) -> Option<&Security>;
 
     fn whitelist(&self) -> Option<&Whitelist> {
@@ -54,7 +53,7 @@ pub trait EndpointSecurity {
         }
     }
 
-    async fn auth (
+    async fn auth(
         &self,
         headers: &HeaderMap,
         method: &Method,
@@ -65,13 +64,11 @@ pub trait EndpointSecurity {
         Ok(())
     }
 
-
-    async fn authorize_whitelist (
+    async fn authorize_whitelist(
         &self,
         method: &Method,
         client_addr: &SocketAddr,
     ) -> Result<(), ProximaError> {
-
         // If endpoint has a method whitelock, verify
         if let Some(whitelist) = self.whitelist() {
             log::debug!("Found whitelist");
@@ -80,7 +77,7 @@ pub trait EndpointSecurity {
         Ok(())
     }
 
-    async fn authenticate_client (
+    async fn authenticate_client(
         &self,
         headers: &HeaderMap,
         method: &Method,

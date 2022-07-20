@@ -4,8 +4,8 @@ use hyper::Method;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 
-use crate::security::Whitelist;
 use crate::error::Error as ProximaError;
+use crate::security::Whitelist;
 
 #[async_trait]
 pub trait AuthorizeList: IntoIterator + Clone {
@@ -20,7 +20,6 @@ pub trait AuthorizeList: IntoIterator + Clone {
         <Self as IntoIterator>::Item: Send + std::fmt::Debug + Authorize + Sync,
         <Self as IntoIterator>::IntoIter: Send,
     {
-
         for user in self.clone() {
             log::debug!("\"Checking if connecting client matches {:?}\"", user);
             match user.authorize(headers, method, client_addr).await {
@@ -41,7 +40,6 @@ pub trait AuthorizeList: IntoIterator + Clone {
 
 #[async_trait]
 pub trait Authorize {
-
     const AUTHORIZATION_TYPE: Option<&'static str>;
 
     fn header_name(&self) -> &str;
@@ -56,7 +54,6 @@ pub trait Authorize {
         method: &Method,
         client_addr: &SocketAddr,
     ) -> Result<(), ProximaError> {
-
         let client_header_value = self.client_header_value(headers)?;
 
         // If we require a specific authorization header type, check for type
@@ -64,10 +61,14 @@ pub trait Authorize {
             match client_header_value.split_once(' ') {
                 None => {
                     log::debug!("Failed getting header sub type");
-                    return Err(ProximaError::UnmatchedHeader)
-                },
-                Some((t,_)) => {
-                    log::debug!("Checking if clients header sub type {} matches auth type {}", &t, &auth_type);
+                    return Err(ProximaError::UnmatchedHeader);
+                }
+                Some((t, _)) => {
+                    log::debug!(
+                        "Checking if clients header sub type {} matches auth type {}",
+                        &t,
+                        &auth_type
+                    );
                     // We didn't find a matching auth type, return err
                     if t.to_lowercase() != auth_type.to_lowercase() {
                         return Err(ProximaError::UnmatchedHeader);
@@ -79,9 +80,7 @@ pub trait Authorize {
 
         if let Err(e) = self.authenticate_client(client_header_value, headers) {
             log::debug!("Client is not authenticated");
-            let labels = [
-                ("type", self.header_name().to_owned()),
-            ];
+            let labels = [("type", self.header_name().to_owned())];
             metrics::increment_counter!(
                 "proxima_security_client_authentication_failed_count",
                 &labels
@@ -104,9 +103,7 @@ pub trait Authorize {
             Some(header) => header,
             None => {
                 log::debug!("Endpoint is locked, but no matching header found");
-                let labels = [
-                    ("type", header_name.to_string()),
-                ];
+                let labels = [("type", header_name.to_string())];
                 metrics::increment_counter!(
                     "proxima_security_client_authentication_failed_count",
                     &labels
@@ -115,9 +112,9 @@ pub trait Authorize {
                 match Self::AUTHORIZATION_TYPE {
                     Some("digest") => {
                         log::debug!("Returning digest login error");
-                        return Err(ProximaError::UnauthorizedClientDigest)
-                    },
-                    _ => return Err(ProximaError::UnmatchedHeader)
+                        return Err(ProximaError::UnauthorizedClientDigest);
+                    }
+                    _ => return Err(ProximaError::UnmatchedHeader),
                 }
             }
         };
