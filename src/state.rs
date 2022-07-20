@@ -285,6 +285,15 @@ impl State {
                                 .body(Body::from(endpoint.body))
                                 .unwrap())
                         }
+                        Endpoint::Redirect(endpoint) => {
+                            log::debug!("Found redirect entry");
+
+                            Ok(Response::builder()
+                                .status(StatusCode::PERMANENT_REDIRECT)
+                                .header("LOCATION", endpoint.url.to_string())
+                                .body(Body::empty())
+                                .unwrap())
+                        }
                     }
                 }
             },

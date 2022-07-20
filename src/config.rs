@@ -76,6 +76,24 @@ pub struct Static {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(deny_unknown_fields)]
+pub struct Proxy {
+    pub url: Urls,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authentication: Option<ServerAuth>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeout: Option<u64>,
+    #[serde(skip_serializing_if = "display_security")]
+    pub security: Option<Security>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+#[serde(deny_unknown_fields)]
+pub struct Redirect {
+    pub url: Url
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+#[serde(deny_unknown_fields)]
 #[serde(rename_all = "snake_case")]
 pub enum Endpoint {
     #[allow(non_camel_case_types)]
@@ -86,18 +104,8 @@ pub enum Endpoint {
     Proxy(Proxy),
     #[allow(non_camel_case_types)]
     Static(Static),
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
-#[serde(deny_unknown_fields)]
-pub struct Proxy {
-    pub url: Urls,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub authentication: Option<ServerAuth>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub timeout: Option<u64>,
-    #[serde(skip_serializing_if = "display_security")]
-    pub security: Option<Security>,
+    #[allow(non_camel_case_types)]
+    Redirect(Redirect),
 }
 
 impl EndpointSecurity for Proxy {
@@ -397,14 +405,24 @@ impl Config {
                             "Found Static at {}",
                             &path.key().unwrap_or_else(|| "None".to_string())
                         );
-
                         //                        // Save entry into cache
                         //                        let key = &path.key().expect("weird");
                         //                        log::debug!("Adding {} to cache", key);
                         //                        self.cache.set(key, &entry).await;
-
                         // Return endpoint
                         Ok((Route::Endpoint(Endpoint::Static(entry.clone())), path))
+                    }
+                    Endpoint::Redirect(entry) => {
+                        log::debug!(
+                            "Found Redirect at {}",
+                            &path.key().unwrap_or_else(|| "None".to_string())
+                        );
+                        //                        // Save entry into cache
+                        //                        let key = &path.key().expect("weird");
+                        //                        log::debug!("Adding {} to cache", key);
+                        //                        self.cache.set(key, &entry).await;
+                        // Return endpoint
+                        Ok((Route::Endpoint(Endpoint::Redirect(entry.clone())), path))
                     }
                 }
             }
