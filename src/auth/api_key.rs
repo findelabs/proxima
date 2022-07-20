@@ -48,7 +48,7 @@ impl Authorize for ApiKeyAuth {
 
         log::debug!("Comparing {} to {}", &client_header, &correct_header);
         if client_header != correct_header {
-            return Err(ProximaError::UnauthorizedClient);
+            Err(ProximaError::UnauthorizedClient)
         } else {
             log::debug!("Client is authenticated");
             Ok(())

@@ -40,7 +40,7 @@ impl Authorize for BearerAuth {
 
         log::debug!("Comparing {} to {}", &header_value, &correct_header);
         if header_value != correct_header {
-            return Err(ProximaError::UnauthorizedClient);
+            Err(ProximaError::UnauthorizedClient)
         } else {
             log::debug!("Client is authenticated");
             Ok(())

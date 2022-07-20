@@ -26,7 +26,7 @@ impl<T> Default for Cache<T> {
 impl<'a, T: std::clone::Clone + std::fmt::Display> Cache<T> {
     pub fn new(name: Option<String>) -> Cache<T> {
         Cache {
-            name: name.unwrap_or_else(|| String::default()),
+            name: name.unwrap_or_default(),
             cache: Arc::new(RwLock::new(HashMap::new())),
         }
     }

@@ -44,7 +44,7 @@ impl ProxyPath {
 
             ProxyPath {
                 path: path.to_string(),
-                vec: vec,
+                vec,
                 count: Arc::new(RwLock::new(-1)),
                 max: max as i32,
             }

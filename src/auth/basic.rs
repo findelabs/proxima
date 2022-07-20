@@ -41,7 +41,7 @@ impl Authorize for BasicAuth {
 
         log::debug!("Comparing {} to {}", &header_value, &correct_header);
         if header_value != correct_header {
-            return Err(ProximaError::UnauthorizedClient);
+            Err(ProximaError::UnauthorizedClient)
         } else {
             log::debug!("Client is authenticated");
             Ok(())
@@ -61,8 +61,7 @@ impl BasicAuth {
 
     pub fn base64_value(&self) -> String {
         let user_pass = format!("{}:{}", self.username, self.password);
-        let encoded = base64::encode(user_pass);
-        encoded
+        base64::encode(user_pass)
     }
 
     pub fn basic(&self) -> String {

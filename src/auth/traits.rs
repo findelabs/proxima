@@ -88,7 +88,7 @@ pub trait Authorize {
             return Err(e);
         }
 
-        if let Some(ref whitelist) = self.whitelist() {
+        if let Some(whitelist) = self.whitelist() {
             log::debug!("Found whitelist");
             whitelist.authorize(method, client_addr)?
         }

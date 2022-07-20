@@ -119,7 +119,7 @@ impl fmt::Display for Proxy {
         // stream: `f`. Returns `fmt::Result` which indicates whether the
         // operation succeeded or failed. Note that `write!` uses syntax which
         // is very similar to `println!`.
-        write!(f, "{}", self.url.to_string())
+        write!(f, "{}", self.url)
     }
 }
 
@@ -195,7 +195,7 @@ impl Config {
     pub async fn cache_get(&self, mut path: ProxyPath) -> Result<(Route, ProxyPath), ProximaError> {
         let path_str = path.path();
         log::debug!("Starting cache_get for {}", &path_str);
-        if let Some(mapping) = self.mappings.get(&path_str).await {
+        if let Some(mapping) = self.mappings.get(path_str).await {
             log::debug!("Found cached mapping for {}", &path_str);
 
             if let Some(endpoint) = self.cache.get(&mapping).await {
@@ -213,7 +213,7 @@ impl Config {
             // Set cache and mappings
             log::debug!("Adding {} to mappings", path.path());
             self.mappings
-                .set(&path.path(), &path.key().expect("weird"))
+                .set(path.path(), &path.key().expect("weird"))
                 .await;
         }
 
@@ -328,15 +328,13 @@ impl Config {
                                 let route = entry.get(self.vault_client()?, "").await?;
 
                                 // If vault secret is Proxy variant, cache endpoint
-                                if let Route::Endpoint(ref entry) = route {
-                                    if let Endpoint::Proxy(ref endpoint) = entry {
-                                        self.cache.set(&path.key().expect("odd"), &endpoint).await;
-                                    }
+                                if let Route::Endpoint(Endpoint::Proxy(ref endpoint)) = route {
+                                    self.cache.set(&path.key().expect("odd"), endpoint).await;
                                 };
 
-                                return Ok((route, path));
+                                Ok((route, path))
                             } else {
-                                return Err(ProximaError::UnknownProxy);
+                                Err(ProximaError::UnknownProxy)
                             }
                         } else {
                             // We found a directory of vault secrets
@@ -359,12 +357,10 @@ impl Config {
                                     path.next()?;
 
                                     // If vault secret is Proxy variant, cache endpoint
-                                    if let Route::Endpoint(ref entry) = route {
-                                        if let Endpoint::Proxy(ref endpoint) = entry {
-                                            self.cache
-                                                .set(&path.key().expect("odd"), &endpoint)
-                                                .await;
-                                        }
+                                    if let Route::Endpoint(Endpoint::Proxy(ref endpoint)) = route {
+                                        self.cache
+                                            .set(&path.key().expect("odd"), endpoint)
+                                            .await;
                                     };
 
                                     Ok((route, path))
@@ -391,7 +387,7 @@ impl Config {
                         // Save entry into cache
                         let key = &path.key().expect("weird");
                         log::debug!("Adding {} to cache", key);
-                        self.cache.set(key, &entry).await;
+                        self.cache.set(key, entry).await;
 
                         // Return endpoint
                         Ok((Route::Endpoint(Endpoint::Proxy(entry.clone())), path))

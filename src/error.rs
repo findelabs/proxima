@@ -109,7 +109,7 @@ impl IntoResponse for Error {
             }
             Error::UnauthorizedClientBasic => {
                 let header_value = "Basic realm=\"Proxima\"";
-                let header = HeaderValue::from_str(&header_value).unwrap();
+                let header = HeaderValue::from_str(header_value).unwrap();
                 headers.insert("www-authenticate", header);
                 StatusCode::UNAUTHORIZED
             }

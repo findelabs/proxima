@@ -1,6 +1,6 @@
 use crate::error::Error as ProximaError;
 use async_recursion::async_recursion;
-use base64;
+//use base64;
 use handlebars::Handlebars;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -37,7 +37,7 @@ impl Vault {
     ) -> Result<ConfigMap, ProximaError> {
         let list = vault.list(&self.secret).await?;
 
-        let cache_prefix = path.key().unwrap_or("/".to_owned());
+        let cache_prefix = path.key().unwrap_or_else(|| "/".to_owned());
 
         // Create new map
         let mut map = BTreeMap::new();
@@ -70,10 +70,8 @@ impl Vault {
                     match self.template(secret.data().await).await {
                         Ok(route) => {
                             // If vault secret is Proxy variant, cache endpoint
-                            if let Route::Endpoint(ref entry) = route {
-                                if let Endpoint::Proxy(ref endpoint) = entry {
-                                    cache.set(&cache_path, &endpoint).await;
-                                }
+                            if let Route::Endpoint(Endpoint::Proxy(ref endpoint)) = route {
+                                cache.set(&cache_path, endpoint).await;
                             }
 
                             map.insert(key_str.to_string(), route);

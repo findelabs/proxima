@@ -68,7 +68,7 @@ impl ProxyRequest {
         self.request_headers.remove(hyper::header::USER_AGENT);
 
         // Add x-forwarded-prefix
-        let header = HeaderValue::from_str(&self.path.path()).unwrap();
+        let header = HeaderValue::from_str(self.path.path()).unwrap();
         self.request_headers.insert("x-forwarded-prefix", header);
 
         // Append to request the headers passed by client

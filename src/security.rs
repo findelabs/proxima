@@ -59,8 +59,8 @@ pub trait EndpointSecurity {
         method: &Method,
         client: &SocketAddr,
     ) -> Result<(), ProximaError> {
-        self.authorize_whitelist(&method, &client).await?;
-        self.authenticate_client(&headers, &method, &client).await?;
+        self.authorize_whitelist(method, client).await?;
+        self.authenticate_client(headers, method, client).await?;
         Ok(())
     }
 
@@ -183,7 +183,7 @@ impl AuthorizedClients {
 
         // If we get here, no authentication was matched, return error.
         // If Basic auth is included, pass along x-auth header
-        if let Some(_) = &self.basic {
+        if self.basic.is_some() {
             Err(ProximaError::UnauthorizedClientBasic)
         } else {
             Err(ProximaError::Unauthorized)
@@ -193,11 +193,7 @@ impl AuthorizedClients {
 
 pub fn display_security(item: &Option<Security>) -> bool {
     if let Some(security) = item {
-        if security.whitelist.is_some() {
-            false
-        } else {
-            true
-        }
+        security.whitelist.is_none()
     } else {
         true
     }

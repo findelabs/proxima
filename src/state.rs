@@ -22,21 +22,21 @@ use crate::security::EndpointSecurity;
 
 type BoxResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 
-#[derive(Clone, Debug)]
+#[derive(Default, Clone, Debug)]
 pub struct State {
     pub config: Config,
     pub client: HttpsClient,
 }
 
-// Let's have this instead create client and vault_client, and add config at a later point
-impl Default for State {
-    fn default() -> Self {
-        State {
-            client: HttpsClient::default(),
-            config: Config::default(),
-        }
-    }
-}
+//// Let's have this instead create client and vault_client, and add config at a later point
+//impl Default for State {
+//    fn default() -> Self {
+//        State {
+//            client: HttpsClient::default(),
+//            config: Config::default(),
+//        }
+//    }
+//}
 
 impl State {
     pub async fn build(&mut self, opts: ArgMatches) -> BoxResult<()> {
@@ -191,7 +191,7 @@ impl State {
             Ok((route, remainder)) => match route {
                 // Return these variants without checking for security
                 Route::ConfigMap(map) => {
-                    return Ok(Response::builder()
+                    Ok(Response::builder()
                         .status(StatusCode::OK)
                         .body(Body::from(
                             serde_json::to_string(&map).expect("Cannot convert to JSON"),
@@ -226,7 +226,7 @@ impl State {
 
                     match entry {
                         Endpoint::HttpConfig(map) => {
-                            return Ok(Response::builder()
+                            Ok(Response::builder()
                                 .status(StatusCode::OK)
                                 .body(Body::from(
                                     serde_json::to_string(&map).expect("Cannot convert to JSON"),
@@ -234,7 +234,7 @@ impl State {
                                 .unwrap())
                         }
                         Endpoint::Vault(map) => {
-                            return Ok(Response::builder()
+                            Ok(Response::builder()
                                 .status(StatusCode::OK)
                                 .body(Body::from(
                                     serde_json::to_string(&map).expect("Cannot convert to JSON"),
@@ -280,15 +280,15 @@ impl State {
                             // Authorize client, and check for client whitelist
                             endpoint.auth(&request_headers, &method, &client).await?;
 
-                            return Ok(Response::builder()
+                            Ok(Response::builder()
                                 .status(StatusCode::OK)
                                 .body(Body::from(endpoint.body))
-                                .unwrap());
+                                .unwrap())
                         }
                     }
                 }
             },
-            Err(e) => return Err(e),
+            Err(e) => Err(e),
         }
     }
 }
