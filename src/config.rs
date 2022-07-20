@@ -15,6 +15,7 @@ use tokio::sync::RwLock;
 use url::Url;
 use vault_client_rs::client::Client as VaultClient;
 
+use crate::security::EndpointSecurity;
 use crate::auth::server::ServerAuth;
 use crate::cache::Cache;
 use crate::error::Error as ProximaError;
@@ -70,7 +71,7 @@ pub struct HttpConfig {
 pub struct Static {
     pub body: String,
     #[serde(skip_serializing_if = "display_security")]
-    pub security: Option<Security>,
+    pub security: Option<Security>
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -97,6 +98,18 @@ pub struct Proxy {
     pub timeout: Option<u64>,
     #[serde(skip_serializing_if = "display_security")]
     pub security: Option<Security>,
+}
+
+impl EndpointSecurity for Proxy {
+    fn security(&self) -> Option<&Security> {
+        self.security.as_ref()
+    }
+}
+
+impl EndpointSecurity for Static {
+    fn security(&self) -> Option<&Security> {
+        self.security.as_ref()
+    }
 }
 
 impl fmt::Display for Proxy {

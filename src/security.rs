@@ -3,10 +3,9 @@ use hyper::Method;
 use ipnetwork::IpNetwork;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
+use async_trait::async_trait;
 
-//use crate::auth::client::ClientAuthList;
 use crate::auth::api_key::ApiKeyAuth;
-//use crate::auth::basic::BasicAuthList;
 use crate::auth::basic::BasicAuth;
 use crate::auth::bearer::BearerAuth;
 use crate::auth::digest::DigestAuth;
@@ -40,6 +39,63 @@ pub struct AuthorizedClients {
     pub bearer: Option<AuthList<BearerAuth>>,
     pub jwks: Option<JwksAuthList>,
     pub api_key: Option<AuthList<ApiKeyAuth>>,
+}
+
+#[async_trait]
+pub trait EndpointSecurity {
+
+    fn security(&self) -> Option<&Security>;
+
+    fn whitelist(&self) -> Option<&Whitelist> {
+        if let Some(security) = self.security() {
+            security.whitelist.as_ref()
+        } else {
+            None
+        }
+    }
+
+    async fn auth (
+        &self,
+        headers: &HeaderMap,
+        method: &Method,
+        client: &SocketAddr,
+    ) -> Result<(), ProximaError> {
+        self.authorize_whitelist(&method, &client).await?;
+        self.authenticate_client(&headers, &method, &client).await?;
+        Ok(())
+    }
+
+
+    async fn authorize_whitelist (
+        &self,
+        method: &Method,
+        client_addr: &SocketAddr,
+    ) -> Result<(), ProximaError> {
+
+        // If endpoint has a method whitelock, verify
+        if let Some(whitelist) = self.whitelist() {
+            log::debug!("Found whitelist");
+            whitelist.authorize(method, client_addr)?
+        }
+        Ok(())
+    }
+
+    async fn authenticate_client (
+        &self,
+        headers: &HeaderMap,
+        method: &Method,
+        client_addr: &SocketAddr,
+    ) -> Result<(), ProximaError> {
+        // If endpoint is locked down, verify credentials
+        let security = self.security();
+        if let Some(security) = security {
+            if let Some(clientlist) = &security.client {
+                log::debug!("Proxy is locked");
+                clientlist.authorize(headers, method, client_addr).await?
+            }
+        }
+        Ok(())
+    }
 }
 
 impl AuthorizedClients {

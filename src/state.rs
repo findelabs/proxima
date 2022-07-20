@@ -12,11 +12,13 @@ use std::net::SocketAddr;
 
 use crate::auth::{basic::BasicAuth, server::ServerAuth};
 use crate::config;
-use crate::config::{Config, Endpoint, Proxy, Route};
+use crate::config::{Config, Endpoint, Route};
 use crate::error::Error as ProximaError;
 use crate::https::{ClientBuilder, HttpsClient};
 use crate::path::ProxyPath;
 use crate::requests::ProxyRequest;
+//use crate::auth::traits::Authorize;
+use crate::security::EndpointSecurity;
 
 type BoxResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
 
@@ -64,11 +66,6 @@ impl State {
 
         let vault_client = match opts.is_present("vault_url") {
             true => {
-                //                // This is required in order to set jwt_path to None if the flag was not passed
-                //                let jwt_path = match opts.occurrences_of("jwt_path") {
-                //                    0 => None,
-                //                    _ => opts.value_of("jwt_path")
-                //                };
                 let mut client = vault_client_rs::client::ClientBuilder::new()
                     .with_mount(opts.value_of("vault_mount").unwrap())
                     .with_url(opts.value_of("vault_url").unwrap())
@@ -141,43 +138,43 @@ impl State {
         }
     }
 
-    pub async fn authorize_whitelist(
-        &mut self,
-        endpoint: &Proxy,
-        method: &Method,
-        client_addr: &SocketAddr,
-    ) -> Result<(), ProximaError> {
-        // If endpoint has a method whitelock, verify
-        if let Some(ref security) = endpoint.security {
-            if let Some(ref whitelist) = security.whitelist {
-                log::debug!("Found whitelist");
-                whitelist.authorize(method, client_addr)?
-            }
-        }
-        Ok(())
-    }
-
-    pub async fn authorize_client(
-        &mut self,
-        endpoint: &Proxy,
-        headers: &HeaderMap,
-        method: &Method,
-        client_addr: &SocketAddr,
-    ) -> Result<(), ProximaError> {
-        // If endpoint is locked down, verify credentials
-        if let Some(ref security) = endpoint.security {
-            if let Some(ref clientlist) = security.client {
-                log::debug!("Proxy is locked");
-                match self.config.global_authentication {
-                    true => {
-                        log::error!("Proxy is locked, but proxima is using global authentication");
-                    }
-                    false => clientlist.authorize(headers, method, client_addr).await?,
-                }
-            }
-        }
-        Ok(())
-    }
+//    pub async fn authorize_whitelist<T: EndpointSecurity> (
+//        &mut self,
+//        endpoint: &T,
+//        method: &Method,
+//        client_addr: &SocketAddr,
+//    ) -> Result<(), ProximaError> {
+//        // If endpoint has a method whitelock, verify
+//        if let Some(ref security) = endpoint.security() {
+//            if let Some(ref whitelist) = security.whitelist {
+//                log::debug!("Found whitelist");
+//                whitelist.authorize(method, client_addr)?
+//            }
+//        }
+//        Ok(())
+//    }
+//
+//    pub async fn authenticate_client<T: EndpointSecurity> (
+//        &mut self,
+//        endpoint: &Proxy,
+//        headers: &HeaderMap,
+//        method: &Method,
+//        client_addr: &SocketAddr,
+//    ) -> Result<(), ProximaError> {
+//        // If endpoint is locked down, verify credentials
+//        if let Some(ref security) = endpoint.security {
+//            if let Some(ref clientlist) = security.client {
+//                log::debug!("Proxy is locked");
+//                match self.config.global_authentication {
+//                    true => {
+//                        log::error!("Proxy is locked, but proxima is using global authentication");
+//                    }
+//                    false => clientlist.authorize(headers, method, client_addr).await?,
+//                }
+//            }
+//        }
+//        Ok(())
+//    }
 
     pub async fn response(
         &mut self,
@@ -251,12 +248,8 @@ impl State {
                                 remainder.suffix()
                             );
 
-                            // Verify global whitelist
-                            self.authorize_whitelist(&endpoint, &method, &client)
-                                .await?;
-
                             // Authorize client, and check for client whitelist
-                            self.authorize_client(&endpoint, &request_headers, &method, &client)
+                            endpoint.auth(&request_headers, &method, &client)
                                 .await?;
 
                             // Wrap Body if there is one
@@ -284,6 +277,10 @@ impl State {
                         }
                         Endpoint::Static(endpoint) => {
                             log::debug!("Found static entry");
+
+                            // Authorize client, and check for client whitelist
+                            endpoint.auth(&request_headers, &method, &client)
+                                .await?;
 
                             return Ok(Response::builder()
                                 .status(StatusCode::OK)
