@@ -43,11 +43,12 @@ pub async fn track_metrics<B>(req: Request<B>, next: Next<B>) -> impl IntoRespon
     let status = response.status().as_u16().to_string();
 
     log::info!(
-        "{{\"method\": \"{}\", \"path\":\"{}\", \"client\":\"{}\", \"status\":{}}}",
+        "{{\"method\": \"{}\", \"path\":\"{}\", \"client\":\"{}\", \"status\":{}, \"latency\":{}}}",
         &method,
         &path,
         &client,
-        &status
+        &status,
+        &latency
     );
 
     let labels = [
