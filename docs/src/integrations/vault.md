@@ -30,8 +30,9 @@ Proxima will attempt to authenticate to the Vault upon startup. Proxima will onl
 ```
 routes:
   atlas:
-    template: eyJ1cmwiOiJ7eyB1cmwgfX0iLCJhdXRoZW50aWNhdGlvbiI6eyJkaWdlc3QiOnsidXNlcm5hbWUiOiJ7eyB1c2VybmFtZSB9fSIsInBhc3N3b3JkIjoie3sgcGFzc3dvcmQgfX0ifX19Cg==
-    secret: atlas/apis/rest
+    vault:
+      template: eyJ1cmwiOiJ7eyB1cmwgfX0iLCJhdXRoZW50aWNhdGlvbiI6eyJkaWdlc3QiOnsidXNlcm5hbWUiOiJ7eyB1c2VybmFtZSB9fSIsInBhc3N3b3JkIjoie3sgcGFzc3dvcmQgfX0ifX19Cg==
+      secret: atlas/apis/rest
 ```
 
 When we unpack the example template, we find: `{"url":"{{ url }}","authentication":{"digest":{"username":"{{ username }}","password":"{{ password }}"}}}`

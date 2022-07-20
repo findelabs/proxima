@@ -17,7 +17,18 @@ Each endpoint can also authenticate users against the remote URL specified. This
 ```
 routes:
   remote_endpoint:
-    url: http://remote-server:8080
+    proxy:
+      url: http://remote-server:8080
+      # Require Basic client authentication
+      security:
+        client:
+          basic:
+          - username: admin
+            password: admin
+          - username: client_one
+            password: passwd_one
+          - username: client_two
+            password: passwd_two
   
     # Specify creds for remote url
     authentication:
@@ -25,16 +36,6 @@ routes:
         username: imkcdads
         password: s.cdanjfiewionkacnklcdaslcds
 
-    # Require Basic client authentication
-    security:
-      client:
-        basic:
-        - username: admin
-          password: admin
-        - username: client_one
-          password: passwd_one
-        - username: client_two
-          password: passwd_two
 ```
 
 More security options are shown under the examples directory.

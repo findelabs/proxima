@@ -9,26 +9,27 @@ An example of a series of whitelisted networks with a global whitelist is shown 
 ```yaml
 routes:
   single:
-    url: http://localhost:3000
-    security:
-      whitelist:
-        networks:
-        - 192.168.1.0/24
-        - 192.168.0.0/24
-      client:
-        basic:
-        # This admin user will only be allowed to authenticate from a single network
-        - username: admin1
-          password: adminpassword1
-          whitelist:
-            networks:
-            - 192.168.0.0/24
-        # This admin user will only be allowed to authenticate from a single network
-        - username: admin2
-          password: adminpassword2
-          whitelist:
-            networks:
-            - 192.168.1.0/24
+    proxy:
+      url: http://localhost:3000
+      security:
+        whitelist:
+          networks:
+          - 192.168.1.0/24
+          - 192.168.0.0/24
+        client:
+          basic:
+          # This admin user will only be allowed to authenticate from a single network
+          - username: admin1
+            password: adminpassword1
+            whitelist:
+              networks:
+              - 192.168.0.0/24
+          # This admin user will only be allowed to authenticate from a single network
+          - username: admin2
+            password: adminpassword2
+            whitelist:
+              networks:
+              - 192.168.1.0/24
 ```
 
 Here is an example of an endpoint that does not specify a global network whitelist:
@@ -36,13 +37,14 @@ Here is an example of an endpoint that does not specify a global network whiteli
 ```yaml
 routes:
   single:
-    url: http://localhost:3000
-    security:
-      client:
-        basic:
-        - username: admin1
-          password: adminpassword1
-          whitelist:
-            networks:
-            - 192.168.0.0/24
+    proxy:
+      url: http://localhost:3000
+      security:
+        client:
+          basic:
+          - username: admin1
+            password: adminpassword1
+            whitelist:
+              networks:
+              - 192.168.0.0/24
 ```

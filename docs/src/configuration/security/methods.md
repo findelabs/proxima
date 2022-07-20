@@ -5,12 +5,13 @@ You can whitelist specific methods for all clients for an endpoint.
 ```yaml
 routes:
   endpoint_basic:
-    url: http://myurl.net
-    security:
-      whitelist:
-        methods:
-        - GET
-        - POST
+    proxy:
+      url: http://myurl.net
+      security:
+        whitelist:
+          methods:
+          - GET
+          - POST
 ```
 
 The following methods can currently be whitelisted:
@@ -33,27 +34,28 @@ You can also whitelist specific methods for specific clients under security.clie
 ```yaml
 routes:
   endpoint_basic:
-    url: http://myurl.net
-    security:
-      whitelist:
-        methods:
-        - GET
-        - POST
-      client:
-        basic:
-        
-        # This will work
-        - username: myuser_one
-          password: mypassword
-          whitelist:
-            methods:
-            - GET
-            
-        # This will fail since PUT is not a globally whitelisted endpoint method
-        - username: myuser_two
-          password: mypassword
-          whitelist:
-            methods:
-            - PUT
+    proxy:
+      url: http://myurl.net
+      security:
+        whitelist:
+          methods:
+          - GET
+          - POST
+        client:
+          basic:
+          
+          # This will work
+          - username: myuser_one
+            password: mypassword
+            whitelist:
+              methods:
+              - GET
+              
+          # This will fail since PUT is not a globally whitelisted endpoint method
+          - username: myuser_two
+            password: mypassword
+            whitelist:
+              methods:
+              - PUT
 ```
 

@@ -5,14 +5,15 @@ Proxima allows for the whitelisting of both methods and networks. An example of 
 ```yaml
 routes:
   endpoint_basic:
-    url: http://myurl.net
-    security:
-      whitelist:
-        methods:
-        - GET
-        - POST
-        networks:
-        - 10.0.0.0/8
-        - 127.0.0.0/16
-        - 192.168.0.0/24
+    proxy:
+      url: http://myurl.net
+      security:
+        whitelist:
+          methods:
+          - GET
+          - POST
+          networks:
+          - 10.0.0.0/8
+          - 127.0.0.0/16
+          - 192.168.0.0/24
 ```

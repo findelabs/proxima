@@ -6,6 +6,7 @@ If 60 seconds is considered too long for your remote endpoint, you can override 
 ```yaml
 routes:
   my_endpoint:
-    url: http://google.com
-    timeout: 5000
+    proxy:
+      url: http://google.com
+      timeout: 5000
 ```

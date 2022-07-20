@@ -14,15 +14,16 @@ If you would like to require that one user logs in with Basic, and another with 
 ```yaml
 routes:
   locked:
-    url: http://myurl.net
-    security:
-      client:
-        basic:
-        - username: client_one
-          password: mypasswordone
-        digest:
-        - username: client_digest
-          password: mypasswordtwo
+    proxy:
+      url: http://myurl.net
+      security:
+        client:
+          basic:
+          - username: client_one
+            password: mypasswordone
+          digest:
+          - username: client_digest
+            password: mypasswordtwo
 ```
 
 #### Client JWKS Configuration
@@ -34,14 +35,15 @@ Here is an example on how to configure an endpoint with jwks client authenticati
 ```yaml
 routes:
   endpoint_test:
-    url: http://myurl.net
-    security:
-      client:
-        jwks:
-        - url: https://dev-17129172.okta.com/oauth2/default/v1/keys
-          audience: api://default
-          scopes:
-          - findelabs.test
+    proxy:
+      url: http://myurl.net
+      security:
+        client:
+          jwks:
+          - url: https://dev-17129172.okta.com/oauth2/default/v1/keys
+            audience: api://default
+            scopes:
+            - findelabs.test
 ```
 
 With this configuration, after a user generates a token via the Okta /token endpoint, include said token field in the Authorization header of the request to Proxima.

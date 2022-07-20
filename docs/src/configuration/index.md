@@ -12,10 +12,11 @@ For example, to have Proxima send any clients requesting `/host/yahoo` to yahoo.
 ```yaml
 routes:
   host:
-    yahoo:
-      url: http://yahoo.com
-    google:
-      url: http:://google.com
+    proxy:
+      yahoo:
+        url: http://yahoo.com
+      google:
+        url: http:://google.com
 ```
 
 ### Optional Endpoint Fields

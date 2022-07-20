@@ -11,11 +11,12 @@ If a remote endpoint requires authentication, for example, Basic authentication,
 ```yaml
 routes:
   endpoint_requiring_basic:
-    url: http://myurl.net
-    authentication:
-      basic:
-        username: myusername
-        password: mypassword
+    proxy:
+      url: http://myurl.net
+      authentication:
+        basic:
+          username: myusername
+          password: mypassword
 ```
 
 Proxima currently supports Basic and Digest for username/password authentication, as well as Bearer token authentication. 
@@ -25,7 +26,8 @@ Here are some examples on how to specify each of these authentication types, for
 ```yaml
 routes:
   endpoint_test:
-    url: http://myurl.net
+    proxy:
+      url: http://myurl.net
     authentication:
       basic:                  # Authenticate with remote endpoint with Basic or
       - username: client

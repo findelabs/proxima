@@ -6,8 +6,9 @@ Configure an endpoint like below in order to have the URL failover. In this exam
 ```yaml
 routes:
   search:
-    url: 
-      failover:
-      - http://google.com
-      - http://duckduckgo.com
+    proxy:
+      url: 
+        failover:
+        - http://google.com
+        - http://duckduckgo.com
 ```
