@@ -1,6 +1,6 @@
 # Proxying Requests
 
-The main use case for Proxima is to handle the proxying of clients to remote urls. General usage is below:
+The main use case for Proxima is to handle clients hitting various endpoints specified in the config. General usage is below:
 
 ## List Sub Endpoints
 View all endpoints under a path
@@ -27,8 +27,8 @@ View all endpoints under a path
 }
 ```
 ---
-## Endpoint Pass Through
-Proxy request to remote endpoint
+## Endpoint Forward
+Endpoints can forward, redirect, and display static content:
 
 **URL** : `/:endpoint/*path`
 
