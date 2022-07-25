@@ -59,15 +59,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .default_value("8081")
                 .takes_value(true),
         )
-//        .arg(
-//            Arg::new("timeout")
-//                .short('t')
-//                .long("timeout")
-//                .help("Set default global timeout")
-//                .default_value("60")
-//                .env("PROXIMA_TIMEOUT")
-//                .takes_value(true),
-//        )
         .arg(
             Arg::new("config_username")
                 .short('u')
@@ -95,45 +86,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .takes_value(true),
         )
         .arg(
-            Arg::new("set_nodelay")
-                .long("nodelay")
-                .required(false)
-                .help("Set socket nodelay")
-                .takes_value(false),
-        )
-        .arg(
             Arg::new("insecure")
                 .long("insecure")
                 .required(false)
                 .help("Accept insecure https config")
-                .takes_value(false),
-        )
-        .arg(
-            Arg::new("enforce_http")
-                .long("enforce_http")
-                .required(false)
-                .help("Enforce http protocol for remote endpoints")
-                .takes_value(false),
-        )
-        .arg(
-            Arg::new("set_reuse_address")
-                .long("reuse_address")
-                .required(false)
-                .help("Enable socket reuse")
-                .takes_value(false),
-        )
-        .arg(
-            Arg::new("accept_invalid_hostnames")
-                .long("accept_invalid_hostnames")
-                .required(false)
-                .help("Accept invalid remote hostnames")
-                .takes_value(false),
-        )
-        .arg(
-            Arg::new("accept_invalid_certs")
-                .long("accept_invalid_certs")
-                .required(false)
-                .help("Accept invalid remote certificates")
                 .takes_value(false),
         )
         .arg(
@@ -198,14 +154,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .env("JWT_PATH")
                 .help("JWT path"),
         )
-        .arg(
-            Arg::new("import_cert")
-                .long("import_cert")
-                .required(false)
-                .help("Import CA certificate")
-                .env("PROXIMA_IMPORT_CERT")
-                .takes_value(true),
-        )
         .get_matches();
 
     // Initialize log Builder
@@ -243,8 +191,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
             8081
         });
 
-    // Create state for axum
-    let mut state = State::default();
+    // Create state for axum, beginning with seed State which generates the shared HttpsClient
+    let mut state = State::basic(opts.clone()).await;
     state.build(opts.clone()).await?;
 
     // Create prometheus handle

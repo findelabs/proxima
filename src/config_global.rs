@@ -4,32 +4,42 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct GlobalConfig {
+    #[serde(default)]
     pub network: GlobalConfigNetwork,
+    #[serde(default)]
     pub security: GlobalConfigSecurity,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub integrations: Option<GlobalConfigIntegrations>
+//    #[serde(skip_serializing_if = "Option::is_none")]
+//    pub integrations: Option<GlobalConfigIntegrations>
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct GlobalConfigNetwork {
+    #[serde(default)]
     pub timeout: Timeout,
+    #[serde(default)]
     pub nodelay: bool,
+    #[serde(default)]
     pub reuse_address: bool,
+    #[serde(default)]
     pub enforce_http: bool
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct GlobalConfigSecurity {
+    #[serde(default)]
     pub tls: GlobalConfigSecurityTls,
+    #[serde(default)]
     pub config: GlobalConfigSecurityConfig
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct GlobalConfigSecurityTls {
+    #[serde(default)]
     pub accept_invalid_hostnames: bool,
+    #[serde(default)]
     pub insecure: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub import_cert: Option<String>
@@ -38,6 +48,7 @@ pub struct GlobalConfigSecurityTls {
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct GlobalConfigSecurityConfig {
+    #[serde(default)]
     pub hide_folders: bool
 }
 

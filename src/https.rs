@@ -30,7 +30,6 @@ impl HttpsClient {
     }
 
     pub async fn reconfigure(&mut self, global: &GlobalConfig) {
-        println!("setting timeout to {}", global.network.timeout.value());
         match ClientBuilder::new()
             .timeout(global.network.timeout.value())
             .nodelay(global.network.nodelay)
@@ -41,14 +40,14 @@ impl HttpsClient {
             .import_cert(global.security.tls.import_cert.as_deref())
             .build() {
             Ok(c) => {
-                log::debug!("Updating https client");
+                log::debug!("\"Updating shared https client\"");
                 let mut locked = self.0.write().await;
                 let new = c.internal().await;
-                log::debug!("{:?}", new);
-                *locked = new
+                *locked = new;
+                log::debug!("\"Shared https client has been updated\"");
             },
             Err(e) => {
-                log::error!("\"Error generating new client: {}", e);
+                log::error!("\"Error generating new client: {}\"", e);
             }
         }
     }

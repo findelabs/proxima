@@ -23,7 +23,7 @@ pub struct ProxyRequest {
     pub query: Option<String>,
 }
 
-// Default endpoint connection timeout of 5 seconds
+// Default endpoint connection timeout of 60 seconds
 const TIMEOUT_DEFAULT: u64 = 60000;
 
 impl ProxyRequest {

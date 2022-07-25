@@ -222,8 +222,5 @@ pub async fn handler_404(
         &addr,
         &path_and_query,
     );
-    (
-        StatusCode::NOT_FOUND,
-        "{\"error_code\": 404, \"message\": \"HTTP 404 Not Found\"}",
-    )
+    StatusCode::NOT_FOUND
 }

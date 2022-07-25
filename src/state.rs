@@ -28,7 +28,7 @@ pub struct State {
     pub client: HttpsClient,
 }
 
-//// Let's have this instead create client and vault_client, and add config at a later point
+// Let's have this instead create client and vault_client, and add config at a later point
 //impl Default for State {
 //    fn default() -> Self {
 //        State {
@@ -39,16 +39,21 @@ pub struct State {
 //}
 
 impl State {
+    // This function is needed to establish the global HttpsClient used by both config to
+    // fetch remote configs, as well as the main proxy threads
+    pub async fn basic(opts: ArgMatches) -> Self {
+        let client = ClientBuilder::new()
+            .accept_invalid_hostnames(opts.is_present("insecure"))
+            .accept_invalid_certs(opts.is_present("insecure"))
+            .build().unwrap();
+
+        State {
+            client,
+            config: Config::default(),
+        }
+    }
+
     pub async fn build(&mut self, opts: ArgMatches) -> BoxResult<()> {
-//        // Set timeout
-//        let timeout: u64 = opts
-//            .value_of("timeout")
-//            .unwrap()
-//            .parse()
-//            .unwrap_or_else(|_| {
-//                eprintln!("Supplied timeout not in range, defaulting to 60");
-//                60
-//            });
 
         let config_auth = match opts.value_of("config_username") {
             Some(config_username) => {
@@ -87,27 +92,19 @@ impl State {
             false => None,
         };
 
-        let client = ClientBuilder::new()
-            .accept_invalid_hostnames(opts.is_present("insecure"))
-            .accept_invalid_certs(opts.is_present("insecure"))
-            .build()?;
-
         let config_location = opts.value_of("config").unwrap().to_owned();
         let mut config = config::Config::new(
             &config_location,
             config_auth.clone(),
             opts.is_present("username"),
-            client,
+            self.client.clone(),
             vault_client,
         );
 
-        // Get config
+        // Get config from file or remote source
         config.update().await?;
 
-        // Generate HttpsClient based on config
-        let https_client = config.create_https_client().await?;
-
-        self.client = https_client;
+        // Update config
         self.config = config;
 
         Ok(())
