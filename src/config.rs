@@ -15,7 +15,9 @@ use tokio::sync::RwLock;
 use url::Url;
 use vault_client_rs::client::Client as VaultClient;
 
+use crate::https::ClientBuilder;
 use crate::auth::server::ServerAuth;
+use crate::config_global::GlobalConfig;
 use crate::cache::Cache;
 use crate::error::Error as ProximaError;
 use crate::https::HttpsClient;
@@ -30,6 +32,8 @@ pub type ConfigMap = BTreeMap<String, Route>;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash, Default)]
 pub struct ConfigFile {
+    #[serde(default)]
+    pub global: GlobalConfig,
     pub routes: ConfigMap,
 }
 
@@ -159,14 +163,14 @@ impl Config {
         let last_read = self.last_read.read().await;
         let diff = Utc::now().timestamp() - *last_read;
         if diff >= 30 {
-            log::debug!("cache has expired, kicking off config reload");
+            log::debug!("\"Cache has expired, kicking off config reload\"");
             metrics::increment_counter!("proxima_config_renew_attempts_total");
             drop(last_read);
 
             // Kick off background thread to update config
             let mut me = self.clone();
             tokio::spawn(async move {
-                log::debug!("Kicking off background thread to reload config");
+                log::debug!("\"Kicking off background thread to reload config\"");
                 if let Err(e) = me.update().await {
                     log::error!("Error updating config: {}", e);
                     metrics::increment_counter!("proxima_config_renew_failures_total");
@@ -175,6 +179,22 @@ impl Config {
         } else {
             log::debug!("\"cache has not expired, current age is {} seconds\"", diff);
         }
+    }
+
+    #[allow(dead_code)]
+    pub async fn create_https_client(&self) -> Result<HttpsClient, ProximaError> {
+        let config = self.config_file().await;
+        let client = ClientBuilder::new()
+            .timeout(config.global.network.timeout.value())
+            .nodelay(config.global.network.nodelay)
+            .enforce_http(config.global.network.enforce_http)
+            .reuse_address(config.global.network.reuse_address)
+            .accept_invalid_hostnames(config.global.security.tls.accept_invalid_hostnames)
+            .accept_invalid_certs(config.global.security.tls.insecure)
+            .import_cert(config.global.security.tls.import_cert.as_deref())
+            .build()?;
+
+        Ok(client)
     }
 
     pub fn new(
@@ -186,6 +206,7 @@ impl Config {
     ) -> Config {
         Config {
             config_file: Arc::new(RwLock::new(ConfigFile {
+                global: GlobalConfig::default(),
                 routes: BTreeMap::new(),
             })),
             location: location.to_string(),
@@ -202,9 +223,9 @@ impl Config {
 
     pub async fn cache_get(&self, mut path: ProxyPath) -> Result<(Route, ProxyPath), ProximaError> {
         let path_str = path.path();
-        log::debug!("Starting cache_get for {}", &path_str);
+        log::debug!("\"Starting cache_get for {}\"", &path_str);
         if let Some(mapping) = self.mappings.get(path_str).await {
-            log::debug!("Found cached mapping for {}", &path_str);
+            log::debug!("\"Found cached mapping for {}\"", &path_str);
 
             if let Some(endpoint) = self.cache.get(&mapping).await {
                 log::debug!("Found cache entry for {}", &mapping);
@@ -239,7 +260,12 @@ impl Config {
         if path.next_hop().is_some() {
             path.next()?;
         } else {
-            return Ok((Route::ConfigMap(Box::new(config)), path));
+            // If hide_folders is true, return back 403
+            if self.config_file().await.global.security.config.hide_folders {
+                return Err(ProximaError::Forbidden)
+            } else {
+                return Ok((Route::ConfigMap(Box::new(config)), path))
+            }
         };
 
         // Check if cache contains endpoint
@@ -467,6 +493,9 @@ impl Config {
             let mut config_file = self.config_file.write().await;
             let mut hash = self.hash.write().await;
             self.cache.clear().await;
+
+            // Update https_client live
+            self.https_client.reconfigure(&new_config.global).await;
 
             *config_file = new_config;
             *hash = new_config_hash;

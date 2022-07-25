@@ -32,7 +32,7 @@ impl<'a, T: std::clone::Clone + std::fmt::Display> Cache<T> {
     }
 
     pub async fn clear(&mut self) {
-        log::debug!("Clearing cache");
+        log::debug!("\"Clearing cache\"");
         let mut cache = self.cache.write().await;
         cache.clear();
     }

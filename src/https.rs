@@ -5,18 +5,51 @@ use hyper::Request;
 use hyper::Response;
 use hyper_tls::HttpsConnector;
 use native_tls::{Certificate, TlsConnector};
-use std::error::Error;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+
+use crate::error::Error as ProximaError;
+use crate::config_global::GlobalConfig;
 
 //pub type Client = hyper::client::Client<HttpsConnector<HttpConnector>, Body>;
-type BoxResult<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
+//type BoxResult<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 #[derive(Debug, Clone)]
-pub struct HttpsClient(hyper::client::Client<HttpsConnector<HttpConnector>, Body>);
+pub struct HttpsClient(Arc<RwLock<hyper::client::Client<HttpsConnector<HttpConnector>, Body>>>);
 
 impl HttpsClient {
     pub async fn request(&self, req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
-        let Self(internal) = self;
-        internal.request(req).await
+        let locked = self.0.read().await;
+        locked.request(req).await
+    }
+
+    // This should only be ran against a new HttpsClient
+    pub async fn internal(self) -> hyper::client::Client<HttpsConnector<HttpConnector>, Body> {
+        let rwlock = Arc::try_unwrap(self.0).expect("Unable to unwrap Arc");
+        rwlock.into_inner()
+    }
+
+    pub async fn reconfigure(&mut self, global: &GlobalConfig) {
+        match ClientBuilder::new()
+            .timeout(global.network.timeout.value())
+            .nodelay(global.network.nodelay)
+            .enforce_http(global.network.enforce_http)
+            .reuse_address(global.network.reuse_address)
+            .accept_invalid_hostnames(global.security.tls.accept_invalid_hostnames)
+            .accept_invalid_certs(global.security.tls.insecure)
+            .import_cert(global.security.tls.import_cert.as_deref())
+            .build() {
+            Ok(c) => {
+                log::debug!("\"Updating shared https client\"");
+                let mut locked = self.0.write().await;
+                let new = c.internal().await;
+                *locked = new;
+                log::debug!("\"Shared https client has been updated\"");
+            },
+            Err(e) => {
+                log::error!("\"Error generating new client: {}\"", e);
+            }
+        }
     }
 }
 
@@ -89,7 +122,7 @@ impl<'a> ClientBuilder<'a> {
         self.config.import_cert = arg;
         self
     }
-    pub fn build(&mut self) -> BoxResult<HttpsClient> {
+    pub fn build(&mut self) -> Result<HttpsClient, ProximaError> {
         let tls_connector = match self.config.import_cert {
             Some(path) => {
                 let cert = &std::fs::read(path).expect("Failed reading in root cert");
@@ -121,7 +154,7 @@ impl<'a> ClientBuilder<'a> {
         let https: hyper_tls::HttpsConnector<hyper::client::HttpConnector> =
             hyper_tls::HttpsConnector::from((http, tls_connector.into()));
         Ok(HttpsClient(
-            hyper::Client::builder().build::<_, hyper::Body>(https),
+            Arc::new(RwLock::new(hyper::Client::builder().build::<_, hyper::Body>(https))),
         ))
     }
 }
