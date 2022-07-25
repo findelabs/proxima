@@ -40,15 +40,15 @@ pub struct State {
 
 impl State {
     pub async fn build(&mut self, opts: ArgMatches) -> BoxResult<()> {
-        // Set timeout
-        let timeout: u64 = opts
-            .value_of("timeout")
-            .unwrap()
-            .parse()
-            .unwrap_or_else(|_| {
-                eprintln!("Supplied timeout not in range, defaulting to 60");
-                60
-            });
+//        // Set timeout
+//        let timeout: u64 = opts
+//            .value_of("timeout")
+//            .unwrap()
+//            .parse()
+//            .unwrap_or_else(|_| {
+//                eprintln!("Supplied timeout not in range, defaulting to 60");
+//                60
+//            });
 
         let config_auth = match opts.value_of("config_username") {
             Some(config_username) => {
@@ -88,13 +88,8 @@ impl State {
         };
 
         let client = ClientBuilder::new()
-            .timeout(timeout)
-            .nodelay(opts.is_present("set_nodelay"))
-            .enforce_http(opts.is_present("enforce_http"))
-            .reuse_address(opts.is_present("set_reuse_address"))
-            .accept_invalid_hostnames(opts.is_present("accept_invalid_hostnames"))
-            .accept_invalid_certs(opts.is_present("accept_invalid_certs"))
-            .import_cert(opts.value_of("import_cert"))
+            .accept_invalid_hostnames(opts.is_present("insecure"))
+            .accept_invalid_certs(opts.is_present("insecure"))
             .build()?;
 
         let config_location = opts.value_of("config").unwrap().to_owned();
@@ -102,12 +97,17 @@ impl State {
             &config_location,
             config_auth.clone(),
             opts.is_present("username"),
-            client.clone(),
+            client,
             vault_client,
         );
+
+        // Get config
         config.update().await?;
 
-        self.client = client;
+        // Generate HttpsClient based on config
+        let https_client = config.create_https_client().await?;
+
+        self.client = https_client;
         self.config = config;
 
         Ok(())

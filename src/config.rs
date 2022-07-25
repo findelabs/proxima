@@ -15,7 +15,9 @@ use tokio::sync::RwLock;
 use url::Url;
 use vault_client_rs::client::Client as VaultClient;
 
+use crate::https::ClientBuilder;
 use crate::auth::server::ServerAuth;
+use crate::config_global::GlobalConfig;
 use crate::cache::Cache;
 use crate::error::Error as ProximaError;
 use crate::https::HttpsClient;
@@ -30,6 +32,7 @@ pub type ConfigMap = BTreeMap<String, Route>;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash, Default)]
 pub struct ConfigFile {
+    pub global: GlobalConfig,
     pub routes: ConfigMap,
 }
 
@@ -177,6 +180,21 @@ impl Config {
         }
     }
 
+    pub async fn create_https_client(&self) -> Result<HttpsClient, ProximaError> {
+        let config = self.config_file().await;
+        let client = ClientBuilder::new()
+            .timeout(config.global.network.timeout.value())
+            .nodelay(config.global.network.nodelay)
+            .enforce_http(config.global.network.enforce_http)
+            .reuse_address(config.global.network.reuse_address)
+            .accept_invalid_hostnames(config.global.security.tls.accept_invalid_hostnames)
+            .accept_invalid_certs(config.global.security.tls.insecure)
+            .import_cert(config.global.security.tls.import_cert.as_deref())
+            .build()?;
+
+        Ok(client)
+    }
+
     pub fn new(
         location: &str,
         config_authentication: Option<ServerAuth>,
@@ -186,6 +204,7 @@ impl Config {
     ) -> Config {
         Config {
             config_file: Arc::new(RwLock::new(ConfigFile {
+                global: GlobalConfig::default(),
                 routes: BTreeMap::new(),
             })),
             location: location.to_string(),
@@ -467,6 +486,9 @@ impl Config {
             let mut config_file = self.config_file.write().await;
             let mut hash = self.hash.write().await;
             self.cache.clear().await;
+
+            // Update https_client live
+            self.https_client.reconfigure(&new_config.global).await;
 
             *config_file = new_config;
             *hash = new_config_hash;

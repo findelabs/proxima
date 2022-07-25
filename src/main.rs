@@ -26,6 +26,7 @@ mod security;
 mod state;
 mod urls;
 mod vault;
+mod config_global;
 
 use crate::metrics::{setup_metrics_recorder, track_metrics};
 use handlers::{
@@ -58,15 +59,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .default_value("8081")
                 .takes_value(true),
         )
-        .arg(
-            Arg::new("timeout")
-                .short('t')
-                .long("timeout")
-                .help("Set default global timeout")
-                .default_value("60")
-                .env("PROXIMA_TIMEOUT")
-                .takes_value(true),
-        )
+//        .arg(
+//            Arg::new("timeout")
+//                .short('t')
+//                .long("timeout")
+//                .help("Set default global timeout")
+//                .default_value("60")
+//                .env("PROXIMA_TIMEOUT")
+//                .takes_value(true),
+//        )
         .arg(
             Arg::new("config_username")
                 .short('u')
@@ -98,6 +99,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .long("nodelay")
                 .required(false)
                 .help("Set socket nodelay")
+                .takes_value(false),
+        )
+        .arg(
+            Arg::new("insecure")
+                .long("insecure")
+                .required(false)
+                .help("Accept insecure https config")
                 .takes_value(false),
         )
         .arg(

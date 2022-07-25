@@ -39,6 +39,7 @@ pub enum Error {
     DecodeError(base64::DecodeError),
     UtfError(std::str::Utf8Error),
     VaultError(VaultError),
+    TlsError(native_tls::Error)
 }
 
 impl std::error::Error for Error {}
@@ -78,6 +79,7 @@ impl fmt::Display for Error {
             Error::DecodeError(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::UtfError(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::VaultError(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
+            Error::TlsError(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
         }
     }
 }
@@ -185,5 +187,11 @@ impl From<std::str::Utf8Error> for Error {
 impl From<VaultError> for Error {
     fn from(err: VaultError) -> Error {
         Error::VaultError(err)
+    }
+}
+
+impl From<native_tls::Error> for Error {
+    fn from(err: native_tls::Error) -> Error {
+        Error::TlsError(err)
     }
 }

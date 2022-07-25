@@ -87,7 +87,7 @@ impl ProxyRequest {
 
         match tokio::time::timeout(
             Duration::from_millis(timeout),
-            self.client.clone().request(req),
+            self.client.request(req),
         )
         .await
         {
