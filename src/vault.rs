@@ -48,12 +48,12 @@ impl Vault {
             let secret_path = format!("{}{}", self.secret, &key_str);
 
             let cache_path = format!("{}/{}", cache_prefix, key_str);
-            log::debug!("Attempting to get {} from cache", &cache_path);
+            log::debug!("\"Attempting to get {} from cache\"", &cache_path);
 
             // Attempt to find key in cache, before pulling from vault
             match cache.get(&cache_path).await {
                 Some(endpoint) => {
-                    log::debug!("Found {} in cache", &cache_path);
+                    log::debug!("\"Found {} in cache\"", &cache_path);
                     map.insert(
                         key_str.to_string(),
                         Route::Endpoint(Endpoint::Proxy(endpoint)),
@@ -63,7 +63,7 @@ impl Vault {
                     let secret = match vault.get(&secret_path).await {
                         Ok(s) => s,
                         Err(e) => {
-                            log::error!("Error getting secret {}: {}", &secret_path, e);
+                            log::error!("\"Error getting secret {}: {}\"", &secret_path, e);
                             continue;
                         }
                     };
@@ -77,7 +77,7 @@ impl Vault {
                             map.insert(key_str.to_string(), route);
                         }
                         Err(e) => {
-                            log::error!("Error generating template: {}", e);
+                            log::error!("\"Error generating template: {}\"", e);
                             continue;
                         }
                     }
@@ -93,7 +93,7 @@ impl Vault {
         match self.template(secret.data().await).await {
             Ok(templated) => Ok(templated),
             Err(e) => {
-                log::error!("Error generating template: {}", e);
+                log::error!("\"Error generating template: {}\"", e);
                 Err(e)
             }
         }
@@ -104,7 +104,7 @@ impl Vault {
         if let Some(_template) = &self.template {
             let handlebars = self.handlebars().await?;
             let output = handlebars.render("secret", &secret)?;
-            log::debug!("Rendered string: {}", &output);
+            log::debug!("\"Rendered string: {}\"", &output);
             let v: Route = serde_json::from_str(&output)?;
             Ok(v)
         } else {
