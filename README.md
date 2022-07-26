@@ -12,7 +12,7 @@ Proxima is configured via a simple yaml file, which specifies all routes and sub
 
 A Proxima endpoint is great at handling client security, to include authentication and method whitelisting. The security field allows for multiple types of client authentication on a single endpoint, including basic, digest, bearer, and JWT via JWKS.
 
-Each endpoint can also authenticate users against the remote URL specified. This is great for masking authentication to remote API's requiring API keys. Using Proxima, you can use a single API key to authenticate to a remote endpoint, yet still requiring unique credentials for internal clients. An example of this is below:
+Each endpoint can also authenticate users against the remote URL specified. This is great for masking authentication to remote API's requiring API keys. Using Proxima, you can use a single API key to authenticate to a remote endpoint, yet still requiring unique credentials for internal clients. An example of this is below, and more security options are shown under the examples directory:
 
 ```
 routes:
@@ -35,10 +35,26 @@ routes:
       basic:
         username: imkcdads
         password: s.cdanjfiewionkacnklcdaslcds
-
 ```
 
-More security options are shown under the examples directory.
+The `global` field is used to specify many options regarding security and network configurations. Please note that all booleans default to false.
+
+```yaml
+global:
+  network:
+    timeout: u64        # default 5000
+    nodelay: bool
+    reuse_address: bool
+    enforce_http: bool
+  security:
+    tls:
+      accept_invalid_hostnames: bool
+      insecure: bool
+      import_cert: Option<String>
+    config:
+      hide_folders: bool
+```
+
 
 ### Proxima Usage
 ```
