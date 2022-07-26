@@ -66,23 +66,14 @@ USAGE:
     proxima [OPTIONS] --config <config>
 
 OPTIONS:
-        --accept_invalid_certs        Accept invalid remote certificates
-        --accept_invalid_hostnames    Accept invalid remote hostnames
     -c, --config                      Config file [env: PROXIMA_CONFIG=] 
         --config_password             Set required password for config endpoint [env: PROXIMA_AUTH_PASSWORD=]
-        --enforce_http                Enforce http protocol for remote endpoints
+    -u, --config_username             Set required username for config endpoint [env: PROXIMA_AUTH_USERNAME=]
     -h, --help                        Print help information
-        --import_cert                 Import CA certificate [env: PROXIMA_IMPORT_CERT=]
-        --jwt_path                    JWT path [env: JWT_PATH=]
-        --nodelay                     Set socket nodelay
     -p, --port                        Set port to listen on [env: PROXIMA_LISTEN_PORT=] [default: 8080]
     -P, --api_port                    Set API port to listen on [env: PROXIMA_API_LISTEN_PORT=] [default: 8081]
-        --password                    Set required client password [env: PROXIMA_CLIENT_PASSWORD=]
-        --reuse_address               Enable socket reuse
-    -t, --timeout                     Set default global timeout [env: PROXIMA_TIMEOUT=] [default: 60]
-    -u, --config_username             Set required username for config endpoint [env: PROXIMA_AUTH_USERNAME=]
-        --username                    Set required client username [env: PROXIMA_CLIENT_USERNAME=]
     -V, --version                     Print version information
+        --jwt_path                    JWT path [env: JWT_PATH=]
         --vault_kubernetes_role       Vault kubernetes role [env: VAULT_KUBERNETES_ROLE=]
         --vault_login_path            Vault login path [env: VAULT_LOGIN_PATH=]
         --vault_mount                 Vault engine mount path [env: VAULT_MOUNT=]
