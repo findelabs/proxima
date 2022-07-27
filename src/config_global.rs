@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use crate::security::Whitelist;
 //use serde_json::{json, Map, Value};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Hash)]
@@ -31,7 +32,9 @@ pub struct GlobalConfigSecurity {
     #[serde(default)]
     pub tls: GlobalConfigSecurityTls,
     #[serde(default)]
-    pub config: GlobalConfigSecurityConfig
+    pub config: GlobalConfigSecurityConfig,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub whitelist: Option<Whitelist> 
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Hash)]
