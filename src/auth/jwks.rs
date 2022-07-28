@@ -193,21 +193,21 @@ impl JwksAuth {
         let last_read = self.last_read.lock().expect("Error getting last_read");
         let diff = Utc::now().timestamp() - *last_read;
         if diff >= 360 {
-            log::debug!("jwts has expired, kicking off job to get keys");
-            metrics::increment_counter!("proxima_jwts_renew_attempts_total");
+            log::debug!("jwks has expired, kicking off job to get keys");
+            metrics::increment_counter!("proxima_jwks_renew_attempts_total");
             drop(last_read);
 
             // Kick off background thread to update config
             let me = self.clone();
             tokio::spawn(async move {
-                log::debug!("Kicking off background thread to renew jwts");
+                log::debug!("Kicking off background thread to renew jwks");
                 if let Err(e) = me.get_keys().await {
-                    log::error!("Error gettings updated jwts: {}", e);
-                    metrics::increment_counter!("proxima_jwts_renew_failures_total");
+                    log::error!("Error gettings updated jwks: {}", e);
+                    metrics::increment_counter!("proxima_jwks_renew_failures_total");
                 }
             });
         } else {
-            log::debug!("\"jwts has not expired, current age is {} seconds\"", diff);
+            log::debug!("\"jwks has not expired, current age is {} seconds\"", diff);
         }
     }
 

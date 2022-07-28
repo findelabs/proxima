@@ -6,3 +6,4 @@ pub mod bearer;
 pub mod digest;
 pub mod server;
 pub mod traits;
+pub mod jwt;
