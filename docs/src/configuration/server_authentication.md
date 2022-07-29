@@ -1,6 +1,6 @@
-# Remote URL Authentication
+# Remote Server Authentication
 
-Proxima can both connect to remote endpoints using the following authentication methods:
+Proxima can both connect to remote URL's using the following authentication methods:
 
 - Basic  
 - Bearer  
