@@ -279,6 +279,11 @@ impl State {
                         Endpoint::Static(endpoint) => {
                             log::debug!("Found static entry");
 
+                            // If there is a global whitelist
+                            if let Some(whitelist) = self.config.config_file().await.global.security.whitelist {
+                                whitelist.authorize(&method, &client_addr)?
+                            }
+
                             // Authorize client, and check for client whitelist
                             endpoint.auth(&request_headers, &method, &client).await?;
 

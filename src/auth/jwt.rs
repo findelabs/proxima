@@ -39,7 +39,7 @@ pub struct JwtAuth {
 #[warn(non_camel_case_types)]
 pub struct JwtQueries {
     audience: String,
-//    scopes: Vec<String>,
+    scopes: String,
     client_id: String,
     client_secret: String,
     grant_type: String
@@ -81,7 +81,7 @@ impl JwtAuth {
 
         let jwt_queries = JwtQueries {
             audience: self.audience.clone(),
-//            scopes: self.scopes.clone(),
+            scopes: self.scopes.join(","),
             client_id: self.client_id.clone(),
             client_secret: self.client_secret.clone(),
             grant_type: self.grant_type.clone()
