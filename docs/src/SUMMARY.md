@@ -15,7 +15,7 @@
   - [Endpoint Options](./configuration/options.md)
     - [Request Timeouts](./configuration/timeouts.md)
     - [URL Failover](./configuration/urlfailover.md)
-    - [Authentication](./configuration/server_authentication.md)
+    - [Remote Auth](./configuration/server_authentication.md)
     - [Endpoint Security](./configuration/security/index.md)
       - [Method](./configuration/security/methods.md)
       - [Network](./configuration/security/networks.md)
