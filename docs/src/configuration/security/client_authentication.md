@@ -48,3 +48,39 @@ routes:
 
 With this configuration, after a user generates a token via the Okta /token endpoint, include said token field in the Authorization header of the request to Proxima.
 
+#### Client Bearer Configuration
+
+Proxima can authenticate user's token as well, by using the token client security type.
+
+Here is an example on how to configure an endpoint with bearer client authentication:
+
+```yaml
+routes:
+  endpoint_test:
+    proxy:
+      url: http://myurl.net
+      security:
+        client:
+          bearer:
+          - token: s.YWQ5MWY2N2RiMTE1ZjNhZDdkOTFiOGZl
+```
+
+#### Client API Key Configuration
+
+Proxima can also authenticate users based on a specified header's value. The default header name is set to `x-api-key`, but this name can be set to any arbitrary value.
+
+Here is an example on how to configure an endpoint with api_key client authentication:
+
+```yaml
+routes:
+  endpoint_test:
+    proxy:
+      url: http://myurl.net
+      security:
+        client:
+          api_key:
+          - token: s.YWQ5MWY2N2RiMTE1ZjNhZDdkOTFiOGZl
+          - token: s.NDQ4YzIzNzA0OWI4YmU1MjVkN2M4ZDZi
+            key: api-key
+```
+
