@@ -9,6 +9,7 @@ use crate::auth::api_key;
 use crate::auth::basic;
 use crate::auth::bearer;
 use crate::auth::digest;
+use crate::auth::jwt;
 use crate::error::Error as ProximaError;
 use crate::https::ClientBuilder;
 
@@ -23,6 +24,8 @@ pub enum ServerAuth {
     digest(digest::DigestAuth),
     #[allow(non_camel_case_types)]
     api_key(api_key::ApiKeyAuth),
+    #[allow(non_camel_case_types)]
+    jwt(jwt::JwtAuth),
 }
 
 impl<'a> ServerAuth {
@@ -43,6 +46,19 @@ impl<'a> ServerAuth {
                     }
                 };
                 headers.insert(AUTHORIZATION, header_basic_auth);
+                Ok(headers)
+            }
+            ServerAuth::jwt(auth) => {
+                log::debug!("\"Generating JWT Bearer auth headers\"");
+                let bearer_auth = format!("Bearer {}", auth.token().await?);
+                let header_bearer_auth = match HeaderValue::from_str(&bearer_auth) {
+                    Ok(a) => a,
+                    Err(e) => {
+                        log::error!("{{\"error\":\"{}\"", e);
+                        return Err(ProximaError::BadToken);
+                    }
+                };
+                headers.insert(AUTHORIZATION, header_bearer_auth);
                 Ok(headers)
             }
             ServerAuth::bearer(auth) => {
