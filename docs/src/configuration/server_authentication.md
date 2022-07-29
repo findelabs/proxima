@@ -5,6 +5,8 @@ Proxima can both connect to remote endpoints using the following authentication 
 - Basic  
 - Bearer  
 - Digest
+- API Key
+- JWT
 
 If a remote endpoint requires authentication, for example, Basic authentication, simply specify a new authentication field within the endpoint yaml:
 
@@ -19,9 +21,9 @@ routes:
           password: mypassword
 ```
 
-Proxima currently supports Basic and Digest for username/password authentication, as well as Bearer token authentication. 
-
 Here are some examples on how to specify each of these authentication types, for an endpoint. Keep in mind that the authentication block only supports one type of authentication for an endpoint:
+
+#### Basic
 
 ```yaml
 routes:
@@ -29,15 +31,64 @@ routes:
     proxy:
       url: http://myurl.net
     authentication:
-      basic:                  # Authenticate with remote endpoint with Basic or
-      - username: client
+      basic:
+        username: client
         password: mypassword
-      # or
-      digest:                 # Authenticate with remote endpoint with Digest or
-      - username: client
+```
+
+#### Digest
+
+```yaml
+routes:
+  endpoint_test:
+    proxy:
+      url: http://myurl.net
+    authentication:
+      digest:
+        username: client
         password: mypassword
-      # or
-      bearer:                 # Authenticate with remote endpoint with Token
-      - token: Y2Rhc2Nkc2NkYXNjc2QK
+```
+
+#### Bearer
+
+```yaml
+routes:
+  endpoint_test:
+    proxy:
+      url: http://myurl.net
+    authentication:
+      bearer:
+        token: s.Y2Rhc2Nkc2NkYXNjc2QK
+```
+
+#### API Key
+
+```yaml
+routes:
+  endpoint_test:
+    proxy:
+      url: http://myurl.net
+    authentication:
+      api_key:
+        token: s.Y2Rhc2Nkc2NkYXNjc2QK
+        key: api-key
+```
+
+#### JWT
+
+```yaml
+routes:
+  endpoint_test:
+    proxy:
+      url: http://myurl.net
+    authentication:
+      jwt:
+        url: https://dev-8177876213.okta.com/oauth2/default/v1/token
+        audience: 0oa4cdaknkn866cdacd
+        client_id: njcda8981cds
+        client_secret: s.Y2Rhc2Nkc2NkYXNjc2QK
+        grant_type: client_credentials
+        scopes: 
+        - default
 ```
 
