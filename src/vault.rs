@@ -17,6 +17,7 @@ use crate::path::ProxyPath;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Vault {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub template: Option<String>,
     pub secret: String,
 }
