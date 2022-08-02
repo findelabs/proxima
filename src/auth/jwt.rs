@@ -81,7 +81,7 @@ impl JwtAuth {
 
         let jwt_queries = JwtQueries {
             audience: self.audience.clone(),
-            scopes: self.scopes.join(","),
+            scopes: self.scopes.join("+"),
             client_id: self.client_id.clone(),
             client_secret: self.client_secret.clone(),
             grant_type: self.grant_type.clone()
