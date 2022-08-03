@@ -34,9 +34,11 @@ impl ProxyRequest {
     ) -> Result<Response<Body>, ProximaError> {
         // This needs to be done as urls with paths do not end with a forward slash,
         // but urls with no paths do
-        let seperator = match url.path() {
-            "/" => "",
-            _ => "/",
+        let seperator = match (url.path(), self.path.suffix().as_str()) {
+            ("/", "") => "",
+            ("/", _) => "",
+            (_, "") => "",
+            (_,_) => "/",
         };
 
         let host_and_path = format!(
