@@ -14,6 +14,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use url::Url;
 use vault_client_rs::client::Client as VaultClient;
+use hyper::HeaderMap;
+use hyper::header::{HeaderValue, HeaderName};
 
 use crate::https::ClientBuilder;
 use crate::auth::server::ServerAuth;
@@ -76,6 +78,7 @@ pub struct Static {
     pub body: String,
     #[serde(skip_serializing_if = "display_security")]
     pub security: Option<Security>,
+    pub headers: Option<Headers>
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -112,6 +115,17 @@ pub enum Endpoint {
     Redirect(Redirect),
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+#[serde(deny_unknown_fields)]
+pub struct Header {
+    pub name: String,
+    pub value: String
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+#[serde(deny_unknown_fields)]
+pub struct Headers(Vec<Header>);
+
 impl EndpointSecurity for Proxy {
     fn security(&self) -> Option<&Security> {
         self.security.as_ref()
@@ -132,6 +146,18 @@ impl fmt::Display for Proxy {
         // operation succeeded or failed. Note that `write!` uses syntax which
         // is very similar to `println!`.
         write!(f, "{}", self.url)
+    }
+}
+
+impl Headers {
+    pub fn insert_headers(&self, map: &mut HeaderMap) -> Result<(), ProximaError>{ 
+        for header in &self.0 {
+            log::debug!("Inserting {} into map", header.name);
+            let name = HeaderName::from_lowercase(header.name.to_lowercase().as_bytes())?;
+            let value = HeaderValue::from_str(&header.value)?;
+            map.insert(name, value);
+        }
+        Ok(())
     }
 }
 

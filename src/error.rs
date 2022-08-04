@@ -39,7 +39,9 @@ pub enum Error {
     DecodeError(base64::DecodeError),
     UtfError(std::str::Utf8Error),
     VaultError(VaultError),
-    TlsError(native_tls::Error)
+    TlsError(native_tls::Error),
+    InvalidHeaderName(http::header::InvalidHeaderName),
+    InvalidHeaderValue(http::header::InvalidHeaderValue)
 }
 
 impl std::error::Error for Error {}
@@ -80,6 +82,8 @@ impl fmt::Display for Error {
             Error::UtfError(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::VaultError(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
             Error::TlsError(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
+            Error::InvalidHeaderName(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
+            Error::InvalidHeaderValue(ref err) => write!(f, "{{\"error\": \"{}\"}}", err),
         }
     }
 }
@@ -193,5 +197,17 @@ impl From<VaultError> for Error {
 impl From<native_tls::Error> for Error {
     fn from(err: native_tls::Error) -> Error {
         Error::TlsError(err)
+    }
+}
+
+impl From<http::header::InvalidHeaderValue> for Error {
+    fn from(err: http::header::InvalidHeaderValue) -> Error {
+        Error::InvalidHeaderValue(err)
+    }
+}
+
+impl From<http::header::InvalidHeaderName> for Error {
+    fn from(err: http::header::InvalidHeaderName) -> Error {
+        Error::InvalidHeaderName(err)
     }
 }

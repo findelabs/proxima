@@ -1231,7 +1231,7 @@ dependencies = [
 
 [[package]]
 name = "proxima"
-version = "0.8.0"
+version = "0.8.4"
 dependencies = [
  "async-recursion",
  "async-trait",
@@ -1242,6 +1242,7 @@ dependencies = [
  "digest_auth",
  "env_logger",
  "handlebars",
+ "http",
  "hyper",
  "hyper-tls",
  "ipnetwork",

@@ -135,44 +135,6 @@ impl State {
         }
     }
 
-    //    pub async fn authorize_whitelist<T: EndpointSecurity> (
-    //        &mut self,
-    //        endpoint: &T,
-    //        method: &Method,
-    //        client_addr: &SocketAddr,
-    //    ) -> Result<(), ProximaError> {
-    //        // If endpoint has a method whitelock, verify
-    //        if let Some(ref security) = endpoint.security() {
-    //            if let Some(ref whitelist) = security.whitelist {
-    //                log::debug!("Found whitelist");
-    //                whitelist.authorize(method, client_addr)?
-    //            }
-    //        }
-    //        Ok(())
-    //    }
-    //
-    //    pub async fn authenticate_client<T: EndpointSecurity> (
-    //        &mut self,
-    //        endpoint: &Proxy,
-    //        headers: &HeaderMap,
-    //        method: &Method,
-    //        client_addr: &SocketAddr,
-    //    ) -> Result<(), ProximaError> {
-    //        // If endpoint is locked down, verify credentials
-    //        if let Some(ref security) = endpoint.security {
-    //            if let Some(ref clientlist) = security.client {
-    //                log::debug!("Proxy is locked");
-    //                match self.config.global_authentication {
-    //                    true => {
-    //                        log::error!("Proxy is locked, but proxima is using global authentication");
-    //                    }
-    //                    false => clientlist.authorize(headers, method, client_addr).await?,
-    //                }
-    //            }
-    //        }
-    //        Ok(())
-    //    }
-
     pub async fn response(
         &mut self,
         method: Method,
@@ -287,10 +249,18 @@ impl State {
                             // Authorize client, and check for client whitelist
                             endpoint.auth(&request_headers, &method, &client).await?;
 
-                            Ok(Response::builder()
+                            let mut response = Response::builder()
                                 .status(StatusCode::OK)
                                 .body(Body::from(endpoint.body))
-                                .unwrap())
+                                .unwrap();
+                            
+                            if let Some(headers) = endpoint.headers {
+                                let headermap = response.headers_mut();
+                                headers.insert_headers(headermap)?;
+                            };
+
+                            Ok(response)
+
                         }
                         Endpoint::Redirect(endpoint) => {
                             log::debug!("Found redirect entry");
