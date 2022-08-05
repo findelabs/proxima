@@ -65,9 +65,21 @@ impl ProxyRequest {
             .body(self.body)
             .expect("request builder");
 
-        // Remove HOST and USER_AGENT headers
-        self.request_headers.remove(hyper::header::HOST);
-        self.request_headers.remove(hyper::header::USER_AGENT);
+        // Apply changes to headers based on config
+        if let Some(config) = self.endpoint.config {
+            if !config.preserve_host_header {
+                log::debug!("\"Removing client HOST/USER_AGENT headers\"");
+                // Remove HOST and USER_AGENT headers
+                self.request_headers.remove(hyper::header::HOST);
+                self.request_headers.remove(hyper::header::USER_AGENT);
+            };
+        } else {
+            // Apply all default changes to headers
+            // Remove HOST and USER_AGENT headers
+            log::debug!("\"Removing client HOST/USER_AGENT headers\"");
+            self.request_headers.remove(hyper::header::HOST);
+            self.request_headers.remove(hyper::header::USER_AGENT);
+        }
 
         // Add x-forwarded-prefix
         let header = HeaderValue::from_str(self.path.path()).unwrap();

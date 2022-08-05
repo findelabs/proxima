@@ -92,6 +92,15 @@ pub struct Proxy {
     pub timeout: Option<u64>,
     #[serde(skip_serializing_if = "display_security")]
     pub security: Option<Security>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub config: Option<ProxyConfig>
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Hash)]
+#[serde(deny_unknown_fields)]
+pub struct ProxyConfig {
+    #[serde(default)]
+    pub preserve_host_header: bool
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
