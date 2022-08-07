@@ -10,6 +10,7 @@ use serde_json::Value;
 use std::error::Error;
 use std::net::SocketAddr;
 
+use crate::config::ConfigFile;
 use crate::auth::{basic::BasicAuth, server::ServerAuth};
 use crate::config;
 use crate::config::{Config, Endpoint, Route};
@@ -110,9 +111,9 @@ impl State {
         Ok(())
     }
 
-    pub async fn config(&mut self) -> Value {
+    pub async fn config(&mut self) -> ConfigFile {
         let _ = self.config.update().await;
-        json!(self.config.config_file().await)
+        self.config.config_file().await
     }
 
     pub async fn cache_get(&mut self) -> Value {

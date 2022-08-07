@@ -31,7 +31,7 @@ mod config_global;
 use crate::metrics::{setup_metrics_recorder, track_metrics};
 use handlers::{
     cache_delete, cache_get, config, echo, handler_404, health, mappings_get, metrics, proxy,
-    reload, 
+    reload, routes
 };
 use state::State;
 
@@ -201,6 +201,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     // API Routes
     let api = Router::new()
         .route("/config", get(config))
+        .route("/routes", get(routes))
         .route("/reload", post(reload))
         .route("/cache", get(cache_get).delete(cache_delete))
         .route("/mappings", get(mappings_get))

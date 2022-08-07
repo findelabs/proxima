@@ -106,7 +106,6 @@ pub async fn proxy(
         },
         Err(e) => Err(e)
     }
-    
 }
 
 pub async fn reload(
@@ -132,7 +131,20 @@ pub async fn config(
         &method,
         &addr,
     );
-    Json(state.config().await)
+    Json(json!(state.config().await.global))
+}
+
+pub async fn routes(
+    Extension(mut state): Extension<State>,
+    RequestMethod(method): RequestMethod,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+) -> Json<Value> {
+    log::debug!(
+        "{{\"fn\": \"routes\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/routes\"}}",
+        &method,
+        &addr,
+    );
+    Json(json!(state.config().await.routes))
 }
 
 pub async fn mappings_get(
