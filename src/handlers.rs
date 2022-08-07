@@ -62,8 +62,8 @@ pub async fn proxy(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Result<Response<Body>, ProximaError> {
 
-    // Check for forwarded by
-    let forwarded_by = if let Some(x_forwarded) = all_headers.get("x-forwarded-for") {
+    // Check for forwarded for
+    let forwarded_for = if let Some(x_forwarded) = all_headers.get("x-forwarded-for") {
         x_forwarded.to_str().unwrap_or("error").to_owned()
     } else if let Some(forwarded) = all_headers.get(FORWARDED) {
         forwarded.to_str().unwrap_or("error").to_owned()
@@ -79,12 +79,12 @@ pub async fn proxy(
         .to_owned();
 
     log::debug!(
-        "{{\"type\": \"incoming connection\", \"method\": \"{}\", \"path\":\"{}\", \"query\": \"{}\", \"addr\":\"{}\", \"forwarded_by\": \"{}\", \"user_agent\":\"{}\"}}",
+        "{{\"type\": \"incoming connection\", \"method\": \"{}\", \"path\":\"{}\", \"query\": \"{}\", \"addr\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\":\"{}\"}}",
         &method.as_str(),
         &path.path(),
         query.clone().unwrap_or_else(|| "none".to_string()),
         &addr,
-        forwarded_by,
+        forwarded_for,
         user_agent
     );
 
@@ -93,12 +93,12 @@ pub async fn proxy(
         .await {
         Ok(s) => {
             log::info!(
-                "{{\"type\": \"response\", \"method\": \"{}\", \"path\":\"{}\", \"query\": \"{}\", \"addr\":\"{}\", \"forwarded_by\": \"{}\", \"user_agent\": \"{}\", \"status\":\"{}\"}}",
+                "{{\"type\": \"response\", \"method\": \"{}\", \"path\":\"{}\", \"query\": \"{}\", \"addr\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\", \"status\":\"{}\"}}",
                 &method.as_str(),
                 &path.path(),
                 query.clone().unwrap_or_else(|| "none".to_string()),
                 &addr,
-                forwarded_by,
+                forwarded_for,
                 user_agent,
                 s.status()
             );
