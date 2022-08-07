@@ -12,6 +12,8 @@ use log::LevelFilter;
 use std::io::Write;
 use std::net::SocketAddr;
 use tower_http::trace::TraceLayer;
+use tower::limit::ConcurrencyLimitLayer;
+
 
 mod auth;
 mod cache;
@@ -91,6 +93,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 .required(false)
                 .help("Accept insecure https config")
                 .takes_value(false),
+        )
+        .arg(
+            Arg::new("concurrent")
+                .long("concurrent")
+                .short('C')
+                .required(false)
+                .default_value("100")
+                .help("Concurrency limit")
+                .takes_value(true),
         )
         .arg(
             Arg::new("vault_url")
@@ -181,6 +192,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         8080
     });
 
+    // Set main listen port
+    let concurrent: usize = opts.value_of("concurrent").unwrap().parse().expect("Expected integer for concurrent operations");
+
     // Set API listen port
     let api_port: u16 = opts
         .value_of("api_port")
@@ -217,6 +231,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .route("/*path", any(proxy))
         .layer(TraceLayer::new_for_http())
         .route_layer(middleware::from_fn(track_metrics))
+        .route_layer(ConcurrencyLimitLayer::new(concurrent))
         .layer(Extension(state))
         .layer(Extension(recorder_handle));
 

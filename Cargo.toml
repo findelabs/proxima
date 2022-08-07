@@ -1,6 +1,6 @@
 [package]
 name = "proxima"
-version = "0.8.7"
+version = "0.8.8"
 description = "ultra fast, simple, API gateway"
 edition = "2021"
 
@@ -19,7 +19,7 @@ log = "0.4"
 chrono = { version = "0.4", features = ["serde"] }
 hyper-tls = "0.5"
 tower-http = { version = "0.2", features = ["trace", "auth"] }
-tower = { version = "0.4", features = ["filter"] }
+tower = { version = "0.4", features = ["filter", "limit"] }
 reqwest = { version = "0.11", features = ["json"] }
 native-tls = "0.2"
 base64 = "0.13"
