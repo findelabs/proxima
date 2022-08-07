@@ -8,13 +8,15 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use clap::{crate_description, crate_name, crate_version};
 use hyper::{Body, HeaderMap};
 use metrics_exporter_prometheus::PrometheusHandle;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::convert::Infallible;
 use std::net::SocketAddr;
+use http::header::FORWARDED;
+use http::header::USER_AGENT;
+use http::HeaderValue;
 
 use crate::error::Error as ProximaError;
 use crate::path::ProxyPath;
@@ -59,16 +61,52 @@ pub async fn proxy(
     RawQuery(query): RawQuery,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> Result<Response<Body>, ProximaError> {
+
+    // Check for forwarded by
+    let forwarded_by = if let Some(x_forwarded) = all_headers.get("x-forwarded-for") {
+        x_forwarded.to_str().unwrap_or("error").to_owned()
+    } else if let Some(forwarded) = all_headers.get(FORWARDED) {
+        forwarded.to_str().unwrap_or("error").to_owned()
+    } else {
+        "none".to_string()
+    };
+
+    let user_agent = all_headers
+        .get(USER_AGENT)
+        .unwrap_or(&HeaderValue::from_str("none").unwrap())
+        .to_str()
+        .unwrap_or("error")
+        .to_owned();
+
     log::debug!(
-        "{{\"fn\": \"proxy\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"{}\", \"query\": \"{}\"}}",
+        "{{\"type\": \"incoming connection\", \"method\": \"{}\", \"path\":\"{}\", \"query\": \"{}\", \"addr\":\"{}\", \"forwarded_by\": \"{}\", \"user_agent\":\"{}\"}}",
         &method.as_str(),
-        &addr,
         &path.path(),
-        query.clone().unwrap_or_else(|| "".to_string())
+        query.clone().unwrap_or_else(|| "none".to_string()),
+        &addr,
+        forwarded_by,
+        user_agent
     );
-    state
-        .response(method, path, query, all_headers, payload, addr)
-        .await
+
+    match state
+        .response(method.clone(), path.clone(), query.clone(), all_headers, payload, addr.clone())
+        .await {
+        Ok(s) => {
+            log::info!(
+                "{{\"type\": \"response\", \"method\": \"{}\", \"path\":\"{}\", \"query\": \"{}\", \"addr\":\"{}\", \"forwarded_by\": \"{}\", \"user_agent\": \"{}\", \"status\":\"{}\"}}",
+                &method.as_str(),
+                &path.path(),
+                query.clone().unwrap_or_else(|| "none".to_string()),
+                &addr,
+                forwarded_by,
+                user_agent,
+                s.status()
+            );
+            Ok(s)
+        },
+        Err(e) => Err(e)
+    }
+    
 }
 
 pub async fn reload(
@@ -154,34 +192,34 @@ pub async fn health(
     Json(json!({ "msg": "Healthy"}))
 }
 
-pub async fn root(
-    Extension(mut state): Extension<State>,
-    payload: Option<BodyStream>,
-    path: ProxyPath,
-    RequestMethod(method): RequestMethod,
-    all_headers: HeaderMap,
-    RawQuery(query): RawQuery,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
-) -> Response<Body> {
-    log::debug!(
-        "{{\"fn\": \"root\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"{}\", \"query\": \"{}\"}}",
-        &method.as_str(),
-        &addr,
-        &path.path(),
-        query.clone().unwrap_or_else(|| "".to_string())
-    );
-    match state
-        .response(method, path, query, all_headers, payload, addr)
-        .await
-    {
-        Ok(p) => p,
-        Err(e) => {
-            log::debug!("No root endpoint found: {}", e);
-            let body = json!({ "version": crate_version!(), "name": crate_name!(), "description": crate_description!()}).to_string();
-            Response::new(body.into())
-        }
-    }
-}
+//pub async fn root(
+//    Extension(mut state): Extension<State>,
+//    payload: Option<BodyStream>,
+//    path: ProxyPath,
+//    RequestMethod(method): RequestMethod,
+//    all_headers: HeaderMap,
+//    RawQuery(query): RawQuery,
+//    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+//) -> Response<Body> {
+//    log::debug!(
+//        "{{\"fn\": \"root\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"{}\", \"query\": \"{}\"}}",
+//        &method.as_str(),
+//        &addr,
+//        &path.path(),
+//        query.clone().unwrap_or_else(|| "".to_string())
+//    );
+//    match state
+//        .response(method, path, query, all_headers, payload, addr)
+//        .await
+//    {
+//        Ok(p) => p,
+//        Err(e) => {
+//            log::debug!("No root endpoint found: {}", e);
+//            let body = json!({ "version": crate_version!(), "name": crate_name!(), "description": crate_description!()}).to_string();
+//            Response::new(body.into())
+//        }
+//    }
+//}
 
 pub async fn echo(
     Json(payload): Json<Value>,
@@ -196,18 +234,18 @@ pub async fn echo(
     Json(payload)
 }
 
-pub async fn help(
-    RequestMethod(method): RequestMethod,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
-) -> Json<Value> {
-    log::debug!(
-        "{{\"fn\": \"help\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/help\"}}",
-        &method,
-        &addr,
-    );
-    let payload = json!({"/cache":{"methods":{"get":"Get proxima cache","delete":"Delete proxima cache"}},"/config":{"methods":{"get":"Get proxima configuration"}},"/echo":{"methods":{"get":"Echo back json payload (debugging)"}},"/health":{"methods":{"get":"Get the health of proxima"}},"/help":{"methods":{"get":"Show this help message"}},"/reload":{"methods":{"get":"Reload proxima's config"}},"/:endpoint":{"methods":{"get":"Show config for specific parent"}},"/:endpoint/*path":{"methods":{"get":"Pass through any request to specified endpoint"}}});
-    Json(payload)
-}
+//pub async fn help(
+//    RequestMethod(method): RequestMethod,
+//    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+//) -> Json<Value> {
+//    log::debug!(
+//        "{{\"fn\": \"help\", \"method\": \"{}\", \"addr\":\"{}\", \"path\":\"/help\"}}",
+//        &method,
+//        &addr,
+//    );
+//    let payload = json!({"/cache":{"methods":{"get":"Get proxima cache","delete":"Delete proxima cache"}},"/config":{"methods":{"get":"Get proxima configuration"}},"/echo":{"methods":{"get":"Echo back json payload (debugging)"}},"/health":{"methods":{"get":"Get the health of proxima"}},"/help":{"methods":{"get":"Show this help message"}},"/reload":{"methods":{"get":"Reload proxima's config"}},"/:endpoint":{"methods":{"get":"Show config for specific parent"}},"/:endpoint/*path":{"methods":{"get":"Pass through any request to specified endpoint"}}});
+//    Json(payload)
+//}
 
 pub async fn handler_404(
     OriginalUri(original_uri): OriginalUri,

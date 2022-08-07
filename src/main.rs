@@ -30,8 +30,8 @@ mod config_global;
 
 use crate::metrics::{setup_metrics_recorder, track_metrics};
 use handlers::{
-    cache_delete, cache_get, config, echo, handler_404, health, help, mappings_get, metrics, proxy,
-    reload, root,
+    cache_delete, cache_get, config, echo, handler_404, health, mappings_get, metrics, proxy,
+    reload, 
 };
 use state::State;
 
@@ -206,7 +206,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .route("/mappings", get(mappings_get))
         .route("/health", get(health))
         .route("/echo", post(echo))
-        .route("/help", get(help))
         .route("/metrics", get(metrics))
         .layer(TraceLayer::new_for_http())
         .route_layer(middleware::from_fn(track_metrics))
@@ -214,9 +213,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .layer(Extension(recorder_handle.clone()));
 
     let app = Router::new()
-        .route("/", any(root))
-        .route("/:endpoint", any(proxy))
-        .route("/:endpoint/*path", any(proxy))
+        .route("/*path", any(proxy))
         .layer(TraceLayer::new_for_http())
         .route_layer(middleware::from_fn(track_metrics))
         .layer(Extension(state))

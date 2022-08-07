@@ -16,6 +16,7 @@ use url::Url;
 use vault_client_rs::client::Client as VaultClient;
 use hyper::HeaderMap;
 use hyper::header::{HeaderValue, HeaderName};
+use clap::{crate_description, crate_name, crate_version};
 
 use crate::https::ClientBuilder;
 use crate::auth::server::ServerAuth;
@@ -269,6 +270,23 @@ impl Config {
                 // Spin path fowward, so that only the remainder is passed along
                 path.forward(&mapping)?;
                 return Ok((Route::Endpoint(Endpoint::Proxy(endpoint)), path));
+            }
+        }
+
+        // If path is just root, if there is no / root set, return default
+        // This needs to be checked here, before we enter into recursion
+        if path_str == "/" {
+            match self.fetch(path.clone(), self.config_file().await.routes).await {
+                Ok((r, v)) => return Ok((r,v)),
+                _ => {
+                    let body = json!({ "version": crate_version!(), "name": crate_name!(), "description": crate_description!()}).to_string();
+                    let stat = Static {
+                        body,
+                        security: None,
+                        headers: None
+                    };
+                    return Ok((Route::Endpoint(Endpoint::Static(stat)), path))
+                }
             }
         }
 
