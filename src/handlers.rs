@@ -93,7 +93,7 @@ pub async fn proxy(
         .await {
         Ok(s) => {
             log::info!(
-                "{{\"type\": \"response\", \"method\": \"{}\", \"path\":\"{}\", \"query\": \"{}\", \"addr\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\", \"status\":\"{}\"}}",
+                "{{\"type\": \"response\", \"method\": \"{}\", \"status\":\"{}\", \"path\":\"{}\", \"query\": \"{}\", \"addr\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",
                 &method.as_str(),
                 &path.path(),
                 query.clone().unwrap_or_else(|| "none".to_string()),
