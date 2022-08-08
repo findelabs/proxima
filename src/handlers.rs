@@ -93,14 +93,14 @@ pub async fn proxy(
         .await {
         Ok(s) => {
             log::info!(
-                "{{\"type\": \"response\", \"method\": \"{}\", \"status\":\"{}\", \"path\":\"{}\", \"query\": \"{}\", \"addr\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",
+                "{{\"type\": \"response\", \"method\": \"{}\", \"status\":\"{}\", \"path\":\"{}\", \"query\": \"{}\", \"client\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",
                 &method.as_str(),
+                s.status(),
                 &path.path(),
                 query.clone().unwrap_or_else(|| "none".to_string()),
                 &addr,
                 forwarded_for,
-                user_agent,
-                s.status()
+                user_agent
             );
             Ok(s)
         },
