@@ -11,7 +11,7 @@ use vault_client_rs::client::Client as VaultClient;
 use crate::cache::Cache;
 use crate::config::ConfigMap;
 use crate::config::Endpoint;
-use crate::config::Proxy;
+//use crate::config::Proxy;
 use crate::config::Route;
 use crate::path::ProxyPath;
 
@@ -34,7 +34,7 @@ impl Vault {
         &self,
         mut vault: VaultClient,
         path: ProxyPath,
-        cache: Cache<Proxy>,
+        cache: Cache<Endpoint>,
     ) -> Result<ConfigMap, ProximaError> {
         let list = vault.list(&self.secret).await?;
 
@@ -57,7 +57,7 @@ impl Vault {
                     log::debug!("\"Found {} in cache\"", &cache_path);
                     map.insert(
                         key_str.to_string(),
-                        Route::Endpoint(Endpoint::Proxy(endpoint)),
+                        Route::Endpoint(endpoint),
                     );
                 }
                 None => {
@@ -71,7 +71,7 @@ impl Vault {
                     match self.template(secret.data().await).await {
                         Ok(route) => {
                             // If vault secret is Proxy variant, cache endpoint
-                            if let Route::Endpoint(Endpoint::Proxy(ref endpoint)) = route {
+                            if let Route::Endpoint(ref endpoint) = route {
                                 cache.set(&cache_path, endpoint).await;
                             }
 

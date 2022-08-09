@@ -48,7 +48,7 @@ pub struct Config {
     pub config_authentication: Option<ServerAuth>,
     pub last_read: Arc<RwLock<i64>>,
     pub hash: Arc<RwLock<u64>>,
-    pub cache: Cache<Proxy>,
+    pub cache: Cache<Endpoint>,
     pub mappings: Cache<String>,
     pub https_client: HttpsClient,
     pub vault_client: Option<VaultClient>,
@@ -149,14 +149,45 @@ impl EndpointSecurity for Static {
     }
 }
 
-impl fmt::Display for Proxy {
-    // This trait requires `fmt` with this exact signature.
+impl fmt::Display for Endpoint {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        // Write strictly the first element into the supplied output
-        // stream: `f`. Returns `fmt::Result` which indicates whether the
-        // operation succeeded or failed. Note that `write!` uses syntax which
-        // is very similar to `println!`.
-        write!(f, "{}", self.url)
+        match self {
+            Endpoint::Proxy(p) => write!(f, "{}", p),
+            Endpoint::Static(p) => write!(f, "{}", p),
+            Endpoint::HttpConfig(p) => write!(f, "{}", p),
+            Endpoint::Vault(p) => write!(f, "{}", p),
+            Endpoint::Redirect(p) => write!(f, "{}", p)
+        }
+    }
+}
+
+impl fmt::Display for HttpConfig {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{{\"http_config\": \"{}\"}}", self.url)
+    }
+}
+
+impl fmt::Display for Vault {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{{\"vault\": \"{}\"}}", self.secret)
+    }
+}
+
+impl fmt::Display for Proxy {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{{\"proxy\": \"{}\"}}", self.url)
+    }
+}
+
+impl fmt::Display for Redirect {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{{\"redirect\": \"{}\"}}", self.url)
+    }
+}
+
+impl fmt::Display for Static {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{{\"static\": \"{}\"}}", self.body)
     }
 }
 
@@ -269,7 +300,7 @@ impl Config {
 
                 // Spin path fowward, so that only the remainder is passed along
                 path.forward(&mapping)?;
-                return Ok((Route::Endpoint(Endpoint::Proxy(endpoint)), path));
+                return Ok((Route::Endpoint(endpoint), path));
             }
         }
 
@@ -292,7 +323,7 @@ impl Config {
 
         let result = self.fetch(path, self.config_file().await.routes).await?;
 
-        if let (Route::Endpoint(Endpoint::Proxy(_)), ref path) = result {
+        if let (Route::Endpoint(_), ref path) = result {
             // Set cache and mappings
             log::debug!("Adding {} to mappings", path.path());
             self.mappings
@@ -327,12 +358,13 @@ impl Config {
             log::debug!("Starting fetch with cache search for {}", &key);
             if let Some(hit) = self.cache.get(&key).await {
                 log::debug!("Got cache hit for {}", &key);
-                return Ok((Route::Endpoint(Endpoint::Proxy(hit)), path));
+                return Ok((Route::Endpoint(hit), path));
             }
         };
 
         // If endpoint is not found in cache, check configmap
-        match config.get(&path.current()) {
+        let key = path.current();
+        match config.get(&key) {
             Some(Route::ConfigMap(entry)) => {
                 log::debug!(
                     "Found ConfigMap at {}",
@@ -346,7 +378,7 @@ impl Config {
                         log::debug!("Got cache hit for {}", &key);
                         // Move path forward
                         path.next()?;
-                        return Ok((Route::Endpoint(Endpoint::Proxy(hit)), path));
+                        return Ok((Route::Endpoint(hit), path));
                     }
                 };
 
@@ -366,7 +398,7 @@ impl Config {
                                 // Move path forward
                                 path.next()?;
 
-                                return Ok((Route::Endpoint(Endpoint::Proxy(hit)), path));
+                                return Ok((Route::Endpoint(hit), path));
                             }
                         };
 
@@ -389,6 +421,9 @@ impl Config {
                             &path.key().unwrap_or_else(|| "None".to_string())
                         );
 
+                        let wrapper = Endpoint::Vault(entry.clone());
+                        self.cache.set(&key, &wrapper).await;
+
                         // Get last char from secret
                         let last_char = &entry
                             .secret
@@ -406,7 +441,7 @@ impl Config {
                                     log::debug!("Got cache hit for {}", &key);
                                     // Move path forward
                                     path.next()?;
-                                    return Ok((Route::Endpoint(Endpoint::Proxy(hit)), path));
+                                    return Ok((Route::Endpoint(hit), path));
                                 }
 
                                 log::debug!(
@@ -415,8 +450,8 @@ impl Config {
                                 );
                                 let route = entry.get(self.vault_client()?, "").await?;
 
-                                // If vault secret is Proxy variant, cache endpoint
-                                if let Route::Endpoint(Endpoint::Proxy(ref endpoint)) = route {
+                                // If vault secret is Endpoint variant, cache endpoint
+                                if let Route::Endpoint(ref endpoint) = route {
                                     self.cache.set(&path.key().expect("odd"), endpoint).await;
                                 };
 
@@ -432,7 +467,7 @@ impl Config {
                                     log::debug!("Got cache hit for {}", &key);
                                     // Move path forward
                                     path.next()?;
-                                    return Ok((Route::Endpoint(Endpoint::Proxy(hit)), path));
+                                    return Ok((Route::Endpoint(hit), path));
                                 }
                             };
 
@@ -444,8 +479,8 @@ impl Config {
                                     // Move path forward
                                     path.next()?;
 
-                                    // If vault secret is Proxy variant, cache endpoint
-                                    if let Route::Endpoint(Endpoint::Proxy(ref endpoint)) = route {
+                                    // If vault secret is Endpoint variant, cache endpoint
+                                    if let Route::Endpoint(ref endpoint) = route {
                                         self.cache
                                             .set(&path.key().expect("odd"), endpoint)
                                             .await;
@@ -475,20 +510,22 @@ impl Config {
                         // Save entry into cache
                         let key = &path.key().expect("weird");
                         log::debug!("Adding {} to cache", key);
-                        self.cache.set(key, entry).await;
+
+                        let wrapper = Endpoint::Proxy(entry.clone());
+                        self.cache.set(key, &wrapper).await;
 
                         // Return endpoint
-                        Ok((Route::Endpoint(Endpoint::Proxy(entry.clone())), path))
+                        Ok((Route::Endpoint(wrapper), path))
                     }
                     Endpoint::Static(entry) => {
                         log::debug!(
                             "Found Static at {}",
                             &path.key().unwrap_or_else(|| "None".to_string())
                         );
-                        //                        // Save entry into cache
-                        //                        let key = &path.key().expect("weird");
-                        //                        log::debug!("Adding {} to cache", key);
-                        //                        self.cache.set(key, &entry).await;
+
+                        let wrapper = Endpoint::Static(entry.clone());
+                        self.cache.set(&key, &wrapper).await;
+
                         // Return endpoint
                         Ok((Route::Endpoint(Endpoint::Static(entry.clone())), path))
                     }
@@ -497,10 +534,10 @@ impl Config {
                             "Found Redirect at {}",
                             &path.key().unwrap_or_else(|| "None".to_string())
                         );
-                        //                        // Save entry into cache
-                        //                        let key = &path.key().expect("weird");
-                        //                        log::debug!("Adding {} to cache", key);
-                        //                        self.cache.set(key, &entry).await;
+
+                        let wrapper = Endpoint::Redirect(entry.clone());
+                        self.cache.set(&key, &wrapper).await;
+
                         // Return endpoint
                         Ok((Route::Endpoint(Endpoint::Redirect(entry.clone())), path))
                     }
