@@ -3,7 +3,7 @@
 Proxima exposes a series of admin API paths on a secondary port, by default 8081.
 
 ## Show Config
-Get Proxima's current config
+Get Proxima's current configuration
 
 **URL** : `/config`
 
@@ -17,16 +17,60 @@ Get Proxima's current config
 
 ```json
 {
+  "network": {
+    "enforce_http": false,
+    "nodelay": false,
+    "reuse_address": false,
+    "timeout": 5000
+  },
+  "security": {
+    "config": {
+      "hide_folders": false
+    },
+    "tls": {
+      "accept_invalid_hostnames": false,
+      "insecure": false
+    },
+    "whitelist": {
+      "networks": [
+        "10.0.0.0/8"
+      ]
+    }
+  }
+}
+```
+---
+## Show Routes
+Get Proxima's current routes
+
+**URL** : `/routes`
+
+**Method** : `GET`
+
+#### Success Response:
+
+**Code** : `200 OK`
+
+**Sample Response**
+
+```json
+{
   "routes": {
     "archivelabs": {
-      "timeout": 5000,
-      "url": "https://api.archivelab.org/v1"
+      "proxy": {
+        "timeout": 5000,
+        "url": "https://api.archivelab.org/v1"
+      }
     },
     "inshortsapi": {
-      "url": "https://inshortsapi.vercel.app/news"
+      "proxy": {
+        "url": "https://inshortsapi.vercel.app/news"
+      }
     },
     "local": {
-      "url": "http://localhost:8082/"
+      "proxy": {
+        "url": "http://localhost:8082/"
+      }
     }
   }
 }
