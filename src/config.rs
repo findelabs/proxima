@@ -402,6 +402,9 @@ impl Config {
                             }
                         };
 
+                        // let wrapper = Endpoint::HttpConfig(entry.clone());
+                        // self.cache.set(&key, &wrapper).await;
+
                         // Get the http config as config_file
                         let config_file = match self
                             .parse(Some(entry.url.clone()), entry.authentication.clone())
@@ -421,8 +424,10 @@ impl Config {
                             &path.key().unwrap_or_else(|| "None".to_string())
                         );
 
-                        let wrapper = Endpoint::Vault(entry.clone());
-                        self.cache.set(&key, &wrapper).await;
+                        // This needs to stay commented out until we impl Recurse for Vault
+                        // Recurse will return back the body based on the ProxyPath
+                        // let wrapper = Endpoint::Vault(entry.clone());
+                        // self.cache.set(&key, &wrapper).await;
 
                         // Get last char from secret
                         let last_char = &entry
