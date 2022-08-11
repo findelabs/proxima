@@ -163,31 +163,31 @@ impl fmt::Display for Endpoint {
 
 impl fmt::Display for HttpConfig {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{{\"http_config\": \"{}\"}}", self.url)
+        write!(f, "http_config={}", self.url)
     }
 }
 
 impl fmt::Display for Vault {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{{\"vault\": \"{}\"}}", self.secret)
+        write!(f, "vault={}", self.secret)
     }
 }
 
 impl fmt::Display for Proxy {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{{\"proxy\": \"{}\"}}", self.url)
+        write!(f, "proxy={}", self.url)
     }
 }
 
 impl fmt::Display for Redirect {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{{\"redirect\": \"{}\"}}", self.url)
+        write!(f, "redirect={}", self.url)
     }
 }
 
 impl fmt::Display for Static {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{{\"static\": \"{}\"}}", self.body)
+        write!(f, "static={}", self.body)
     }
 }
 
