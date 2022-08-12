@@ -105,7 +105,7 @@ pub async fn proxy(
             Ok(s)
         },
         Err(e) => {
-            log::info!(
+            log::warn!(
                 "{{\"type\": \"error\", \"method\": \"{}\", \"message\":{}, \"path\":\"{}\", \"query\": \"{}\", \"client\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",
                 &method.as_str(),
                 &e.to_string(),
