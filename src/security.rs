@@ -211,7 +211,7 @@ impl Whitelist {
                 }
                 false => {
                     metrics::increment_counter!("proxima_security_method_authorize_blocked_count");
-                    log::info!("\"Blocked {} method\"", method);
+                    log::debug!("\"Blocked {} method\"", method);
                     return Err(ProximaError::Forbidden);
                 }
             }
@@ -232,7 +232,7 @@ impl Whitelist {
                 }
             }
             metrics::increment_counter!("proxima_security_network_authorize_blocked_count");
-            log::info!("\"Blocked client {}\"", client_addr);
+            log::debug!("\"Blocked client {}\"", client_addr);
             return Err(ProximaError::Forbidden);
         }
         Ok(())

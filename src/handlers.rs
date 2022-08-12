@@ -104,7 +104,19 @@ pub async fn proxy(
             );
             Ok(s)
         },
-        Err(e) => Err(e)
+        Err(e) => {
+            log::info!(
+                "{{\"type\": \"error\", \"method\": \"{}\", \"message\":{}, \"path\":\"{}\", \"query\": \"{}\", \"client\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",
+                &method.as_str(),
+                &e.to_string(),
+                &path.path(),
+                query.clone().unwrap_or_else(|| "none".to_string()),
+                &addr,
+                forwarded_for,
+                user_agent
+            );
+            Err(e)
+        }
     }
 }
 
