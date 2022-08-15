@@ -119,6 +119,7 @@ impl IntoResponse for Error {
                 headers.insert("www-authenticate", header);
                 StatusCode::UNAUTHORIZED
             }
+            Error::ConnectionTimeout => StatusCode::GATEWAY_TIMEOUT,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         };
 
