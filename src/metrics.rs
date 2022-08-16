@@ -29,8 +29,6 @@ pub async fn track_metrics<B: HttpBody>(req: Request<B>, next: Next<B>) -> impl 
     let status = response.status().as_u16().to_string();
     let transmit = response.body().size_hint().upper().unwrap_or(0) as f64;
 
-    println!("receive: {receive}, transmit: {transmit}");
-
     let labels = [
         ("method", method.to_string()),
         ("path", path),
