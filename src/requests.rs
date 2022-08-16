@@ -6,6 +6,7 @@ use hyper::header::HeaderValue;
 use hyper::{Body, HeaderMap, Method};
 use std::time::Duration;
 use url::Url;
+use axum::body::HttpBody;
 
 use crate::config::Proxy;
 use crate::error::Error as ProximaError;
@@ -60,10 +61,12 @@ impl ProxyRequest {
         log::debug!("full uri: {}", uri);
 
         let mut req = Request::builder()
-            .method(self.method)
+            .method(&self.method)
             .uri(&uri)
             .body(self.body)
             .expect("request builder");
+
+        let response_transmit = req.body().size_hint().upper().unwrap_or(0) as f64;
 
         // Apply changes to headers based on config
         if let Some(config) = self.endpoint.config {
@@ -106,7 +109,17 @@ impl ProxyRequest {
         .await
         {
             Ok(result) => match result {
-                Ok(response) => Ok(response),
+                Ok(response) => {
+                    let labels = [
+                        ("method", self.method.to_string()),
+                        ("path", self.path.suffix()),
+                        ("status", response.status().as_u16().to_string())
+                    ];
+                    let response_receive = response.body().size_hint().upper().unwrap_or(0) as f64;
+                    metrics::increment_gauge!("proxima_response_receive_bytes", response_receive, &labels);
+                    metrics::increment_gauge!("proxima_response_transmit_bytes", response_transmit, &labels);
+                    Ok(response)
+                },
                 Err(e) => {
                     log::error!("{{\"error\":\"{}\"", e);
                     Err(ProximaError::Connection)

@@ -22,12 +22,12 @@ pub async fn track_metrics<B: HttpBody>(req: Request<B>, next: Next<B>) -> impl 
     let start = Instant::now();
     let path = req.uri().path().to_owned();
     let method = req.method().clone();
-    let receive = req.body().size_hint().upper().unwrap_or(0) as f64;
+    let request_receive = req.body().size_hint().upper().unwrap_or(0) as f64;
 
     let response = next.run(req).await;
     let latency = start.elapsed().as_secs_f64();
     let status = response.status().as_u16().to_string();
-    let transmit = response.body().size_hint().upper().unwrap_or(0) as f64;
+    let request_transmit = response.body().size_hint().upper().unwrap_or(0) as f64;
 
     let labels = [
         ("method", method.to_string()),
@@ -36,8 +36,8 @@ pub async fn track_metrics<B: HttpBody>(req: Request<B>, next: Next<B>) -> impl 
     ];
 
     metrics::increment_counter!("proxima_requests_total", &labels);
-    metrics::increment_gauge!("proxima_requests_receive_bytes", receive, &labels);
-    metrics::increment_gauge!("proxima_requests_transmit_bytes", transmit, &labels);
+    metrics::increment_gauge!("proxima_requests_receive_bytes", request_receive, &labels);
+    metrics::increment_gauge!("proxima_requests_transmit_bytes", request_transmit, &labels);
     metrics::histogram!("proxima_requests_duration_seconds", latency, &labels);
     response
 }
