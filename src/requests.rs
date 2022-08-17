@@ -6,7 +6,6 @@ use hyper::header::HeaderValue;
 use hyper::{Body, HeaderMap, Method};
 use std::time::Duration;
 use url::Url;
-use axum::body::HttpBody;
 
 use crate::config::Proxy;
 use crate::error::Error as ProximaError;
@@ -101,8 +100,6 @@ impl ProxyRequest {
             None => TIMEOUT_DEFAULT,
         };
 
-        let req_path = req.uri().path().to_owned();
-
         match tokio::time::timeout(
             Duration::from_millis(timeout),
             self.client.request(req),
@@ -111,13 +108,6 @@ impl ProxyRequest {
         {
             Ok(result) => match result {
                 Ok(response) => {
-                    let labels = [
-                        ("method", self.method.to_string()),
-                        ("path", req_path),
-                        ("status", response.status().as_u16().to_string())
-                    ];
-                    let endpoint_receive = response.body().size_hint().upper().unwrap_or(0) as f64;
-                    metrics::increment_gauge!("proxima_endpoint_receive_bytes", endpoint_receive, &labels);
                     Ok(response)
                 },
                 Err(e) => {
