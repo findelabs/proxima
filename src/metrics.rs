@@ -37,7 +37,6 @@ pub async fn track_metrics<B: HttpBody>(req: Request<B>, next: Next<B>) -> impl 
 
     metrics::increment_counter!("proxima_requests_total", &labels);
     metrics::increment_gauge!("proxima_requests_receive_bytes", request_receive, &labels);
-//    metrics::increment_gauge!("proxima_endpoint_transmit_bytes", request_transmit, &labels);
     metrics::increment_gauge!("proxima_requests_transmit_bytes", request_transmit, &labels);
     metrics::histogram!("proxima_requests_duration_seconds", latency, &labels);
     response
