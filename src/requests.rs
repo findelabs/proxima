@@ -45,7 +45,7 @@ impl ProxyRequest {
         let host_and_path = format!(
             "{}{}{}{}",
             url,
-            seperator,
+            &seperator,
             self.path.suffix(),
             queries.unwrap_or_else(|| "".to_string())
         );
@@ -66,7 +66,6 @@ impl ProxyRequest {
             .body(self.body)
             .expect("request builder");
 
-        let response_transmit = req.body().size_hint().upper().unwrap_or(0) as f64;
 
         // Apply changes to headers based on config
         if let Some(config) = self.endpoint.config {
@@ -102,6 +101,8 @@ impl ProxyRequest {
             None => TIMEOUT_DEFAULT,
         };
 
+        let req_path = req.uri().path().to_owned();
+
         match tokio::time::timeout(
             Duration::from_millis(timeout),
             self.client.request(req),
@@ -112,12 +113,11 @@ impl ProxyRequest {
                 Ok(response) => {
                     let labels = [
                         ("method", self.method.to_string()),
-                        ("path", self.path.suffix()),
+                        ("path", req_path),
                         ("status", response.status().as_u16().to_string())
                     ];
-                    let response_receive = response.body().size_hint().upper().unwrap_or(0) as f64;
-                    metrics::increment_gauge!("proxima_response_receive_bytes", response_receive, &labels);
-                    metrics::increment_gauge!("proxima_response_transmit_bytes", response_transmit, &labels);
+                    let endpoint_receive = response.body().size_hint().upper().unwrap_or(0) as f64;
+                    metrics::increment_gauge!("proxima_endpoint_receive_bytes", endpoint_receive, &labels);
                     Ok(response)
                 },
                 Err(e) => {

@@ -95,7 +95,7 @@ pub async fn proxy(
             log::info!(
                 "{{\"type\": \"response\", \"method\": \"{}\", \"status\":\"{}\", \"path\":\"{}\", \"query\": \"{}\", \"client\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",
                 &method.as_str(),
-                s.status(),
+                s.status().as_u16(),
                 &path.path(),
                 query.clone().unwrap_or_else(|| "none".to_string()),
                 &addr,
