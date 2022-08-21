@@ -1,17 +1,16 @@
 use crate::error::Error as ProximaError;
 use async_recursion::async_recursion;
-//use base64;
 use handlebars::Handlebars;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::BTreeMap;
 use std::hash::{Hash, Hasher};
 use vault_client_rs::client::Client as VaultClient;
+use vault_client_rs::error::VaultError;
 
 use crate::cache::Cache;
 use crate::config::ConfigMap;
 use crate::config::Endpoint;
-//use crate::config::Proxy;
 use crate::config::Route;
 use crate::path::ProxyPath;
 
@@ -90,7 +89,18 @@ impl Vault {
 
     pub async fn get(&self, mut vault: VaultClient, secret: &str) -> Result<Route, ProximaError> {
         let secret_path = format!("{}{}", self.secret, secret);
-        let secret = vault.get(&secret_path).await?;
+        let secret = match vault.get(&secret_path).await {
+            Ok(p) => p,
+            Err(e) => {
+                match e {
+                    VaultError::NotFound => return Err(ProximaError::NotFound),
+                    _ => {
+                        log::error!("\"error getting secret from vault: {e}");
+                        return Err(ProximaError::VaultError(e))
+                    }
+                }
+            }
+        };
         match self.template(secret.data().await).await {
             Ok(templated) => Ok(templated),
             Err(e) => {
