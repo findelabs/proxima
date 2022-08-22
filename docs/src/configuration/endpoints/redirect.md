@@ -10,3 +10,9 @@ routes:
     redirect:
       url: https://google.com
 ```
+
+### Redirect Endpoint Details
+
+| Name                                        | Description                                         | Value      |
+|-------------------------------------------- | --------------------------------------------------- | ---------- |
+| redirect.url                                   | URL for remote server                            | `""`       |

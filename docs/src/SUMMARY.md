@@ -6,6 +6,7 @@
   - [Docker](./usage/docker.md)
   - [Arguments](./usage/arguments.md)
 - [Configuration](./configuration/index.md)
+  - [Global Config](./configuration/global/index.md)
   - [Endpoint Variations](./configuration/endpoints/index.md)
     - [Remote Config](./configuration/endpoints/remote_config.md)
     - [Proxy](./configuration/endpoints/proxy.md)

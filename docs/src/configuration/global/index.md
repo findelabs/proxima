@@ -15,6 +15,7 @@ global:
     tls:
       accept_invalid_hostnames: Bool
       insecure: Bool
+      import_cert: String
     auth:
       client:
         api_key:
@@ -38,6 +39,7 @@ global:
 | global.security.config.hide_folders          | Return 404 for non-endpoints (folders)              | `false`       |
 | global.security.tls.accept_invalid_hostnames | Accept invalid hostnames when using https           | `false`       |
 | global.security.tls.insecure                 | Accept incorrect certs when using https             | `false`       |
+| global.security.tls.import_cert              | Specify cert to import                              | `""`          |
 | global.security.auth.client                  | Set default client auth (overridden at endpoint)    | `{}`          |
 | global.security.auth.whitelist.networks      | Set default network whitelist                       | `[]`          |
 | global.security.auth.whitelist.methods       | Set default method whitelist                        | `[]`          |

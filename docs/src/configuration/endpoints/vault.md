@@ -47,3 +47,9 @@ For example, if a running Proxima were configured with an endpoint named atlas, 
 
 Additionally, a GET request to `http://localhost:8080/atlas` will cause Proxima to attempt to apply the template against any secrets found within `kv2/atlas/apis`, returning back a json payload with any endpoints it found within the folder. 
 
+### Vault Endpoint Details
+
+| Name                                        | Description                                         | Value      |
+|-------------------------------------------- | --------------------------------------------------- | ---------- |
+| vault.secret                                | Path to secret in Vault                             | `""`       |
+| vault.template                              | Template to use when rendering secret               | `""`       |

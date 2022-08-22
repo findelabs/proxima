@@ -10,3 +10,13 @@ routes:
     static:
       body: "hello world"
 ```
+
+### Static Endpoint Details
+
+| Name                                        | Description                                         | Value      |
+|-------------------------------------------- | --------------------------------------------------- | ---------- |
+| static.body                                  | Body of response                                    | `""`       |
+| static.security.client                       | Enable client authentication                        | `{}`       |
+| static.security.whitelist.networks           | Enable network whitelisting                         | `[]`       |
+| static.security.whitelist.methods            | Enable method authentication                        | `[]`       |
+| static.headers                               | Add headers to response                             | `{}`       |
