@@ -207,12 +207,12 @@ impl State {
                                 remainder.suffix()
                             );
 
-                            // If there is a global whitelist
-                            if let Some(global_client) = self.config.config_file().await.global.security.auth {
-                                global_client.auth(&request_headers,&method, &client_addr).await?
-                            } else {
+                            // Check if there is endpoint security
+                            if endpoint.security().is_some() {
                                 // Authorize client, and check for client whitelist
                                 endpoint.auth(&request_headers, &method, &client).await?;
+                            } else if let Some(global_client) = self.config.config_file().await.global.security.auth {
+                                global_client.auth(&request_headers,&method, &client_addr).await?
                             }
 
                             // Wrap Body if there is one
@@ -241,12 +241,12 @@ impl State {
                         Endpoint::Static(endpoint) => {
                             log::debug!("Found static entry");
 
-                            // If there is a global whitelist
-                            if let Some(global_client) = self.config.config_file().await.global.security.auth {
-                                global_client.auth(&request_headers, &method, &client_addr).await?
-                            } else {
+                            // Check if there is endpoint security
+                            if endpoint.security().is_some() {
                                 // Authorize client, and check for client whitelist
                                 endpoint.auth(&request_headers, &method, &client).await?;
+                            } else if let Some(global_client) = self.config.config_file().await.global.security.auth {
+                                global_client.auth(&request_headers,&method, &client_addr).await?
                             }
 
                             let mut response = Response::builder()
