@@ -18,7 +18,6 @@ use crate::error::Error as ProximaError;
 use crate::https::{ClientBuilder, HttpsClient};
 use crate::path::ProxyPath;
 use crate::requests::ProxyRequest;
-//use crate::auth::traits::Authorize;
 use crate::security::EndpointSecurity;
 
 type BoxResult<T> = Result<T, Box<dyn Error + Send + Sync>>;
@@ -209,12 +208,12 @@ impl State {
                             );
 
                             // If there is a global whitelist
-                            if let Some(whitelist) = self.config.config_file().await.global.security.whitelist {
-                                whitelist.authorize(&method, &client_addr)?
+                            if let Some(global_client) = self.config.config_file().await.global.security.auth {
+                                global_client.auth(&request_headers,&method, &client_addr).await?
+                            } else {
+                                // Authorize client, and check for client whitelist
+                                endpoint.auth(&request_headers, &method, &client).await?;
                             }
-
-                            // Authorize client, and check for client whitelist
-                            endpoint.auth(&request_headers, &method, &client).await?;
 
                             // Wrap Body if there is one
                             let body = match payload {
@@ -243,12 +242,12 @@ impl State {
                             log::debug!("Found static entry");
 
                             // If there is a global whitelist
-                            if let Some(whitelist) = self.config.config_file().await.global.security.whitelist {
-                                whitelist.authorize(&method, &client_addr)?
+                            if let Some(global_client) = self.config.config_file().await.global.security.auth {
+                                global_client.auth(&request_headers, &method, &client_addr).await?
+                            } else {
+                                // Authorize client, and check for client whitelist
+                                endpoint.auth(&request_headers, &method, &client).await?;
                             }
-
-                            // Authorize client, and check for client whitelist
-                            endpoint.auth(&request_headers, &method, &client).await?;
 
                             let mut response = Response::builder()
                                 .status(StatusCode::OK)

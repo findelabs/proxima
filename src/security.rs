@@ -41,6 +41,12 @@ pub struct AuthorizedClients {
     pub api_key: Option<AuthList<ApiKeyAuth>>,
 }
 
+impl EndpointSecurity for Security {
+    fn security(&self) -> Option<&Security> {
+        Some(self)
+    }
+}
+
 #[async_trait]
 pub trait EndpointSecurity {
     fn security(&self) -> Option<&Security>;
