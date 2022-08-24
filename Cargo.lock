@@ -1199,7 +1199,7 @@ dependencies = [
 
 [[package]]
 name = "proxima"
-version = "0.8.24"
+version = "0.8.25"
 dependencies = [
  "async-recursion",
  "async-trait",

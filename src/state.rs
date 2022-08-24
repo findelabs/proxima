@@ -207,12 +207,27 @@ impl State {
                                 remainder.suffix()
                             );
 
-                            // Check if there is endpoint security
-                            if endpoint.security().is_some() {
-                                // Authorize client, and check for client whitelist
-                                endpoint.auth(&request_headers, &method, &client).await?;
-                            } else if let Some(global_client) = self.config.config_file().await.global.security.auth {
-                                global_client.auth(&request_headers,&method, &client_addr).await?
+                            // If there is global auth configured, check that first. If client is authorized globally,
+                            // then let them through. If they fail the global auth, then move on to endpoint auth.
+                            // If endpoint auth does not exist, fail. 
+
+                            if let Some(global_client) = self.config.config_file().await.global.security.auth {
+                                match global_client.auth(&request_headers,&method, &client_addr).await {
+                                    Ok(_) => log::debug!("User passed global auth creds"),
+                                    Err(_) => {
+                                        if endpoint.security().is_some() {
+                                            endpoint.auth(&request_headers, &method, &client).await?;
+                                        } else {
+                                            return Err(ProximaError::Unauthorized)
+                                        }
+                                    }
+                                }
+                            } else {
+                                // Check if there is endpoint security
+                                if endpoint.security().is_some() {
+                                    // Authorize client, and check for client whitelist
+                                    endpoint.auth(&request_headers, &method, &client).await?;
+                                }
                             }
 
                             // Wrap Body if there is one
