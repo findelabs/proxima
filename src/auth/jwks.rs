@@ -1,4 +1,5 @@
 use crate::https::HttpsClient;
+use http::header::AUTHORIZATION;
 use async_recursion::async_recursion;
 use axum::http::Request;
 use chrono::Utc;
@@ -62,7 +63,7 @@ impl JwksAuthList {
         log::debug!("Looping over jwks users");
         let Self(internal) = self;
 
-        let header = match headers.get("AUTHORIZATION") {
+        let header = match headers.get(AUTHORIZATION) {
             Some(header) => header,
             None => {
                 log::debug!("Endpoint is locked, but no bearer authorization header found");
@@ -80,8 +81,13 @@ impl JwksAuthList {
         let scheme = auth_scheme_vec.into_iter().nth(0);
 
         // If header is not Bearer, return err
-        if let Some("Bearer") = scheme {
-            log::debug!("Found correct scheme for auth type: Bearer");
+        if let Some(k) = scheme {
+            if k.to_lowercase() == "bearer" {
+                log::debug!("Found correct authorization scheme for JWKS: bearer");
+            } else {
+                log::debug!("Auth type {} does not match required 'bearer'", k.to_lowercase());
+                return Err(ProximaError::UnmatchedHeader);
+            }
         } else {
             return Err(ProximaError::UnmatchedHeader);
         }
@@ -251,12 +257,13 @@ impl JwksAuth {
                         validation.set_audience(&[&self.audience]);
                     }
 
+                    log::debug!("Attempting to decode token");
                     let decoded_token = decode::<HashMap<String, serde_json::Value>>(
                         token,
                         &decoding_key,
                         &validation,
                     )?;
-                    log::debug!("{:?}", decoded_token);
+                    log::debug!("decoded token: {:?}", decoded_token);
 
                     if self.scopes.is_some() && self.validate_scopes {
                         let scp = match decoded_token.claims.get("scp") {
