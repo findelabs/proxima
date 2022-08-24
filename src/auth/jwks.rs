@@ -258,11 +258,17 @@ impl JwksAuth {
                     }
 
                     log::debug!("Attempting to decode token");
-                    let decoded_token = decode::<HashMap<String, serde_json::Value>>(
+                    let decoded_token = match decode::<HashMap<String, serde_json::Value>>(
                         token,
                         &decoding_key,
                         &validation,
-                    )?;
+                    ) {
+                        Ok(e) => Ok(e),
+                        Err(e) => {
+                            log::debug!("Unable to decode token: {}", e);
+                            Err(e)
+                        }
+                    }?;
                     log::debug!("decoded token: {:?}", decoded_token);
 
                     if self.scopes.is_some() && self.validate_scopes {
