@@ -10,7 +10,8 @@ use crate::auth::basic::BasicAuth;
 use crate::auth::bearer::BearerAuth;
 use crate::auth::digest::DigestAuth;
 use crate::auth::jwks::JwksAuthList;
-use crate::auth::traits::{AuthList, AuthorizeList};
+use crate::auth::anonymous::AnonymousAuth;
+use crate::auth::traits::{Authorize,AuthList, AuthorizeList};
 use crate::error::Error as ProximaError;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -39,6 +40,7 @@ pub struct AuthorizedClients {
     pub bearer: Option<AuthList<BearerAuth>>,
     pub jwks: Option<JwksAuthList>,
     pub api_key: Option<AuthList<ApiKeyAuth>>,
+    pub anonymous: Option<AnonymousAuth>,
 }
 
 impl EndpointSecurity for Security {
@@ -108,6 +110,17 @@ impl AuthorizedClients {
         method: &Method,
         client_addr: &SocketAddr,
     ) -> Result<(), ProximaError> {
+
+        // Test for Anonymous authorization
+        if let Some(auth) = &self.anonymous {
+            match auth.authorize(headers, method, client_addr).await {
+                Ok(_) => return Ok(()),
+                Err(e) => {
+                    log::debug!("Anonymous client was blocked: {e}");
+                }
+            }
+        }
+
         // Test for Basic authorization
         if let Some(auth) = &self.basic {
             if let Err(e) = auth.authorize(headers, method, client_addr).await {
