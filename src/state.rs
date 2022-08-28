@@ -212,10 +212,12 @@ impl State {
                             // If endpoint auth does not exist, fail. 
 
                             if let Some(global_client) = self.config.config_file().await.global.security.auth {
+                                log::debug!("Found global auth");
                                 match global_client.auth(&request_headers,&method, &client_addr).await {
                                     Ok(_) => log::debug!("User passed global auth creds"),
                                     Err(_) => {
                                         if endpoint.security().is_some() {
+                                            log::debug!("Checking endpoint client auth");
                                             endpoint.auth(&request_headers, &method, &client).await?;
                                         } else {
                                             return Err(ProximaError::Unauthorized)
@@ -225,6 +227,7 @@ impl State {
                             } else {
                                 // Check if there is endpoint security
                                 if endpoint.security().is_some() {
+                                    log::debug!("Checking endpoint client auth");
                                     // Authorize client, and check for client whitelist
                                     endpoint.auth(&request_headers, &method, &client).await?;
                                 }
