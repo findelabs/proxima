@@ -128,7 +128,18 @@ impl ProxyPath {
         };
         let count = self.count() + 2;
         log::trace!("next_key: {} vs {} ?", &count, self.max + 1);
-        if count <= self.max + 1 {
+        if self.max == 1 {
+            // This will get matched whenever that path is just a forward slash
+            let slice = self.vec[..self.max as usize].to_vec().join("/");
+            log::trace!(
+                "next_key, getting path slice for path with self.max: {}",
+                &self.max,
+            );
+            match slice.as_str() {
+                "" => None,
+                _ => Some(slice),
+            }
+        } else if count <= self.max + 1 {
             log::trace!("next_key: {:?}", self.vec);
             let slice = self.vec[..count as usize].to_vec().join("/");
             log::trace!(
