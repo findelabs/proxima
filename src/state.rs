@@ -111,7 +111,7 @@ impl State {
     }
 
     pub async fn config(&mut self) -> ConfigFile {
-        let _ = self.config.update().await;
+        let _ = self.config.renew().await;
         self.config.config_file().await
     }
 
