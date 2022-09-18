@@ -28,6 +28,7 @@ pub enum Error {
     MissingVaultClient,
     PathCount,
     UnmatchedHeader,
+    RefreshLock,
     Hyper(hyper::Error),
     SerdeJson(serde_json::Error),
     SerdeYaml(serde_yaml::Error),
@@ -67,6 +68,7 @@ impl fmt::Display for Error {
             Error::JwtDecode => f.write_str("{\"error\": \"Unable to decode JWT\"}"),
             Error::MissingVaultClient => f.write_str("{\"error\": \"Missing vault client\"}"),
             Error::PathCount => f.write_str("{\"error\": \"Path count too large\"}"),
+            Error::RefreshLock=> f.write_str("{\"error\": \"Unable to acquire refresh lock\"}"),
             Error::UnmatchedHeader => {
                 f.write_str("{\"error\": \"Incorrect header for auth type\"}")
             }

@@ -17,6 +17,7 @@ use vault_client_rs::client::Client as VaultClient;
 use hyper::HeaderMap;
 use hyper::header::{HeaderValue, HeaderName};
 use clap::{crate_description, crate_name, crate_version};
+use std::sync::Mutex;
 
 use crate::https::ClientBuilder;
 use crate::auth::server::ServerAuth;
@@ -44,9 +45,9 @@ pub struct ConfigFile {
 pub struct Config {
     pub config_file: Arc<RwLock<ConfigFile>>,
     pub location: String,
-    pub global_authentication: bool,
     pub config_authentication: Option<ServerAuth>,
     pub last_read: Arc<RwLock<i64>>,
+    pub refresh_lock: RefreshLock,
     pub hash: Arc<RwLock<u64>>,
     pub cache: Cache<Endpoint>,
     pub mappings: Cache<String>,
@@ -133,6 +134,19 @@ pub struct Header {
     pub value: String
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct RefreshLock {
+    pub lock: Arc<Mutex<bool>>
+}
+
+impl Hash for RefreshLock {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        // Do not change the hash ever
+        "".hash(state);
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct Headers(Vec<Header>);
@@ -140,6 +154,26 @@ pub struct Headers(Vec<Header>);
 impl EndpointSecurity for Proxy {
     fn security(&self) -> Option<&Security> {
         self.security.as_ref()
+    }
+}
+
+impl Default for RefreshLock {
+    fn default() -> Self { 
+        RefreshLock {
+            lock: Arc::new(Mutex::new(true))
+        }
+    }
+}
+
+impl RefreshLock {
+    pub fn acquire(&self) -> Result<(), ProximaError> {
+        match self.lock.try_lock() {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                log::debug!("\"Not able to acquire refresh lock: {}\"", e);
+                Err(ProximaError::RefreshLock)
+            }
+        }
     }
 }
 
@@ -231,19 +265,24 @@ impl Config {
         let last_read = self.last_read.read().await;
         let diff = Utc::now().timestamp() - *last_read;
         if diff >= 30 {
-            log::debug!("\"Cache has expired, kicking off config reload\"");
-            metrics::increment_counter!("proxima_config_renew_attempts_total");
-            drop(last_read);
-
-            // Kick off background thread to update config
-            let mut me = self.clone();
-            tokio::spawn(async move {
-                log::debug!("\"Kicking off background thread to reload config\"");
-                if let Err(e) = me.update().await {
-                    log::error!("Error updating config: {}", e);
-                    metrics::increment_counter!("proxima_config_renew_failures_total");
-                }
-            });
+            // Only allow one config refresh to be active at once
+            if let Ok(()) = self.refresh_lock.acquire() {
+                log::debug!("\"Cache has expired, kicking off config reload\"");
+                metrics::increment_counter!("proxima_config_renew_attempts_total");
+                drop(last_read);
+    
+                // Kick off background thread to update config
+                let mut me = self.clone();
+                tokio::spawn(async move {
+                    log::debug!("\"Kicking off background thread to reload config\"");
+                    if let Err(e) = me.update().await {
+                        log::error!("Error updating config: {}", e);
+                        metrics::increment_counter!("proxima_config_renew_failures_total");
+                    }
+                });
+            } else {
+                log::debug!("\"Active refresh found, deferring\"");
+            }
         } else {
             log::debug!("\"cache has not expired, current age is {} seconds\"", diff);
         }
@@ -268,7 +307,6 @@ impl Config {
     pub fn new(
         location: &str,
         config_authentication: Option<ServerAuth>,
-        global_authentication: bool,
         https_client: HttpsClient,
         vault_client: Option<VaultClient>,
     ) -> Config {
@@ -278,9 +316,9 @@ impl Config {
                 routes: BTreeMap::new(),
             })),
             location: location.to_string(),
-            global_authentication,
             config_authentication,
             last_read: Arc::new(RwLock::new(i64::default())),
+            refresh_lock: RefreshLock::default(),
             hash: Arc::new(RwLock::new(u64::default())),
             cache: Cache::new(Some("cache".to_string())),
             mappings: Cache::new(Some("mappings".to_string())),

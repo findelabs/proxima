@@ -96,7 +96,6 @@ impl State {
         let mut config = config::Config::new(
             &config_location,
             config_auth.clone(),
-            opts.is_present("username"),
             self.client.clone(),
             vault_client,
         );
