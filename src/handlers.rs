@@ -8,15 +8,15 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use http::header::FORWARDED;
+use http::header::USER_AGENT;
+use http::HeaderValue;
 use hyper::{Body, HeaderMap};
 use metrics_exporter_prometheus::PrometheusHandle;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::convert::Infallible;
 use std::net::SocketAddr;
-use http::header::FORWARDED;
-use http::header::USER_AGENT;
-use http::HeaderValue;
 
 use crate::error::Error as ProximaError;
 use crate::path::ProxyPath;
@@ -54,14 +54,13 @@ pub async fn metrics(
 
 pub async fn proxy(
     Extension(mut state): Extension<State>,
-    payload: Option<BodyStream>,
     path: ProxyPath,
     RequestMethod(method): RequestMethod,
     all_headers: HeaderMap,
     RawQuery(query): RawQuery,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    payload: Option<BodyStream>,
 ) -> Result<Response<Body>, ProximaError> {
-
     // Check for forwarded for
     let forwarded_for = if let Some(x_forwarded) = all_headers.get("x-forwarded-for") {
         x_forwarded.to_str().unwrap_or("error").to_owned()
@@ -89,8 +88,16 @@ pub async fn proxy(
     );
 
     match state
-        .response(method.clone(), path.clone(), query.clone(), all_headers, payload, addr.clone())
-        .await {
+        .response(
+            method.clone(),
+            path.clone(),
+            query.clone(),
+            all_headers,
+            payload,
+            addr.clone(),
+        )
+        .await
+    {
         Ok(s) => {
             log::info!(
                 "{{\"type\": \"response\", \"method\": \"{}\", \"status\":\"{}\", \"path\":\"{}\", \"query\": \"{}\", \"client\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",
@@ -103,7 +110,7 @@ pub async fn proxy(
                 user_agent
             );
             Ok(s)
-        },
+        }
         Err(e) => {
             log::warn!(
                 "{{\"type\": \"error\", \"method\": \"{}\", \"message\":{}, \"path\":\"{}\", \"query\": \"{}\", \"client\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",

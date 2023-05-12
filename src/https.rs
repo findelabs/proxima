@@ -8,8 +8,8 @@ use native_tls::{Certificate, TlsConnector};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::error::Error as ProximaError;
 use crate::config_global::GlobalConfig;
+use crate::error::Error as ProximaError;
 
 //pub type Client = hyper::client::Client<HttpsConnector<HttpConnector>, Body>;
 //type BoxResult<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
@@ -38,14 +38,15 @@ impl HttpsClient {
             .accept_invalid_hostnames(global.security.tls.accept_invalid_hostnames)
             .accept_invalid_certs(global.security.tls.insecure)
             .import_cert(global.security.tls.import_cert.as_deref())
-            .build() {
+            .build()
+        {
             Ok(c) => {
                 log::debug!("\"Updating shared https client\"");
                 let mut locked = self.0.write().await;
                 let new = c.internal().await;
                 *locked = new;
                 log::debug!("\"Shared https client has been updated\"");
-            },
+            }
             Err(e) => {
                 log::error!("\"Error generating new client: {}\"", e);
             }
@@ -153,8 +154,8 @@ impl<'a> ClientBuilder<'a> {
 
         let https: hyper_tls::HttpsConnector<hyper::client::HttpConnector> =
             hyper_tls::HttpsConnector::from((http, tls_connector.into()));
-        Ok(HttpsClient(
-            Arc::new(RwLock::new(hyper::Client::builder().build::<_, hyper::Body>(https))),
-        ))
+        Ok(HttpsClient(Arc::new(RwLock::new(
+            hyper::Client::builder().build::<_, hyper::Body>(https),
+        ))))
     }
 }

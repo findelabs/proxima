@@ -10,9 +10,9 @@ use serde_json::Value;
 use std::error::Error;
 use std::net::SocketAddr;
 
-use crate::config::ConfigFile;
 use crate::auth::{basic::BasicAuth, server::ServerAuth};
 use crate::config;
+use crate::config::ConfigFile;
 use crate::config::{Config, Endpoint, Route};
 use crate::error::Error as ProximaError;
 use crate::https::{ClientBuilder, HttpsClient};
@@ -45,7 +45,8 @@ impl State {
         let client = ClientBuilder::new()
             .accept_invalid_hostnames(opts.is_present("insecure"))
             .accept_invalid_certs(opts.is_present("insecure"))
-            .build().unwrap();
+            .build()
+            .unwrap();
 
         State {
             client,
@@ -54,7 +55,6 @@ impl State {
     }
 
     pub async fn build(&mut self, opts: ArgMatches) -> BoxResult<()> {
-
         let config_auth = match opts.value_of("config_username") {
             Some(config_username) => {
                 log::debug!("Generating Basic auth for config endpoint");
@@ -148,14 +148,12 @@ impl State {
             // Looks like we found a match
             Ok((route, remainder)) => match route {
                 // Return these variants without checking for security
-                Route::ConfigMap(map) => {
-                    Ok(Response::builder()
-                        .status(StatusCode::OK)
-                        .body(Body::from(
-                            serde_json::to_string(&map).expect("Cannot convert to JSON"),
-                        ))
-                        .unwrap())
-                }
+                Route::ConfigMap(map) => Ok(Response::builder()
+                    .status(StatusCode::OK)
+                    .body(Body::from(
+                        serde_json::to_string(&map).expect("Cannot convert to JSON"),
+                    ))
+                    .unwrap()),
                 Route::Endpoint(entry) => {
                     // Detect client IP
                     let client = if let Some(x_forwarded) = &request_headers.get("x-forwarded-for")
@@ -183,22 +181,18 @@ impl State {
                     log::debug!("Client socket determined to be {}", &client);
 
                     match entry {
-                        Endpoint::HttpConfig(map) => {
-                            Ok(Response::builder()
-                                .status(StatusCode::OK)
-                                .body(Body::from(
-                                    serde_json::to_string(&map).expect("Cannot convert to JSON"),
-                                ))
-                                .unwrap())
-                        }
-                        Endpoint::Vault(map) => {
-                            Ok(Response::builder()
-                                .status(StatusCode::OK)
-                                .body(Body::from(
-                                    serde_json::to_string(&map).expect("Cannot convert to JSON"),
-                                ))
-                                .unwrap())
-                        }
+                        Endpoint::HttpConfig(map) => Ok(Response::builder()
+                            .status(StatusCode::OK)
+                            .body(Body::from(
+                                serde_json::to_string(&map).expect("Cannot convert to JSON"),
+                            ))
+                            .unwrap()),
+                        Endpoint::Vault(map) => Ok(Response::builder()
+                            .status(StatusCode::OK)
+                            .body(Body::from(
+                                serde_json::to_string(&map).expect("Cannot convert to JSON"),
+                            ))
+                            .unwrap()),
                         Endpoint::Proxy(endpoint) => {
                             log::debug!(
                                 "Found an endpoint {}, with path {}",
@@ -208,18 +202,25 @@ impl State {
 
                             // If there is global auth configured, check that first. If client is authorized globally,
                             // then let them through. If they fail the global auth, then move on to endpoint auth.
-                            // If endpoint auth does not exist, fail. 
+                            // If endpoint auth does not exist, fail.
 
-                            if let Some(global_client) = self.config.config_file().await.global.security.auth {
+                            if let Some(global_client) =
+                                self.config.config_file().await.global.security.auth
+                            {
                                 log::debug!("Found global auth");
-                                match global_client.auth(&request_headers,&method, &client_addr).await {
+                                match global_client
+                                    .auth(&request_headers, &method, &client_addr)
+                                    .await
+                                {
                                     Ok(_) => log::debug!("User passed global auth creds"),
                                     Err(_) => {
                                         if endpoint.security().is_some() {
                                             log::debug!("Checking endpoint client auth");
-                                            endpoint.auth(&request_headers, &method, &client).await?;
+                                            endpoint
+                                                .auth(&request_headers, &method, &client)
+                                                .await?;
                                         } else {
-                                            return Err(ProximaError::Unauthorized)
+                                            return Err(ProximaError::Unauthorized);
                                         }
                                     }
                                 }
@@ -262,22 +263,25 @@ impl State {
                             if endpoint.security().is_some() {
                                 // Authorize client, and check for client whitelist
                                 endpoint.auth(&request_headers, &method, &client).await?;
-                            } else if let Some(global_client) = self.config.config_file().await.global.security.auth {
-                                global_client.auth(&request_headers,&method, &client_addr).await?
+                            } else if let Some(global_client) =
+                                self.config.config_file().await.global.security.auth
+                            {
+                                global_client
+                                    .auth(&request_headers, &method, &client_addr)
+                                    .await?
                             }
 
                             let mut response = Response::builder()
                                 .status(StatusCode::OK)
                                 .body(Body::from(endpoint.body))
                                 .unwrap();
-                            
+
                             if let Some(headers) = endpoint.headers {
                                 let headermap = response.headers_mut();
                                 headers.insert_headers(headermap)?;
                             };
 
                             Ok(response)
-
                         }
                         Endpoint::Redirect(endpoint) => {
                             log::debug!("Found redirect entry");

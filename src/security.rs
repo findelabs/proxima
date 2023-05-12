@@ -5,13 +5,13 @@ use ipnetwork::IpNetwork;
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 
+use crate::auth::anonymous::AnonymousAuth;
 use crate::auth::api_key::ApiKeyAuth;
 use crate::auth::basic::BasicAuth;
 use crate::auth::bearer::BearerAuth;
 use crate::auth::digest::DigestAuth;
 use crate::auth::jwks::JwksAuthList;
-use crate::auth::anonymous::AnonymousAuth;
-use crate::auth::traits::{Authorize,AuthList, AuthorizeList};
+use crate::auth::traits::{AuthList, Authorize, AuthorizeList};
 use crate::error::Error as ProximaError;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -110,7 +110,6 @@ impl AuthorizedClients {
         method: &Method,
         client_addr: &SocketAddr,
     ) -> Result<(), ProximaError> {
-
         // Test for Anonymous authorization
         if let Some(auth) = &self.anonymous {
             match auth.authorize(headers, method, client_addr).await {

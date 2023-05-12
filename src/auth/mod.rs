@@ -1,10 +1,10 @@
 pub mod jwks;
 //pub mod client;
+pub mod anonymous;
 pub mod api_key;
 pub mod basic;
 pub mod bearer;
 pub mod digest;
+pub mod jwt;
 pub mod server;
 pub mod traits;
-pub mod jwt;
-pub mod anonymous;

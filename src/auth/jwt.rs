@@ -42,7 +42,7 @@ pub struct JwtQueries {
     scopes: String,
     client_id: String,
     client_secret: String,
-    grant_type: String
+    grant_type: String,
 }
 
 impl Hash for JwtAuth {
@@ -62,7 +62,7 @@ impl JwtAuth {
         let jwt = self.jwt().await?;
         let token = match jwt["access_token"].as_str() {
             Some(v) => v.to_string(),
-            None => return Err(ProximaError::JwtDecode)
+            None => return Err(ProximaError::JwtDecode),
         };
         Ok(token)
     }
@@ -78,16 +78,16 @@ impl JwtAuth {
     }
 
     pub async fn get_jwt(&self) -> Result<(), ProximaError> {
-
         let jwt_queries = JwtQueries {
             audience: self.audience.clone(),
             scopes: self.scopes.join("+"),
             client_id: self.client_id.clone(),
             client_secret: self.client_secret.clone(),
-            grant_type: self.grant_type.clone()
+            grant_type: self.grant_type.clone(),
         };
 
-        let query = serde_urlencoded::to_string(jwt_queries).map_err(|_| ProximaError::JwtDecode)?;
+        let query =
+            serde_urlencoded::to_string(jwt_queries).map_err(|_| ProximaError::JwtDecode)?;
         let url = format!("{}?{}", self.url, query);
         let uri = Uri::try_from(url)?;
 
@@ -122,7 +122,7 @@ impl JwtAuth {
             Some(t) => {
                 log::debug!("Token expires in {}", &t);
                 t
-            },
+            }
             None => {
                 log::debug!("Could not detect token expiration, defaulting to 360");
                 360i64
@@ -150,7 +150,6 @@ impl JwtAuth {
             drop(expiration);
 
             self.get_jwt().await?;
-
         } else {
             log::debug!("\"Reusing JWT, as it has not expired\"");
         }

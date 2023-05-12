@@ -1,8 +1,8 @@
 use crate::https::HttpsClient;
-use http::header::AUTHORIZATION;
 use async_recursion::async_recursion;
 use axum::http::Request;
 use chrono::Utc;
+use http::header::AUTHORIZATION;
 use hyper::header::HeaderValue;
 use hyper::HeaderMap;
 use hyper::Method;
@@ -85,7 +85,10 @@ impl JwksAuthList {
             if k.to_lowercase() == "bearer" {
                 log::debug!("Found correct authorization scheme for JWKS: bearer");
             } else {
-                log::debug!("Auth type {} does not match required 'bearer'", k.to_lowercase());
+                log::debug!(
+                    "Auth type {} does not match required 'bearer'",
+                    k.to_lowercase()
+                );
                 return Err(ProximaError::UnmatchedHeader);
             }
         } else {

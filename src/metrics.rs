@@ -1,12 +1,11 @@
 use axum::{http::Request, middleware::Next, response::IntoResponse};
-use metrics_exporter_prometheus::{Matcher, PrometheusBuilder, PrometheusHandle};
 use hyper::body::HttpBody;
+use metrics_exporter_prometheus::{Matcher, PrometheusBuilder, PrometheusHandle};
 use std::time::Instant;
 
 pub fn setup_metrics_recorder() -> PrometheusHandle {
-    const EXPONENTIAL_SECONDS: &[f64] = &[
-        0.001, 0.01, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0,
-    ];
+    const EXPONENTIAL_SECONDS: &[f64] =
+        &[0.001, 0.01, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0];
 
     PrometheusBuilder::new()
         .set_buckets_for_metric(
@@ -32,7 +31,7 @@ pub async fn track_metrics<B: HttpBody>(req: Request<B>, next: Next<B>) -> impl 
     let labels = [
         ("method", method.to_string()),
         ("path", path),
-        ("status", status)
+        ("status", status),
     ];
 
     metrics::increment_counter!("proxima_requests_total", &labels);

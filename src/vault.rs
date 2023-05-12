@@ -54,10 +54,7 @@ impl Vault {
             match cache.get(&cache_path).await {
                 Some(endpoint) => {
                     log::debug!("\"Found {} in cache\"", &cache_path);
-                    map.insert(
-                        key_str.to_string(),
-                        Route::Endpoint(endpoint),
-                    );
+                    map.insert(key_str.to_string(), Route::Endpoint(endpoint));
                 }
                 None => {
                     let secret = match vault.get(&secret_path).await {
@@ -91,15 +88,13 @@ impl Vault {
         let secret_path = format!("{}{}", self.secret, secret);
         let secret = match vault.get(&secret_path).await {
             Ok(p) => p,
-            Err(e) => {
-                match e {
-                    VaultError::NotFound => return Err(ProximaError::NotFound),
-                    _ => {
-                        log::error!("\"error getting secret from vault: {e}");
-                        return Err(ProximaError::VaultError(e))
-                    }
+            Err(e) => match e {
+                VaultError::NotFound => return Err(ProximaError::NotFound),
+                _ => {
+                    log::error!("\"error getting secret from vault: {e}");
+                    return Err(ProximaError::VaultError(e));
                 }
-            }
+            },
         };
         match self.template(secret.data().await).await {
             Ok(templated) => Ok(templated),

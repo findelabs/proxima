@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::security::Security;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Hash)]
 #[serde(deny_unknown_fields)]
@@ -8,8 +8,8 @@ pub struct GlobalConfig {
     pub network: GlobalConfigNetwork,
     #[serde(default)]
     pub security: GlobalConfigSecurity,
-//    #[serde(skip_serializing_if = "Option::is_none")]
-//    pub integrations: Option<GlobalConfigIntegrations>
+    //    #[serde(skip_serializing_if = "Option::is_none")]
+    //    pub integrations: Option<GlobalConfigIntegrations>
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Hash)]
@@ -22,7 +22,7 @@ pub struct GlobalConfigNetwork {
     #[serde(default)]
     pub reuse_address: bool,
     #[serde(default)]
-    pub enforce_http: bool
+    pub enforce_http: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Hash)]
@@ -33,7 +33,7 @@ pub struct GlobalConfigSecurity {
     #[serde(default)]
     pub config: GlobalConfigSecurityConfig,
     #[serde(default)]
-    pub auth: Option<Security>
+    pub auth: Option<Security>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Hash)]
@@ -44,21 +44,21 @@ pub struct GlobalConfigSecurityTls {
     #[serde(default)]
     pub insecure: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub import_cert: Option<String>
+    pub import_cert: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct GlobalConfigSecurityConfig {
     #[serde(default)]
-    pub hide_folders: bool
+    pub hide_folders: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct GlobalConfigIntegrations {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub vault: Option<GlobalConfigIntegrationsVault>
+    pub vault: Option<GlobalConfigIntegrationsVault>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, Hash)]
@@ -72,7 +72,7 @@ pub struct GlobalConfigIntegrationsVault {
     #[serde(skip_serializing_if = "Option::is_none")]
     login_path: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    jwt_path: Option<String>
+    jwt_path: Option<String>,
 }
 
 impl Timeout {

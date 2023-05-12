@@ -11,13 +11,13 @@ use env_logger::{Builder, Target};
 use log::LevelFilter;
 use std::io::Write;
 use std::net::SocketAddr;
-use tower_http::trace::TraceLayer;
 use tower::limit::ConcurrencyLimitLayer;
-
+use tower_http::trace::TraceLayer;
 
 mod auth;
 mod cache;
 mod config;
+mod config_global;
 mod error;
 mod handlers;
 mod https;
@@ -28,12 +28,11 @@ mod security;
 mod state;
 mod urls;
 mod vault;
-mod config_global;
 
 use crate::metrics::{setup_metrics_recorder, track_metrics};
 use handlers::{
     cache_delete, cache_get, config, echo, handler_404, health, mappings_get, metrics, proxy,
-    reload, routes
+    reload, routes,
 };
 use state::State;
 
@@ -172,12 +171,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         .format(|buf, record| {
             writeln!(
                 buf,
-//                "{{\"date\": \"{}\", \"level\": \"{}\", \"module\": \"{}\", \"line\": \"{}\", \"log\": {}}}",
+                //                "{{\"date\": \"{}\", \"level\": \"{}\", \"module\": \"{}\", \"line\": \"{}\", \"log\": {}}}",
                 "{{\"date\": \"{}\", \"level\": \"{}\", \"log\": {}}}",
                 Local::now().format("%Y-%m-%dT%H:%M:%S:%f"),
                 record.level(),
-//                record.module_path().unwrap_or(""),
-//                record.line().unwrap_or(0u32),
+                //                record.module_path().unwrap_or(""),
+                //                record.line().unwrap_or(0u32),
                 record.args()
             )
         })
@@ -193,7 +192,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     });
 
     // Set main listen port
-    let concurrent: usize = opts.value_of("concurrent").unwrap().parse().expect("Expected integer for concurrent operations");
+    let concurrent: usize = opts
+        .value_of("concurrent")
+        .unwrap()
+        .parse()
+        .expect("Expected integer for concurrent operations");
 
     // Set API listen port
     let api_port: u16 = opts

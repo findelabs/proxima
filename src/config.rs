@@ -1,6 +1,9 @@
 use async_recursion::async_recursion;
 use axum::http::Request;
 use chrono::Utc;
+use clap::{crate_description, crate_name, crate_version};
+use hyper::header::{HeaderName, HeaderValue};
+use hyper::HeaderMap;
 use hyper::{Body, Uri};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Map, Value};
@@ -11,19 +14,16 @@ use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::prelude::*;
 use std::sync::Arc;
+use std::sync::Mutex;
 use tokio::sync::RwLock;
 use url::Url;
 use vault_client_rs::client::Client as VaultClient;
-use hyper::HeaderMap;
-use hyper::header::{HeaderValue, HeaderName};
-use clap::{crate_description, crate_name, crate_version};
-use std::sync::Mutex;
 
-use crate::https::ClientBuilder;
 use crate::auth::server::ServerAuth;
-use crate::config_global::GlobalConfig;
 use crate::cache::Cache;
+use crate::config_global::GlobalConfig;
 use crate::error::Error as ProximaError;
+use crate::https::ClientBuilder;
 use crate::https::HttpsClient;
 use crate::path::ProxyPath;
 use crate::security::EndpointSecurity;
@@ -81,7 +81,7 @@ pub struct Static {
     #[serde(skip_serializing_if = "display_security")]
     pub security: Option<Security>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub headers: Option<Headers>
+    pub headers: Option<Headers>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -95,20 +95,20 @@ pub struct Proxy {
     #[serde(skip_serializing_if = "display_security")]
     pub security: Option<Security>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub config: Option<ProxyConfig>
+    pub config: Option<ProxyConfig>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct ProxyConfig {
     #[serde(default)]
-    pub preserve_host_header: bool
+    pub preserve_host_header: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
 #[serde(deny_unknown_fields)]
 pub struct Redirect {
-    pub url: Url
+    pub url: Url,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -131,13 +131,13 @@ pub enum Endpoint {
 #[serde(deny_unknown_fields)]
 pub struct Header {
     pub name: String,
-    pub value: String
+    pub value: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct RefreshLock {
-    pub lock: Arc<Mutex<bool>>
+    pub lock: Arc<Mutex<bool>>,
 }
 
 impl Hash for RefreshLock {
@@ -158,9 +158,9 @@ impl EndpointSecurity for Proxy {
 }
 
 impl Default for RefreshLock {
-    fn default() -> Self { 
+    fn default() -> Self {
         RefreshLock {
-            lock: Arc::new(Mutex::new(true))
+            lock: Arc::new(Mutex::new(true)),
         }
     }
 }
@@ -190,7 +190,7 @@ impl fmt::Display for Endpoint {
             Endpoint::Static(p) => write!(f, "{}", p),
             Endpoint::HttpConfig(p) => write!(f, "{}", p),
             Endpoint::Vault(p) => write!(f, "{}", p),
-            Endpoint::Redirect(p) => write!(f, "{}", p)
+            Endpoint::Redirect(p) => write!(f, "{}", p),
         }
     }
 }
@@ -226,7 +226,7 @@ impl fmt::Display for Static {
 }
 
 impl Headers {
-    pub fn insert_headers(&self, map: &mut HeaderMap) -> Result<(), ProximaError>{ 
+    pub fn insert_headers(&self, map: &mut HeaderMap) -> Result<(), ProximaError> {
         for header in &self.0 {
             log::debug!("Inserting {} into map", header.name);
             let name = HeaderName::from_lowercase(header.name.to_lowercase().as_bytes())?;
@@ -270,7 +270,7 @@ impl Config {
                 log::debug!("\"Cache has expired, kicking off config reload\"");
                 metrics::increment_counter!("proxima_config_renew_attempts_total");
                 drop(last_read);
-    
+
                 // Kick off background thread to update config
                 let mut me = self.clone();
                 tokio::spawn(async move {
@@ -345,16 +345,19 @@ impl Config {
         // If path is just root, if there is no / root set, return default
         // This needs to be checked here, before we enter into recursion
         if path_str == "/" {
-            match self.fetch(path.clone(), self.config_file().await.routes).await {
-                Ok((r, v)) => return Ok((r,v)),
+            match self
+                .fetch(path.clone(), self.config_file().await.routes)
+                .await
+            {
+                Ok((r, v)) => return Ok((r, v)),
                 _ => {
                     let body = json!({ "version": crate_version!(), "name": crate_name!(), "description": crate_description!()}).to_string();
                     let stat = Static {
                         body,
                         security: None,
-                        headers: None
+                        headers: None,
                     };
-                    return Ok((Route::Endpoint(Endpoint::Static(stat)), path))
+                    return Ok((Route::Endpoint(Endpoint::Static(stat)), path));
                 }
             }
         }
@@ -385,9 +388,9 @@ impl Config {
         } else {
             // If hide_folders is true, return back 403
             if self.config_file().await.global.security.config.hide_folders {
-                return Err(ProximaError::Forbidden)
+                return Err(ProximaError::Forbidden);
             } else {
-                return Ok((Route::ConfigMap(Box::new(config)), path))
+                return Ok((Route::ConfigMap(Box::new(config)), path));
             }
         };
 
@@ -524,9 +527,7 @@ impl Config {
 
                                     // If vault secret is Endpoint variant, cache endpoint
                                     if let Route::Endpoint(ref endpoint) = route {
-                                        self.cache
-                                            .set(&path.key().expect("odd"), endpoint)
-                                            .await;
+                                        self.cache.set(&path.key().expect("odd"), endpoint).await;
                                     };
 
                                     Ok((route, path))

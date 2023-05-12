@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use hyper::HeaderMap;
 use serde::{Deserialize, Serialize};
 
-use crate::auth::traits::{Authorize};
+use crate::auth::traits::Authorize;
 use crate::error::Error as ProximaError;
 
 #[derive(Serialize, Deserialize, Debug, Clone, Hash)]
@@ -29,7 +29,7 @@ impl Authorize for AnonymousAuth {
         _client_header: &str,
         _headers: &HeaderMap,
     ) -> Result<(), ProximaError> {
-            Ok(())
+        Ok(())
     }
 
     fn whitelist(&self) -> Option<&Whitelist> {

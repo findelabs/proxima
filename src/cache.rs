@@ -64,7 +64,7 @@ impl<'a, T: std::clone::Clone + std::fmt::Display> Cache<T> {
         for (key, value) in &*cache {
             map.insert(
                 key.to_string(),
-                serde_json::Value::String(value.to_string())
+                serde_json::Value::String(value.to_string()),
             );
         }
         map

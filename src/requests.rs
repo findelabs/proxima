@@ -38,7 +38,7 @@ impl ProxyRequest {
             ("/", "") => "",
             ("/", _) => "",
             (_, "") => "",
-            (_,_) => "/",
+            (_, _) => "/",
         };
 
         let host_and_path = format!(
@@ -64,7 +64,6 @@ impl ProxyRequest {
             .uri(&uri)
             .body(self.body)
             .expect("request builder");
-
 
         // Apply changes to headers based on config
         if let Some(config) = self.endpoint.config {
@@ -100,16 +99,9 @@ impl ProxyRequest {
             None => TIMEOUT_DEFAULT,
         };
 
-        match tokio::time::timeout(
-            Duration::from_millis(timeout),
-            self.client.request(req),
-        )
-        .await
-        {
+        match tokio::time::timeout(Duration::from_millis(timeout), self.client.request(req)).await {
             Ok(result) => match result {
-                Ok(response) => {
-                    Ok(response)
-                },
+                Ok(response) => Ok(response),
                 Err(e) => {
                     log::error!("{{\"error\":\"{}\"", e);
                     Err(ProximaError::Connection)

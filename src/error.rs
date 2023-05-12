@@ -42,7 +42,7 @@ pub enum Error {
     VaultError(VaultError),
     TlsError(native_tls::Error),
     InvalidHeaderName(http::header::InvalidHeaderName),
-    InvalidHeaderValue(http::header::InvalidHeaderValue)
+    InvalidHeaderValue(http::header::InvalidHeaderValue),
 }
 
 impl std::error::Error for Error {}
@@ -68,7 +68,7 @@ impl fmt::Display for Error {
             Error::JwtDecode => f.write_str("{\"error\": \"Unable to decode JWT\"}"),
             Error::MissingVaultClient => f.write_str("{\"error\": \"Missing vault client\"}"),
             Error::PathCount => f.write_str("{\"error\": \"Path count too large\"}"),
-            Error::RefreshLock=> f.write_str("{\"error\": \"Unable to acquire refresh lock\"}"),
+            Error::RefreshLock => f.write_str("{\"error\": \"Unable to acquire refresh lock\"}"),
             Error::UnmatchedHeader => {
                 f.write_str("{\"error\": \"Incorrect header for auth type\"}")
             }
