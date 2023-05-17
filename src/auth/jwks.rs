@@ -104,7 +104,7 @@ impl JwksAuthList {
                 }
             }
         }
-        log::debug!("\"Client could not be authenticated\"");
+        log::warn!("\"Client could not be authenticated\"");
         Err(ProximaError::UnauthorizedClient)
     }
 }
@@ -227,7 +227,7 @@ impl JwksAuth {
         let kid = match header.kid {
             Some(k) => k,
             None => {
-                log::error!("\"Token doesn't have a `kid` header field\"");
+                log::warn!("\"Token doesn't have a `kid` header field\"");
                 return Err(ProximaError::JwtDecode);
             }
         };
@@ -238,7 +238,7 @@ impl JwksAuth {
                     let decoding_key = match DecodingKey::from_rsa_components(&rsa.n, &rsa.e) {
                         Ok(k) => k,
                         Err(e) => {
-                            log::error!("\"Error decoding key: {}\"", e);
+                            log::warn!("\"Error decoding key: {}\"", e);
                             return Err(ProximaError::JwtDecode);
                         }
                     };
@@ -291,7 +291,7 @@ impl JwksAuth {
                         // Ensure that all required scopes are contained with the JWT.scp field
                         for scope in self.scopes.as_ref().unwrap().iter() {
                             if !scp.contains(scope) {
-                                log::error!(
+                                log::debug!(
                                     "\"Blocking client as JWT.scp does not contain {}\"",
                                     scope
                                 );
@@ -304,7 +304,7 @@ impl JwksAuth {
                 _ => Err(ProximaError::JwtDecode),
             }
         } else {
-            log::error!("\"No matching JWK found for the given kid\"");
+            log::warn!("\"No matching JWK found for the given kid\"");
             Err(ProximaError::JwtDecode)
         }
     }
