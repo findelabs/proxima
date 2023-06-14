@@ -1,6 +1,6 @@
 [package]
 name = "proxima"
-version = "0.8.33"
+version = "0.8.34"
 description = "ultra fast, simple, API gateway"
 edition = "2021"
 
@@ -43,3 +43,4 @@ ipnetwork = "0.19"
 async-trait = "0.1.56"
 serde_urlencoded = "0.7.1"
 http = "0.2.8"
+metrics-util = "0.12"
