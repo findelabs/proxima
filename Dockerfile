@@ -6,7 +6,7 @@ RUN mkdir /app/bin
 COPY src /app/src/
 COPY Cargo.toml /app
 
-RUN apt-get update && apt-get install -y libssl-dev pkg-config
+RUN apt-get update && apt-get install -y libssl-dev pkg-config make
 RUN cargo install --path /app --root /app
 
 FROM debian:bullseye-slim

@@ -327,7 +327,7 @@ impl Config {
         }
     }
 
-    pub async fn cache_get(&self, mut path: ProxyPath) -> Result<(Route, ProxyPath), ProximaError> {
+    pub async fn cache_get(&mut self, mut path: ProxyPath) -> Result<(Route, ProxyPath), ProximaError> {
         let path_str = path.path();
         log::debug!("\"Starting cache_get for {}\"", &path_str);
         if let Some(mapping) = self.mappings.get(path_str).await {
@@ -378,7 +378,7 @@ impl Config {
     #[async_recursion]
     // Fetch should check the cache, then the ConfigMap
     pub async fn fetch(
-        &self,
+        &mut self,
         mut path: ProxyPath,
         config: ConfigMap,
     ) -> Result<(Route, ProxyPath), ProximaError> {
@@ -591,7 +591,7 @@ impl Config {
         }
     }
 
-    pub async fn get(&self, path: ProxyPath) -> Result<(Route, ProxyPath), ProximaError> {
+    pub async fn get(&mut self, path: ProxyPath) -> Result<(Route, ProxyPath), ProximaError> {
         self.renew().await;
         self.cache_get(path).await
     }

@@ -11,7 +11,7 @@ pub fn setup_metrics_recorder() -> PrometheusHandle {
 
     PrometheusBuilder::new()
         .idle_timeout(
-            MetricKindMask::COUNTER | MetricKindMask::GAUGE | MetricKindMask::HISTOGRAM,
+            MetricKindMask::COUNTER | MetricKindMask::GAUGE,
             Some(Duration::from_secs(120)),
         )
         .set_buckets_for_metric(

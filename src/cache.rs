@@ -1,11 +1,12 @@
 //use crate::config::Proxy;
 use serde_json::map::Map;
 use serde_json::Value;
-use std::collections::HashMap;
+use lru::LruCache;
+use std::num::NonZeroUsize;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-pub type CacheMap<T> = Arc<RwLock<HashMap<String, T>>>;
+pub type CacheMap<T> = Arc<RwLock<LruCache<String, T>>>;
 
 #[derive(Debug, Clone)]
 pub struct Cache<T> {
@@ -18,7 +19,7 @@ impl<T> Default for Cache<T> {
         Cache {
             // Used for metric tracking
             name: String::default(),
-            cache: Arc::new(RwLock::new(HashMap::new())),
+            cache: Arc::new(RwLock::new(LruCache::new(NonZeroUsize::new(10000).unwrap()))),
         }
     }
 }
@@ -27,7 +28,7 @@ impl<'a, T: std::clone::Clone + std::fmt::Display> Cache<T> {
     pub fn new(name: Option<String>) -> Cache<T> {
         Cache {
             name: name.unwrap_or_default(),
-            cache: Arc::new(RwLock::new(HashMap::new())),
+            cache: Arc::new(RwLock::new(LruCache::new(NonZeroUsize::new(2).unwrap()))),
         }
     }
 
@@ -37,24 +38,42 @@ impl<'a, T: std::clone::Clone + std::fmt::Display> Cache<T> {
         cache.clear();
     }
 
-    pub async fn get(&self, key: &str) -> Option<T> {
-        log::debug!("\"Searching for {} in cache\"", key);
-        metrics::increment_counter!("proxima_cache_attempt_total", "name" => self.name.clone());
-        let cache = self.cache.read().await;
-        match cache.get(key).cloned() {
-            Some(h) => Some(h),
-            None => {
-                log::debug!("\"Cache miss for {}\"", &key);
-                metrics::increment_counter!("proxima_cache_miss_total", "name" => self.name.clone());
-                None
-            }
-        }
+    pub async fn promote(&mut self, key: &str) {
+        log::debug!("\"Promoting {} in cache\"", key);
+        let mut cache = self.cache.write().await;
+        cache.promote(key);
     }
 
-    pub async fn remove(&self, key: &str) -> Option<String> {
+    pub async fn get(&mut self, key: &str) -> Option<T> {
+        log::debug!("\"Searching for {} in cache\"", key);
+        metrics::increment_counter!("proxima_cache_attempt_total", "name" => self.name.clone());
+
+        let value = {
+            let cache = self.cache.read().await;
+            match cache.peek(key).cloned() {
+                Some(h) => Some(h),
+                None => {
+                    log::debug!("\"Cache miss for {}\"", &key);
+                    metrics::increment_counter!("proxima_cache_miss_total", "name" => self.name.clone());
+                    None
+                }
+            }
+        };
+
+        // Promote the key if it existed
+        if let Some(_) = value {
+            self.promote(key).await;
+        }
+
+        value
+
+    }
+
+    pub async fn remove(&self, key: &'a str) -> Option<&'a str> {
         log::debug!("\"Removing {} from cache\"", &key);
         let mut cache = self.cache.write().await;
-        cache.remove_entry(key).map(|(key, _)| key)
+        cache.pop(key);
+        Some(key)
     }
 
     pub async fn cache(&self) -> Map<String, Value> {
@@ -73,7 +92,7 @@ impl<'a, T: std::clone::Clone + std::fmt::Display> Cache<T> {
     pub async fn set(&self, key: &str, endpoint: &T) {
         log::debug!("\"Adding {} to cache\"", key);
         let mut cache = self.cache.write().await;
-        cache.insert(key.to_string(), endpoint.clone());
+        cache.push(key.to_string(), endpoint.clone());
         let count = cache.len() as f64;
 
         metrics::gauge!("proxima_cache_keys", count, "name" => self.name.clone());

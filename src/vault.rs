@@ -33,7 +33,7 @@ impl Vault {
         &self,
         mut vault: VaultClient,
         path: ProxyPath,
-        cache: Cache<Endpoint>,
+        mut cache: Cache<Endpoint>,
     ) -> Result<ConfigMap, ProximaError> {
         let list = vault.list(&self.secret).await?;
 
