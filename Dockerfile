@@ -1,4 +1,4 @@
-from rust:slim as builder
+from rust:bookworm as builder
 
 RUN mkdir /app 
 RUN mkdir /app/bin 
@@ -9,7 +9,7 @@ COPY Cargo.toml /app
 RUN apt-get update && apt-get install -y libssl-dev pkg-config make
 RUN cargo install --path /app --root /app
 
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 WORKDIR /app
 COPY --from=builder /app/bin/ ./
 
