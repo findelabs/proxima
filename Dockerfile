@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y libssl-dev pkg-config make
 RUN cargo install --path /app --root /app
 
 FROM debian:bookworm-slim
+RUN apt-get update && apt install -y openssl
 WORKDIR /app
 COPY --from=builder /app/bin/ ./
 
