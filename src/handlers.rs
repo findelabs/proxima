@@ -81,7 +81,7 @@ pub async fn proxy(
 
     let id: String = thread_rng()
         .sample_iter(&Alphanumeric)
-        .take(30)
+        .take(16)
         .map(char::from)
         .collect();
 
