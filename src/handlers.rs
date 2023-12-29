@@ -13,6 +13,8 @@ use http::header::USER_AGENT;
 use http::HeaderValue;
 use hyper::{Body, HeaderMap};
 use metrics_exporter_prometheus::PrometheusHandle;
+use rand::distributions::Alphanumeric;
+use rand::{thread_rng, Rng};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::convert::Infallible;
@@ -77,8 +79,15 @@ pub async fn proxy(
         .unwrap_or("error")
         .to_owned();
 
-    log::debug!(
-        "{{\"type\": \"incoming connection\", \"method\": \"{}\", \"path\":\"{}\", \"query\": \"{}\", \"addr\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\":\"{}\"}}",
+    let id: String = thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(30)
+        .map(char::from)
+        .collect();
+
+    log::info!(
+        "{{\"id\":\"{}\", \"type\": \"request\", \"method\": \"{}\", \"path\":\"{}\", \"query\": \"{}\", \"addr\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\":\"{}\"}}",
+        &id,
         &method.as_str(),
         &path.path(),
         query.clone().unwrap_or_else(|| "none".to_string()),
@@ -100,7 +109,8 @@ pub async fn proxy(
     {
         Ok(s) => {
             log::info!(
-                "{{\"type\": \"response\", \"method\": \"{}\", \"status\":\"{}\", \"path\":\"{}\", \"query\": \"{}\", \"client\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",
+                "{{\"id\":\"{}\", \"type\": \"response\", \"method\": \"{}\", \"status\":\"{}\", \"path\":\"{}\", \"query\": \"{}\", \"client\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",
+                &id,
                 &method.as_str(),
                 s.status().as_u16(),
                 &path.path(),
@@ -113,7 +123,8 @@ pub async fn proxy(
         }
         Err(e) => {
             log::warn!(
-                "{{\"type\": \"error\", \"method\": \"{}\", \"message\":{}, \"path\":\"{}\", \"query\": \"{}\", \"client\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",
+                "{{\"id\":\"{}\", \"type\": \"error\", \"method\": \"{}\", \"message\":{}, \"path\":\"{}\", \"query\": \"{}\", \"client\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",
+                &id,
                 &method.as_str(),
                 &e.to_string(),
                 &path.path(),

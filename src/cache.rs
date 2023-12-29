@@ -1,7 +1,7 @@
 //use crate::config::Proxy;
+use lru::LruCache;
 use serde_json::map::Map;
 use serde_json::Value;
-use lru::LruCache;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -19,7 +19,9 @@ impl<T> Default for Cache<T> {
         Cache {
             // Used for metric tracking
             name: String::default(),
-            cache: Arc::new(RwLock::new(LruCache::new(NonZeroUsize::new(10000).unwrap()))),
+            cache: Arc::new(RwLock::new(LruCache::new(
+                NonZeroUsize::new(10000).unwrap(),
+            ))),
         }
     }
 }
@@ -28,7 +30,9 @@ impl<'a, T: std::clone::Clone + std::fmt::Display> Cache<T> {
     pub fn new(name: Option<String>) -> Cache<T> {
         Cache {
             name: name.unwrap_or_default(),
-            cache: Arc::new(RwLock::new(LruCache::new(NonZeroUsize::new(10000).unwrap()))),
+            cache: Arc::new(RwLock::new(LruCache::new(
+                NonZeroUsize::new(10000).unwrap(),
+            ))),
         }
     }
 
@@ -66,7 +70,6 @@ impl<'a, T: std::clone::Clone + std::fmt::Display> Cache<T> {
         }
 
         value
-
     }
 
     pub async fn remove(&self, key: &'a str) -> Option<&'a str> {

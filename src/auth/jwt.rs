@@ -147,7 +147,6 @@ impl JwtAuth {
         if expiration - now <= 360 {
             log::debug!("jwt is expiring, kicking off job to get new token");
             metrics::increment_counter!("proxima_jwt_renew_attempts_total");
-            drop(expiration);
 
             self.get_jwt().await?;
         } else {

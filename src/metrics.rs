@@ -1,9 +1,9 @@
 use axum::{http::Request, middleware::Next, response::IntoResponse};
+use core::time::Duration;
 use hyper::body::HttpBody;
 use metrics_exporter_prometheus::{Matcher, PrometheusBuilder, PrometheusHandle};
 use metrics_util::MetricKindMask;
 use std::time::Instant;
-use core::time::Duration;
 
 pub fn setup_metrics_recorder() -> PrometheusHandle {
     const EXPONENTIAL_SECONDS: &[f64] =

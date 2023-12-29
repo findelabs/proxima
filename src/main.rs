@@ -8,12 +8,12 @@ use axum::{
 use chrono::Local;
 use clap::{crate_name, crate_version, Arg, Command};
 use env_logger::{Builder, Target};
+use jemallocator::Jemalloc;
 use log::LevelFilter;
 use std::io::Write;
 use std::net::SocketAddr;
 use tower::limit::ConcurrencyLimitLayer;
 use tower_http::trace::TraceLayer;
-use jemallocator::Jemalloc;
 
 mod auth;
 mod cache;

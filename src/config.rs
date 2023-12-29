@@ -327,7 +327,10 @@ impl Config {
         }
     }
 
-    pub async fn cache_get(&mut self, mut path: ProxyPath) -> Result<(Route, ProxyPath), ProximaError> {
+    pub async fn cache_get(
+        &mut self,
+        mut path: ProxyPath,
+    ) -> Result<(Route, ProxyPath), ProximaError> {
         let path_str = path.path();
         log::debug!("\"Starting cache_get for {}\"", &path_str);
         if let Some(mapping) = self.mappings.get(path_str).await {
