@@ -19,6 +19,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 use std::convert::Infallible;
 use std::net::SocketAddr;
+use std::time::Instant;
 
 use crate::error::Error as ProximaError;
 use crate::path::ProxyPath;
@@ -85,6 +86,8 @@ pub async fn proxy(
         .map(char::from)
         .collect();
 
+    let start = Instant::now();
+
     log::info!(
         "{{\"id\":\"{}\", \"type\": \"request\", \"method\": \"{}\", \"path\":\"{}\", \"query\": \"{}\", \"addr\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\":\"{}\"}}",
         &id,
@@ -109,10 +112,11 @@ pub async fn proxy(
     {
         Ok(s) => {
             log::info!(
-                "{{\"id\":\"{}\", \"type\": \"response\", \"method\": \"{}\", \"status\":\"{}\", \"path\":\"{}\", \"query\": \"{}\", \"client\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",
+                "{{\"id\":\"{}\", \"type\": \"response\", \"method\": \"{}\", \"status\":\"{}\", \"duration\": {}, \"path\":\"{}\", \"query\": \"{}\", \"client\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",
                 &id,
                 &method.as_str(),
                 s.status().as_u16(),
+                start.elapsed().as_secs_f64(),
                 &path.path(),
                 query.clone().unwrap_or_else(|| "none".to_string()),
                 &addr,
@@ -123,10 +127,11 @@ pub async fn proxy(
         }
         Err(e) => {
             log::warn!(
-                "{{\"id\":\"{}\", \"type\": \"error\", \"method\": \"{}\", \"message\":{}, \"path\":\"{}\", \"query\": \"{}\", \"client\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",
+                "{{\"id\":\"{}\", \"type\": \"error\", \"method\": \"{}\", \"message\":{}, \"duration\": {}, \"path\":\"{}\", \"query\": \"{}\", \"client\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",
                 &id,
                 &method.as_str(),
                 &e.to_string(),
+                start.elapsed().as_secs_f64(),
                 &path.path(),
                 query.clone().unwrap_or_else(|| "none".to_string()),
                 &addr,
