@@ -112,12 +112,12 @@ pub async fn proxy(
     {
         Ok(s) => {
             log::info!(
-                "{{\"id\":\"{}\", \"type\": \"response\", \"method\": \"{}\", \"status\":\"{}\", \"duration\": {}, \"path\":\"{}\", \"query\": \"{}\", \"client\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",
+                "{{\"id\":\"{}\", \"type\": \"response\", \"method\": \"{}\", \"path\":\"{}\", \"status\":\"{}\", \"duration\": {}, \"query\": \"{}\", \"client\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",
                 &id,
                 &method.as_str(),
+                &path.path(),
                 s.status().as_u16(),
                 start.elapsed().as_secs_f64(),
-                &path.path(),
                 query.clone().unwrap_or_else(|| "none".to_string()),
                 &addr,
                 forwarded_for,
@@ -127,12 +127,12 @@ pub async fn proxy(
         }
         Err(e) => {
             log::warn!(
-                "{{\"id\":\"{}\", \"type\": \"error\", \"method\": \"{}\", \"message\":{}, \"duration\": {}, \"path\":\"{}\", \"query\": \"{}\", \"client\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",
+                "{{\"id\":\"{}\", \"type\": \"error\", \"method\": \"{}\", \"path\":\"{}\", \"message\":{}, \"duration\": {}, \"query\": \"{}\", \"client\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",
                 &id,
                 &method.as_str(),
+                &path.path(),
                 &e.to_string(),
                 start.elapsed().as_secs_f64(),
-                &path.path(),
                 query.clone().unwrap_or_else(|| "none".to_string()),
                 &addr,
                 forwarded_for,
