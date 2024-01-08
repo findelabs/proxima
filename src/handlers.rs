@@ -3,6 +3,7 @@ use axum::{
     extract::{
         BodyStream, ConnectInfo, Extension, FromRequest, OriginalUri, Query, RawQuery, RequestParts,
     },
+    http::HeaderName,
     http::Response,
     http::StatusCode,
     response::IntoResponse,
@@ -110,7 +111,7 @@ pub async fn proxy(
         )
         .await
     {
-        Ok(s) => {
+        Ok(mut s) => {
             log::info!(
                 "{{\"id\":\"{}\", \"type\": \"response\", \"method\": \"{}\", \"path\":\"{}\", \"status\":\"{}\", \"duration\": {}, \"query\": \"{}\", \"client\":\"{}\", \"forwarded_for\": \"{}\", \"user_agent\": \"{}\"}}",
                 &id,
@@ -123,6 +124,11 @@ pub async fn proxy(
                 forwarded_for,
                 user_agent
             );
+            s.headers_mut().insert(
+                HeaderName::from_static("x-proxima-trace-id"),
+                HeaderValue::from_str(&id).expect("Failed creating proxima trace id value"),
+            );
+
             Ok(s)
         }
         Err(e) => {
