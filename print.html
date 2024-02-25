@@ -1,0 +1,901 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title></title>
+        <meta name="robots" content="noindex" />
+        <!-- Custom HTML head -->
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="favicon.svg">
+        <link rel="shortcut icon" href="favicon.png">
+        <link rel="stylesheet" href="css/variables.css">
+        <link rel="stylesheet" href="css/general.css">
+        <link rel="stylesheet" href="css/chrome.css">
+        <link rel="stylesheet" href="css/print.css" media="print">
+        <!-- Fonts -->
+        <link rel="stylesheet" href="FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="fonts/fonts.css">
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+        <link rel="stylesheet" href="ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="installation.html"><strong aria-hidden="true">1.</strong> Installation</a></li><li class="chapter-item expanded "><a href="usage/index.html"><strong aria-hidden="true">2.</strong> Usage</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="usage/proxy.html"><strong aria-hidden="true">2.1.</strong> Proxy</a></li><li class="chapter-item expanded "><a href="usage/docker.html"><strong aria-hidden="true">2.2.</strong> Docker</a></li><li class="chapter-item expanded "><a href="usage/arguments.html"><strong aria-hidden="true">2.3.</strong> Arguments</a></li></ol></li><li class="chapter-item expanded "><a href="configuration/index.html"><strong aria-hidden="true">3.</strong> Configuration</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="configuration/global/index.html"><strong aria-hidden="true">3.1.</strong> Global Config</a></li><li class="chapter-item expanded "><a href="configuration/endpoints/index.html"><strong aria-hidden="true">3.2.</strong> Endpoint Variations</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="configuration/endpoints/remote_config.html"><strong aria-hidden="true">3.2.1.</strong> Remote Config</a></li><li class="chapter-item expanded "><a href="configuration/endpoints/proxy.html"><strong aria-hidden="true">3.2.2.</strong> Proxy</a></li><li class="chapter-item expanded "><a href="configuration/endpoints/redirect.html"><strong aria-hidden="true">3.2.3.</strong> Redirect</a></li><li class="chapter-item expanded "><a href="configuration/endpoints/static.html"><strong aria-hidden="true">3.2.4.</strong> Static</a></li><li class="chapter-item expanded "><a href="configuration/endpoints/vault.html"><strong aria-hidden="true">3.2.5.</strong> Vault</a></li></ol></li><li class="chapter-item expanded "><a href="configuration/options.html"><strong aria-hidden="true">3.3.</strong> Endpoint Options</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="configuration/timeouts.html"><strong aria-hidden="true">3.3.1.</strong> Request Timeouts</a></li><li class="chapter-item expanded "><a href="configuration/urlfailover.html"><strong aria-hidden="true">3.3.2.</strong> URL Failover</a></li><li class="chapter-item expanded "><a href="configuration/server_authentication.html"><strong aria-hidden="true">3.3.3.</strong> Remote Auth</a></li><li class="chapter-item expanded "><a href="configuration/security/index.html"><strong aria-hidden="true">3.3.4.</strong> Endpoint Security</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="configuration/security/methods.html"><strong aria-hidden="true">3.3.4.1.</strong> Method</a></li><li class="chapter-item expanded "><a href="configuration/security/networks.html"><strong aria-hidden="true">3.3.4.2.</strong> Network</a></li><li class="chapter-item expanded "><a href="configuration/security/client_authentication.html"><strong aria-hidden="true">3.3.4.3.</strong> Client Auth</a></li></ol></li></ol></li></ol></li><li class="chapter-item expanded "><a href="administration/index.html"><strong aria-hidden="true">4.</strong> Administration</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="administration/caching.html"><strong aria-hidden="true">4.1.</strong> Endpoint Caching</a></li><li class="chapter-item expanded "><a href="administration/rest.html"><strong aria-hidden="true">4.2.</strong> REST API</a></li></ol></li><li class="chapter-item expanded "><a href="metrics.html"><strong aria-hidden="true">5.</strong> Metrics</a></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title"></h1>
+
+                    <div class="right-buttons">
+                        <a href="print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/findelabs/proxima" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="overview"><a class="header" href="#overview">Overview</a></h1>
+<p>Proxima is a simple L7 proxy, redirect engine, and static site server, commonly used as an API gateway, acting as a single entry point for your microservices. Proxima supports connecting to backend endpoints over http/https, and can source dynamic endpoints through http calls, or through Hashicorp Vault.</p>
+<h1 id="docker"><a class="header" href="#docker">Docker</a></h1>
+<p>You can pull down Proxima images at <a href="https://hub.docker.com/repository/docker/findelabs/proxima">docker</a>.</p>
+<h1 id="compile"><a class="header" href="#compile">Compile</a></h1>
+<p>You can compile Proxima by running <code>cargo build --release</code> after pulling down the <a href="https://github.com/findelabs/proxima">repo</a>.</p>
+<p>Alternatively, you may run <code>cargo install --git https://github.com/findelabs/proxima.git</code>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="proxima-usage"><a class="header" href="#proxima-usage">Proxima Usage</a></h1>
+<p>Proxima is, at heart, a layer seven proxy, and is configured using a yaml config file, and also allows for multi-level routing structures.</p>
+<p>For example, a simple configuration could look like the following. With this config, with proxima running on localhost on port 8080, a GET to <code>localhost:8080/google</code> will get redirected to https://www.google.com.</p>
+<pre><code class="language-yaml">routes:
+  google:
+    url: https://www.google.com
+  yahoo:
+    url: https://yahoo.com
+</code></pre>
+<p>A more complex configuration could also proxy in the following. With this config, with a GET to <code>/user1/search</code>, the call will get sent to google, whereas a GET to <code>/user2/search</code> will get forwarded to yahoo.</p>
+<pre><code class="language-yaml">routes:
+  user1:
+    search:
+      url: https://www.google.com
+  user2:
+    search:
+      url: https://yahoo.com
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="proxying-requests"><a class="header" href="#proxying-requests">Proxying Requests</a></h1>
+<p>The main use case for Proxima is to handle clients hitting various endpoints specified in the config. General usage is below:</p>
+<h2 id="list-sub-endpoints"><a class="header" href="#list-sub-endpoints">List Sub Endpoints</a></h2>
+<p>View all endpoints under a path</p>
+<p><strong>URL</strong> : <code>/:endpoint</code></p>
+<p><strong>Method</strong> : <code>GET</code></p>
+<p><strong>Sample Response</strong></p>
+<pre><code class="language-json">{
+  &quot;endpoint_four&quot;: {
+    &quot;url&quot;: &quot;http://localhost:8080/&quot;
+  },
+  &quot;endpoint_three&quot;: {
+    &quot;url&quot;: &quot;http://localhost:8080/&quot;
+  },
+  &quot;level_three&quot;: {
+    &quot;endpoint_five&quot;: {
+      &quot;url&quot;: &quot;http://localhost:8080/&quot;
+    }
+  }
+}
+</code></pre>
+<hr />
+<h2 id="endpoint-forward"><a class="header" href="#endpoint-forward">Endpoint Forward</a></h2>
+<p>Endpoints can forward, redirect, and display static content:</p>
+<p><strong>URL</strong> : <code>/:endpoint/*path</code></p>
+<p><strong>Method</strong> : <code>ANY</code></p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="docker-1"><a class="header" href="#docker-1">Docker</a></h1>
+<p>Findelabs pushes new images to <a href="https://hub.docker.com/r/findelabs/proxima/tags">docker.com</a>. </p>
+<p>You will need to provide Proxima with a basic configuration file in order to start. Below is a bare-bones config:</p>
+<pre><code class="language-bash">cat &lt;&lt; EOF &gt; config.yaml
+routes:
+  endpoint:
+    url: https://google.com
+EOF
+</code></pre>
+<p>You can then start a Proxima container on a server running docker with something like:</p>
+<pre><code class="language-bash">docker run -p 8080:8080 \
+--mount type=bind,source=&quot;$(pwd)&quot;/config.yaml,target=/config.yaml\
+findelabs/proxima:latest --config /config.yaml
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="command-line-arguments"><a class="header" href="#command-line-arguments">Command Line Arguments</a></h1>
+<h2 id="quick-start"><a class="header" href="#quick-start">Quick Start</a></h2>
+<p>Basic usage to start Proxima is </p>
+<pre><code class="language-bash">proxima --config config.yaml
+</code></pre>
+<h2 id="flags"><a class="header" href="#flags">Flags</a></h2>
+<p>Flags are optional to start Proxima.</p>
+<h4 id="--enforce_http"><a class="header" href="#--enforce_http">--enforce_http</a></h4>
+<p>Using <code>--enforce_http</code> causes Proxima to error if any endpoints specify non-http urls.</p>
+<h4 id="--help"><a class="header" href="#--help">--help</a></h4>
+<p>Print out help information with either <code>--help</code> or <code>-h</code>.</p>
+<h4 id="--nodelay"><a class="header" href="#--nodelay">--nodelay</a></h4>
+<p>Enable socket nodelay with <code>--nodelay</code>, read about this <a href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux_for_real_time/7/html/tuning_guide/tcp_nodelay_and_small_buffer_writes">here</a>.</p>
+<h4 id="--reuse_address"><a class="header" href="#--reuse_address">--reuse_address</a></h4>
+<p>Proxima will reuse socket if possible when <code>--reuse_address</code> is specified.</p>
+<h4 id="--accept_invalid_hostnames"><a class="header" href="#--accept_invalid_hostnames">--accept_invalid_hostnames</a></h4>
+<p>Ignore hostnames that do not match the request</p>
+<h4 id="--accept_invalid_certs"><a class="header" href="#--accept_invalid_certs">--accept_invalid_certs</a></h4>
+<p>Accept certs that are not valid on remote servers</p>
+<h4 id="--root_cert"><a class="header" href="#--root_cert">--root_cert</a></h4>
+<p>Import root cert, overriding system default cert</p>
+<h4 id="--version"><a class="header" href="#--version">--version</a></h4>
+<p>Print Proxima version with <code>--version</code> or <code>-v</code></p>
+<h2 id="options"><a class="header" href="#options">Options</a></h2>
+<h4 id="--config-env-proxima_config"><a class="header" href="#--config-env-proxima_config">--config [env: PROXIMA_CONFIG]</a></h4>
+<p>Specify a yaml config file with <code>--config</code> or <code>-c</code>. This configuration can either be a file, or an http endpoint.</p>
+<h4 id="--config_username-env-proxima_auth_username"><a class="header" href="#--config_username-env-proxima_auth_username">--config_username [env: PROXIMA_AUTH_USERNAME]</a></h4>
+<p>If you config file is an http endpoint that requires authentication, specify a username with <code>--config_username</code>.</p>
+<h4 id="--config_password-env-proxima_auth_password"><a class="header" href="#--config_password-env-proxima_auth_password">--config_password [env: PROXIMA_AUTH_PASSWORD]</a></h4>
+<p>If you config file is an http endpoint that requires authentication, specify a password with <code>--config_password</code>.</p>
+<h4 id="--port-env-proxima_listen_port"><a class="header" href="#--port-env-proxima_listen_port">--port [env: PROXIMA_LISTEN_PORT]</a></h4>
+<p>Set the port on which to listen with <code>--port</code> or <code>-p</code>, default of 8080.</p>
+<h4 id="--username-env-proxima_client_username"><a class="header" href="#--username-env-proxima_client_username">--username [env: PROXIMA_CLIENT_USERNAME]</a></h4>
+<p>Force all clients hitting Proxima to authenticate with Basic creds, with <code>--username</code> or <code>-u</code> specifying the username.</p>
+<h4 id="-password-env-proxima_client_password"><a class="header" href="#-password-env-proxima_client_password">-password [env: PROXIMA_CLIENT_PASSWORD]</a></h4>
+<p>Force all clients hitting Proxima to authenticate with Basic creds, with <code>--password</code> or <code>-p</code> specifying the password.</p>
+<h4 id="--timeout-env-proxima_timeout"><a class="header" href="#--timeout-env-proxima_timeout">--timeout [env: PROXIMA_TIMEOUT]</a></h4>
+<p>Set a global connection timeout with <code>--timeout</code>, default is 60 seconds.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="configuration"><a class="header" href="#configuration">Configuration</a></h1>
+<p>Proxima is configured via a yaml config file, which currently specifies just the subfolders, endpoints, and various endpoint options which Proxima will serve. </p>
+<p>In the future, we will be including many more configuration options within this config.</p>
+<h3 id="configuration-syntax"><a class="header" href="#configuration-syntax">Configuration Syntax</a></h3>
+<p>The configuration file of Proxima always starts with a <code>routes</code> block, under which all remote endpoints reside. Proxima can handle multi-level endpoints as well.</p>
+<p>For example, to have Proxima send any clients requesting <code>/host/yahoo</code> to yahoo.com, and <code>/host/google</code> to google.com, your config.yaml would look something like:</p>
+<pre><code class="language-yaml">routes:
+  host:
+    proxy:
+      yahoo:
+        url: http://yahoo.com
+      google:
+        url: http:://google.com
+</code></pre>
+<p>Alternatively, Proxima can also serve redirects for various sites, as shown in the example below:</p>
+<pre><code class="language-yaml">routes:
+  links:
+    google: 
+      redirect:
+        url: https://google.com
+    craigslist: 
+      redirect:
+        url: https://craigslist.com
+</code></pre>
+<h3 id="optional-endpoint-fields"><a class="header" href="#optional-endpoint-fields">Optional Endpoint Fields</a></h3>
+<p>Proxy and static endpoint variants can contain a series of optional fields:</p>
+<ul>
+<li>Endpoint timeouts (timeout)</li>
+<li>Security (security)
+<ul>
+<li>Client Authentication (security.client)</li>
+<li>Method Whitelisting  (security.whitelist.method)</li>
+<li>Network Whitelisting  (security.whitelist.method)</li>
+</ul>
+</li>
+<li>Remote URL Authentication  (authentication)</li>
+</ul>
+<h3 id="dynamic-loading"><a class="header" href="#dynamic-loading">Dynamic Loading</a></h3>
+<p>Proxima will check for changes to the config file every 30 seconds by default. If the newest changes are unparsable, Proxima will continue to operate using the previous working configuration.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="global-config"><a class="header" href="#global-config">Global Config</a></h1>
+<p>Example global config is shown below:</p>
+<pre><code class="language-yaml">global:
+  network:
+    enforce_http: Bool
+    nodelay: Bool
+    reuse_address: Bool
+    timeout: u64
+  security:
+    config:
+      hide_folders: Bool
+    tls:
+      accept_invalid_hostnames: Bool
+      insecure: Bool
+      import_cert: String
+    auth:
+      client:
+        api_key:
+        basic:
+        bearer:
+        digest:
+        jwks:
+      whitelist:
+        networks: Vec&lt;CIDR&gt;
+        methods: Vec&lt;Methods&gt;
+</code></pre>
+<h3 id="config-item-details"><a class="header" href="#config-item-details">Config Item Details</a></h3>
+<table><thead><tr><th>Name</th><th>Description</th><th>Value</th></tr></thead><tbody>
+<tr><td>global.network.enforce_http</td><td>Enforce http-type endpoints</td><td><code>false</code></td></tr>
+<tr><td>global.network.nodelay</td><td>Enable TCP nodelay on packets</td><td><code>false</code></td></tr>
+<tr><td>global.network.reuse_address</td><td>Reuse sockets when establishing connections</td><td><code>false</code></td></tr>
+<tr><td>global.network.timeout</td><td>Set global connection timeout</td><td><code>false</code></td></tr>
+<tr><td>global.security.config.hide_folders</td><td>Return 404 for non-endpoints (folders)</td><td><code>false</code></td></tr>
+<tr><td>global.security.tls.accept_invalid_hostnames</td><td>Accept invalid hostnames when using https</td><td><code>false</code></td></tr>
+<tr><td>global.security.tls.insecure</td><td>Accept incorrect certs when using https</td><td><code>false</code></td></tr>
+<tr><td>global.security.tls.import_cert</td><td>Specify cert to import</td><td><code>&quot;&quot;</code></td></tr>
+<tr><td>global.security.auth.client</td><td>Set default client auth (overridden at endpoint)</td><td><code>{}</code></td></tr>
+<tr><td>global.security.auth.whitelist.networks</td><td>Set default network whitelist</td><td><code>[]</code></td></tr>
+<tr><td>global.security.auth.whitelist.methods</td><td>Set default method whitelist</td><td><code>[]</code></td></tr>
+</tbody></table>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="endpoints"><a class="header" href="#endpoints">Endpoints</a></h1>
+<p>Below is a list of the endpoint variations that Proxima supports, along with a brief description:</p>
+<h4 id="remote-config"><a class="header" href="#remote-config">Remote Config</a></h4>
+<p>This variant will attempt to pull all sub folders from the url specified. </p>
+<h4 id="proxy"><a class="header" href="#proxy">Proxy</a></h4>
+<p>This variant will forward request payload, method, and headers, along with sub folders, to the specified url.</p>
+<h4 id="redirect"><a class="header" href="#redirect">Redirect</a></h4>
+<p>This variant will simply redirect all requests to the specified url.</p>
+<h4 id="static"><a class="header" href="#static">Static</a></h4>
+<p>Specify a static body to serve.</p>
+<h4 id="vault"><a class="header" href="#vault">Vault</a></h4>
+<p>Connect to a HashiCorp Vault instance, in order to pull dynamic secrets, optionally templated to match any matching variant using handlebars.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="remote-config-1"><a class="header" href="#remote-config-1">Remote Config</a></h1>
+<p>This variant will pull the sub-config from a remote url. This can be used to stitch multiple Proximas together, in order to share a config. </p>
+<p>An example of this is shown below:</p>
+<pre><code class="language-yaml">routes:
+  proxima:
+    http_config:
+      url: http://localhost:8081/config
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="proxy-1"><a class="header" href="#proxy-1">Proxy</a></h1>
+<p>This endpoint variant will forward all requests that terminate the config entry. For example, with the following config:</p>
+<pre><code class="language-yaml">routes:
+  api:
+    proxy:
+      url: http://localhost:8081
+</code></pre>
+<p>A user request to localhost:8080/api/health will return back the response from http://localhost:8081/health.</p>
+<h3 id="proxy-endpoint-details"><a class="header" href="#proxy-endpoint-details">Proxy Endpoint Details</a></h3>
+<table><thead><tr><th>Name</th><th>Description</th><th>Value</th></tr></thead><tbody>
+<tr><td>proxy.url</td><td>URL for remote server</td><td><code>&quot;&quot;</code></td></tr>
+<tr><td>proxy.authentication</td><td>Enable the sending of credentials to remote server</td><td><code>{}</code></td></tr>
+<tr><td>proxy.timeout</td><td>Endpoint timeout after connection is established</td><td><code>u64</code></td></tr>
+<tr><td>proxy.security.client</td><td>Enable client authentication</td><td><code>{}</code></td></tr>
+<tr><td>proxy.security.whitelist.networks</td><td>Enable network whitelisting</td><td><code>[]</code></td></tr>
+<tr><td>proxy.security.whitelist.methods</td><td>Enable method authentication</td><td><code>[]</code></td></tr>
+<tr><td>proxy.config.preserve_host_header</td><td>Retain original client HOST header</td><td><code>{}</code></td></tr>
+</tbody></table>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="redirect-1"><a class="header" href="#redirect-1">Redirect</a></h1>
+<p>With this variant, hitting this endpoint will cause proxima to return a 308 Permanent Redirect to the client, along with the next hop location in the headers.</p>
+<p>Example of such config below:</p>
+<pre><code class="language-yaml">routes:
+  google:
+    redirect:
+      url: https://google.com
+</code></pre>
+<h3 id="redirect-endpoint-details"><a class="header" href="#redirect-endpoint-details">Redirect Endpoint Details</a></h3>
+<table><thead><tr><th>Name</th><th>Description</th><th>Value</th></tr></thead><tbody>
+<tr><td>redirect.url</td><td>URL for remote server</td><td><code>&quot;&quot;</code></td></tr>
+</tbody></table>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="static-1"><a class="header" href="#static-1">Static</a></h1>
+<p>This endpoint variant simply returns back a body to the client. This can easily be used to override the default root page of Proxima. </p>
+<p>An example override of <code>/</code> shown below:</p>
+<pre><code class="language-yaml">routes:
+  /:
+    static:
+      body: &quot;hello world&quot;
+</code></pre>
+<h3 id="static-endpoint-details"><a class="header" href="#static-endpoint-details">Static Endpoint Details</a></h3>
+<table><thead><tr><th>Name</th><th>Description</th><th>Value</th></tr></thead><tbody>
+<tr><td>static.body</td><td>Body of response</td><td><code>&quot;&quot;</code></td></tr>
+<tr><td>static.security.client</td><td>Enable client authentication</td><td><code>{}</code></td></tr>
+<tr><td>static.security.whitelist.networks</td><td>Enable network whitelisting</td><td><code>[]</code></td></tr>
+<tr><td>static.security.whitelist.methods</td><td>Enable method authentication</td><td><code>[]</code></td></tr>
+<tr><td>static.headers</td><td>Add headers to response</td><td><code>{}</code></td></tr>
+</tbody></table>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="hashicorp-vault-integration"><a class="header" href="#hashicorp-vault-integration">Hashicorp Vault Integration</a></h1>
+<p>Proxima can be directed to pull secrets from a single Vault endpoint, and can be configured to authenticate via approle, or JWT. Proxima is able to source either an entire secret directory from Vault, or a single secret. </p>
+<p>Proxima is able to pull dynamic secrets from Hashicorp Vault, and can cache these remote endpoints locally in the endpoint cache. This reduces the necassary calls to Vault to just a single GET, with subsequent proxy requests being served from memory.</p>
+<p>Examples on how to configure Proxima to connect to Vault is shown below:</p>
+<h4 id="vault-approle-authentication"><a class="header" href="#vault-approle-authentication">Vault AppRole Authentication</a></h4>
+<pre><code>./proxima --config $CONFIG \
+--vault_role_id $ROLE_ID \
+--vault_secret_id $SECRET_ID \
+--vault_url https://vault.local:8200 \
+--vault_mount kv2
+</code></pre>
+<h5 id="vault-jwt-authentication-within-pod"><a class="header" href="#vault-jwt-authentication-within-pod">Vault JWT Authentication (within pod)</a></h5>
+<pre><code>./proxima --vault_kubernetes_role kubernetes \
+--vault_login_path auth/kubernetes \
+--vault_url https://vault.local:8200 \
+--vault_mount kv2
+</code></pre>
+<h3 id="endpoint-configuration"><a class="header" href="#endpoint-configuration">Endpoint Configuration</a></h3>
+<p>Proxima will attempt to authenticate to the Vault upon startup. Proxima will only begin to serve endpoints once it is able to connect to Vault succesfully. Next, we will need to ensure that the endpoints are pointed at a secret or folder that exists. This is done by specifying both the secret path, and an optional template, in case of a complex secrets. Below is an example of how one could setup an endpoint designed to use Digest authentication to connect to the MongoDB Atlas REST API.</p>
+<pre><code>routes:
+  atlas:
+    vault:
+      template: eyJ1cmwiOiJ7eyB1cmwgfX0iLCJhdXRoZW50aWNhdGlvbiI6eyJkaWdlc3QiOnsidXNlcm5hbWUiOiJ7eyB1c2VybmFtZSB9fSIsInBhc3N3b3JkIjoie3sgcGFzc3dvcmQgfX0ifX19Cg==
+      secret: atlas/apis/rest
+</code></pre>
+<p>When we unpack the example template, we find: <code>{&quot;url&quot;:&quot;{{ url }}&quot;,&quot;authentication&quot;:{&quot;digest&quot;:{&quot;username&quot;:&quot;{{ username }}&quot;,&quot;password&quot;:&quot;{{ password }}&quot;}}}</code></p>
+<p>The Vault secret found at <code>kv2/atlas/apis/rest</code> can contain any number of fields,  as long as they contain a minimum number of fields specified in the base64-encoded template: url, username, and password. </p>
+<h3 id="vault-secret-folder"><a class="header" href="#vault-secret-folder">Vault Secret Folder</a></h3>
+<p>Proxima is also able to grab secrets from a folder within  Vault. Proxima differentiate a folder vs a single secret by whether or not the secret provided has a trailing forward slash.</p>
+<p>For example, if a running Proxima were configured with an endpoint named atlas, with a Vault secret pointing at <code>/atlas/apis/</code>, a GET request to <code>http://localhost:8080/atlas/rest</code> will cause Proxima to attempt to pull a secret in Vault at <code>kv2/atlas/apis/rest</code>, and will attempt to apply the template against the contents. If the resulting json can be successfully parsed as an endpoint, Proxima will route the client to the remote url with digest authentication. If the secret does not contain the fields specified within the template, Proxima will log an error, and will return a 404 status code.</p>
+<p>Additionally, a GET request to <code>http://localhost:8080/atlas</code> will cause Proxima to attempt to apply the template against any secrets found within <code>kv2/atlas/apis</code>, returning back a json payload with any endpoints it found within the folder. </p>
+<h3 id="vault-endpoint-details"><a class="header" href="#vault-endpoint-details">Vault Endpoint Details</a></h3>
+<table><thead><tr><th>Name</th><th>Description</th><th>Value</th></tr></thead><tbody>
+<tr><td>vault.secret</td><td>Path to secret in Vault</td><td><code>&quot;&quot;</code></td></tr>
+<tr><td>vault.template</td><td>Template to use when rendering secret</td><td><code>&quot;&quot;</code></td></tr>
+</tbody></table>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="endpoint-options"><a class="header" href="#endpoint-options">Endpoint Options</a></h1>
+<p>Extra endpoint options are available for specific endpoint variants. </p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="endpoint-timeouts"><a class="header" href="#endpoint-timeouts">Endpoint Timeouts</a></h1>
+<p>Proxima has a default connection timeout of 60 seconds that can be overridden with a command line argument or environmental variable. However, there is also a request timeout that is set at the individual endpoint level, also with a default of 60 seconds.</p>
+<p>If 60 seconds is considered too long for your remote endpoint, you can override the setting like the following (in ms):</p>
+<pre><code class="language-yaml">routes:
+  my_endpoint:
+    proxy:
+      url: http://google.com
+      timeout: 5000
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="url-failover"><a class="header" href="#url-failover">URL Failover</a></h1>
+<p>Proxima allow for URL's to be failed over when a remote URL socket is not open, or when the url times out. </p>
+<p>Configure an endpoint like below in order to have the URL failover. In this example, if google.com fails to respond, then duckduckgo.com will be promoted as the primary URL for this endpoint.</p>
+<pre><code class="language-yaml">routes:
+  search:
+    proxy:
+      url: 
+        failover:
+        - http://google.com
+        - http://duckduckgo.com
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="remote-server-authentication"><a class="header" href="#remote-server-authentication">Remote Server Authentication</a></h1>
+<p>Proxima can both connect to remote URL's using the following authentication methods:</p>
+<ul>
+<li>Basic</li>
+<li>Bearer</li>
+<li>Digest</li>
+<li>API Key</li>
+<li>JWT</li>
+</ul>
+<p>If a remote endpoint requires authentication, for example, Basic authentication, simply specify a new authentication field within the endpoint yaml:</p>
+<pre><code class="language-yaml">routes:
+  endpoint_requiring_basic:
+    proxy:
+      url: http://myurl.net
+      authentication:
+        basic:
+          username: myusername
+          password: mypassword
+</code></pre>
+<p>Here are some examples on how to specify each of these authentication types, for an endpoint. Keep in mind that the authentication block only supports one type of authentication for an endpoint:</p>
+<h4 id="basic"><a class="header" href="#basic">Basic</a></h4>
+<pre><code class="language-yaml">routes:
+  endpoint_test:
+    proxy:
+      url: http://myurl.net
+    authentication:
+      basic:
+        username: client
+        password: mypassword
+</code></pre>
+<h4 id="digest"><a class="header" href="#digest">Digest</a></h4>
+<pre><code class="language-yaml">routes:
+  endpoint_test:
+    proxy:
+      url: http://myurl.net
+    authentication:
+      digest:
+        username: client
+        password: mypassword
+</code></pre>
+<h4 id="bearer"><a class="header" href="#bearer">Bearer</a></h4>
+<pre><code class="language-yaml">routes:
+  endpoint_test:
+    proxy:
+      url: http://myurl.net
+    authentication:
+      bearer:
+        token: s.Y2Rhc2Nkc2NkYXNjc2QK
+</code></pre>
+<h4 id="api-key"><a class="header" href="#api-key">API Key</a></h4>
+<pre><code class="language-yaml">routes:
+  endpoint_test:
+    proxy:
+      url: http://myurl.net
+    authentication:
+      api_key:
+        token: s.Y2Rhc2Nkc2NkYXNjc2QK
+        key: api-key
+</code></pre>
+<h4 id="jwt"><a class="header" href="#jwt">JWT</a></h4>
+<pre><code class="language-yaml">routes:
+  endpoint_test:
+    proxy:
+      url: http://myurl.net
+    authentication:
+      jwt:
+        url: https://dev-8177876213.okta.com/oauth2/default/v1/token
+        audience: 0oa4cdaknkn866cdacd
+        client_id: njcda8981cds
+        client_secret: s.Y2Rhc2Nkc2NkYXNjc2QK
+        grant_type: client_credentials
+        scopes: 
+        - default
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="endpoint-security"><a class="header" href="#endpoint-security">Endpoint Security</a></h1>
+<p>Proxima allows for the whitelisting of both methods and networks. An example of an endpoint that allows GET and POST requests, from private networks, is shown below:</p>
+<pre><code class="language-yaml">routes:
+  endpoint_basic:
+    proxy:
+      url: http://myurl.net
+      security:
+        whitelist:
+          methods:
+          - GET
+          - POST
+          networks:
+          - 10.0.0.0/8
+          - 127.0.0.0/16
+          - 192.168.0.0/24
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="method-whitelisting"><a class="header" href="#method-whitelisting">Method Whitelisting</a></h1>
+<p>You can whitelist specific methods for all clients for an endpoint.</p>
+<pre><code class="language-yaml">routes:
+  endpoint_basic:
+    proxy:
+      url: http://myurl.net
+      security:
+        whitelist:
+          methods:
+          - GET
+          - POST
+</code></pre>
+<p>The following methods can currently be whitelisted:</p>
+<ul>
+<li>Options</li>
+<li>Get</li>
+<li>Post</li>
+<li>Put</li>
+<li>Delete</li>
+<li>Head</li>
+<li>Trace</li>
+<li>Connect</li>
+<li>Patch</li>
+</ul>
+<h3 id="client-whitelists"><a class="header" href="#client-whitelists">Client Whitelists</a></h3>
+<p>You can also whitelist specific methods for specific clients under security.clients[].whitelist, as shown below. Keep in mind that clients will only be able to use methods included in the global endpoint configuration.</p>
+<pre><code class="language-yaml">routes:
+  endpoint_basic:
+    proxy:
+      url: http://myurl.net
+      security:
+        whitelist:
+          methods:
+          - GET
+          - POST
+        client:
+          basic:
+          
+          # This will work
+          - username: myuser_one
+            password: mypassword
+            whitelist:
+              methods:
+              - GET
+              
+          # This will fail since PUT is not a globally whitelisted endpoint method
+          - username: myuser_two
+            password: mypassword
+            whitelist:
+              methods:
+              - PUT
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="network-whitelisting"><a class="header" href="#network-whitelisting">Network Whitelisting</a></h1>
+<p>Proxima is able to whitelist CIDR networks. You may configure both global whitelisted endpoint networks, as well per-client whitelisted networks. The global network whitelist trumps client whitelists, in that if a client network is not included in the global whitelisted networks, connections from the client network will be refused.</p>
+<p>The global endpoint network whitelist is not a requirement. You keep network whitelisted solely at the client whitelist level.</p>
+<p>An example of a series of whitelisted networks with a global whitelist is shown below:</p>
+<pre><code class="language-yaml">routes:
+  single:
+    proxy:
+      url: http://localhost:3000
+      security:
+        whitelist:
+          networks:
+          - 192.168.1.0/24
+          - 192.168.0.0/24
+        client:
+          basic:
+          # This admin user will only be allowed to authenticate from a single network
+          - username: admin1
+            password: adminpassword1
+            whitelist:
+              networks:
+              - 192.168.0.0/24
+          # This admin user will only be allowed to authenticate from a single network
+          - username: admin2
+            password: adminpassword2
+            whitelist:
+              networks:
+              - 192.168.1.0/24
+</code></pre>
+<p>Here is an example of an endpoint that does not specify a global network whitelist:</p>
+<pre><code class="language-yaml">routes:
+  single:
+    proxy:
+      url: http://localhost:3000
+      security:
+        client:
+          basic:
+          - username: admin1
+            password: adminpassword1
+            whitelist:
+              networks:
+              - 192.168.0.0/24
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="client-authentication"><a class="header" href="#client-authentication">Client Authentication</a></h1>
+<p>Proxima is able to authenticate clients using any of the following protocols:</p>
+<ul>
+<li>Basic</li>
+<li>Bearer</li>
+<li>Digest</li>
+<li>JWKS</li>
+</ul>
+<h3 id="basic-and-digest-client-authentication"><a class="header" href="#basic-and-digest-client-authentication">Basic and Digest Client Authentication</a></h3>
+<p>If you would like to require that one user logs in with Basic, and another with Digest, simply create a new security.client map that contains both basic and digest, within the endpoint yaml. </p>
+<pre><code class="language-yaml">routes:
+  locked:
+    proxy:
+      url: http://myurl.net
+      security:
+        client:
+          basic:
+          - username: client_one
+            password: mypasswordone
+          digest:
+          - username: client_digest
+            password: mypasswordtwo
+</code></pre>
+<h4 id="client-jwks-configuration"><a class="header" href="#client-jwks-configuration">Client JWKS Configuration</a></h4>
+<p>Proxima can authenticate users' JWT's by caching the JWKS from other authentication providers, like Okta. </p>
+<p>Here is an example on how to configure an endpoint with jwks client authentication:</p>
+<pre><code class="language-yaml">routes:
+  endpoint_test:
+    proxy:
+      url: http://myurl.net
+      security:
+        client:
+          jwks:
+          - url: https://dev-17129172.okta.com/oauth2/default/v1/keys
+            audience: api://default
+            scopes:
+            - findelabs.test
+</code></pre>
+<p>With this configuration, after a user generates a token via the Okta /token endpoint, include said token field in the Authorization header of the request to Proxima.</p>
+<h4 id="client-bearer-configuration"><a class="header" href="#client-bearer-configuration">Client Bearer Configuration</a></h4>
+<p>Proxima can authenticate user's token as well, by using the token client security type.</p>
+<p>Here is an example on how to configure an endpoint with bearer client authentication:</p>
+<pre><code class="language-yaml">routes:
+  endpoint_test:
+    proxy:
+      url: http://myurl.net
+      security:
+        client:
+          bearer:
+          - token: s.YWQ5MWY2N2RiMTE1ZjNhZDdkOTFiOGZl
+</code></pre>
+<h4 id="client-api-key-configuration"><a class="header" href="#client-api-key-configuration">Client API Key Configuration</a></h4>
+<p>Proxima can also authenticate users based on a specified header's value. The default header name is set to <code>x-api-key</code>, but this name can be set to any arbitrary value.</p>
+<p>Here is an example on how to configure an endpoint with api_key client authentication:</p>
+<pre><code class="language-yaml">routes:
+  endpoint_test:
+    proxy:
+      url: http://myurl.net
+      security:
+        client:
+          api_key:
+          - token: s.YWQ5MWY2N2RiMTE1ZjNhZDdkOTFiOGZl
+          - token: s.NDQ4YzIzNzA0OWI4YmU1MjVkN2M4ZDZi
+            key: api-key
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="administration"><a class="header" href="#administration">Administration</a></h1>
+<p>Proxima exposes a series of administrative API endpoints that can used to gain insight into endpoint mappings, caching, metrics, and more.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="endpoint-caching"><a class="header" href="#endpoint-caching">Endpoint Caching</a></h1>
+<p>Proxima employs a two-stage cache; the first which maps a Proxima config folder path to config endpoint, and the second which maps unique client request paths to the first stage cache. </p>
+<h4 id="first-stage"><a class="header" href="#first-stage">First Stage</a></h4>
+<p>The first stage cache can be viewed by hitting the <code>/cache</code> endpoint on the admin port, and may show contents like:</p>
+<pre><code>{
+  &quot;archivelabs&quot;: &quot;https://api.archivelab.org/v1&quot;,
+  &quot;inshortsapi&quot;: &quot;https://inshortsapi.vercel.app/news&quot;
+}
+</code></pre>
+<p>What this shows is that there are at least two endpoints listed within Proxima's config, one for archivelabs, and the other for inshortsapi. The value for both of these keys is simply displayed as the remote URL, but within the cache is the entire endpoint, which includes any authentication, or security parameters. </p>
+<h4 id="second-stage"><a class="header" href="#second-stage">Second Stage</a></h4>
+<p>The second stage cache can be accessed by hitting the <code>/mappings</code> endpoint, also served on the admin port. Example contents corresponding to the first stage cache listed above may look something like:</p>
+<pre><code>{
+  &quot;/archivelabs&quot;: &quot;archivelabs&quot;,
+  &quot;/inshortsapi&quot;: &quot;inshortsapi&quot;,
+  &quot;/inshortsapi/foobar&quot;: &quot;inshortsapi&quot;
+}
+</code></pre>
+<p>What this means is that at least one client has hit Proxima at the paths /archivelabs, /inshortsapi, and /inshortsapi/foobar. If another client were to request another unique path from Proxima which matches a known endpoint, that too would be added to the second stage cache.</p>
+<h4 id="relearning-endpoints"><a class="header" href="#relearning-endpoints">Relearning Endpoints</a></h4>
+<p>If the endpoints for any of the entries in the cache were learned from a remote source, such as Vault, and then had their Vault secret modified, the first stage cache will have invalid data. This is acknowledged as a potential risk, and we plan on introducing a cache timeout in the future. </p>
+<p>For now, if a Vault secret is modified that has already been cached, you may remove the cached entry by using a delete method against <code>/cache?key=inshortsapi</code>, which in this case will remove the entry for inshortsapi from the first stage cache. There is no delete option available for the second stage cache, since the likelyhood of a mapping going bad is exceedingly low. </p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="rest-api"><a class="header" href="#rest-api">REST API</a></h1>
+<p>Proxima exposes a series of admin API paths on a secondary port, by default 8081.</p>
+<h2 id="show-config"><a class="header" href="#show-config">Show Config</a></h2>
+<p>Get Proxima's current configuration</p>
+<p><strong>URL</strong> : <code>/config</code></p>
+<p><strong>Method</strong> : <code>GET</code></p>
+<h4 id="success-response"><a class="header" href="#success-response">Success Response:</a></h4>
+<p><strong>Code</strong> : <code>200 OK</code></p>
+<p><strong>Sample Response</strong></p>
+<pre><code class="language-json">{
+  &quot;network&quot;: {
+    &quot;enforce_http&quot;: false,
+    &quot;nodelay&quot;: false,
+    &quot;reuse_address&quot;: false,
+    &quot;timeout&quot;: 5000
+  },
+  &quot;security&quot;: {
+    &quot;config&quot;: {
+      &quot;hide_folders&quot;: false
+    },
+    &quot;tls&quot;: {
+      &quot;accept_invalid_hostnames&quot;: false,
+      &quot;insecure&quot;: false
+    },
+    &quot;whitelist&quot;: {
+      &quot;networks&quot;: [
+        &quot;10.0.0.0/8&quot;
+      ]
+    }
+  }
+}
+</code></pre>
+<hr />
+<h2 id="show-routes"><a class="header" href="#show-routes">Show Routes</a></h2>
+<p>Get Proxima's current routes</p>
+<p><strong>URL</strong> : <code>/routes</code></p>
+<p><strong>Method</strong> : <code>GET</code></p>
+<h4 id="success-response-1"><a class="header" href="#success-response-1">Success Response:</a></h4>
+<p><strong>Code</strong> : <code>200 OK</code></p>
+<p><strong>Sample Response</strong></p>
+<pre><code class="language-json">{
+  &quot;routes&quot;: {
+    &quot;archivelabs&quot;: {
+      &quot;proxy&quot;: {
+        &quot;timeout&quot;: 5000,
+        &quot;url&quot;: &quot;https://api.archivelab.org/v1&quot;
+      }
+    },
+    &quot;inshortsapi&quot;: {
+      &quot;proxy&quot;: {
+        &quot;url&quot;: &quot;https://inshortsapi.vercel.app/news&quot;
+      }
+    },
+    &quot;local&quot;: {
+      &quot;proxy&quot;: {
+        &quot;url&quot;: &quot;http://localhost:8082/&quot;
+      }
+    }
+  }
+}
+</code></pre>
+<hr />
+<h2 id="show-health"><a class="header" href="#show-health">Show Health</a></h2>
+<p>Get Proxima's current health</p>
+<p><strong>URL</strong> : <code>/health</code></p>
+<p><strong>Method</strong> : <code>GET</code></p>
+<h4 id="success-response-2"><a class="header" href="#success-response-2">Success Response:</a></h4>
+<p><strong>Code</strong> : <code>200 OK</code></p>
+<p><strong>Sample Response</strong></p>
+<pre><code class="language-json">{
+  &quot;msg&quot;: &quot;Healthy&quot;
+}
+</code></pre>
+<hr />
+<h2 id="reload-config"><a class="header" href="#reload-config">Reload Config</a></h2>
+<p>Reload Proxima Config</p>
+<p><strong>URL</strong> : <code>/reload</code></p>
+<p><strong>Method</strong> : <code>POST</code></p>
+<h4 id="success-response-3"><a class="header" href="#success-response-3">Success Response:</a></h4>
+<p><strong>Code</strong> : <code>200 OK</code></p>
+<hr />
+<h2 id="get-mappings-cache"><a class="header" href="#get-mappings-cache">Get Mappings Cache</a></h2>
+<p>Get the current mappings cache.</p>
+<p><strong>URL</strong> : <code>/mappings</code></p>
+<p><strong>Method</strong> : <code>GET</code></p>
+<h4 id="success-response-4"><a class="header" href="#success-response-4">Success Response:</a></h4>
+<p><strong>Code</strong> : <code>200 OK</code></p>
+<p><strong>Sample Response</strong></p>
+<pre><code class="language-json">{
+  &quot;/archivelabs&quot;: &quot;archivelabs&quot;,
+  &quot;/inshortsapi&quot;: &quot;inshortsapi&quot;
+}
+</code></pre>
+<hr />
+<h2 id="get-cache"><a class="header" href="#get-cache">Get Cache</a></h2>
+<p>Get the current url cache.</p>
+<p><strong>URL</strong> : <code>/cache</code></p>
+<p><strong>Method</strong> : <code>GET</code></p>
+<h4 id="success-response-5"><a class="header" href="#success-response-5">Success Response:</a></h4>
+<p><strong>Code</strong> : <code>200 OK</code></p>
+<p><strong>Sample Response</strong></p>
+<pre><code class="language-json">{
+  &quot;archivelabs&quot;: &quot;https://api.archivelab.org/v1&quot;,
+  &quot;inshortsapi&quot;: &quot;https://inshortsapi.vercel.app/news&quot;
+}
+</code></pre>
+<hr />
+<h2 id="delete-cache"><a class="header" href="#delete-cache">Delete Cache</a></h2>
+<p>Delete Proxima's cache</p>
+<p><strong>URL</strong> : <code>/cache</code></p>
+<p><strong>Method</strong> : <code>DELETE</code></p>
+<h4 id="success-response-6"><a class="header" href="#success-response-6">Success Response:</a></h4>
+<p><strong>Code</strong> : <code>200 OK</code></p>
+<p><strong>Sample Response</strong></p>
+<pre><code class="language-json">{
+  &quot;msg&quot;: &quot;cache has been cleared&quot;
+}
+</code></pre>
+<hr />
+<h2 id="delete-cache-entry"><a class="header" href="#delete-cache-entry">Delete Cache Entry</a></h2>
+<p>Get the current url cache hashmap.</p>
+<p><strong>URL</strong> : <code>/cache?key=[key]</code></p>
+<p><strong>Method</strong> : <code>DELETE</code></p>
+<h4 id="success-response-7"><a class="header" href="#success-response-7">Success Response:</a></h4>
+<p><strong>Code</strong> : <code>200 OK</code></p>
+<p><strong>Sample Response</strong></p>
+<pre><code class="language-json">{
+  &quot;entry&quot;: &quot;archivelabs&quot;,
+  &quot;msg&quot;: &quot;entry remove from cache&quot;
+}
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="metrics"><a class="header" href="#metrics">Metrics</a></h1>
+<p>Proxima exposes a <code>/-/metrics</code> path that can be scraped by Prometheus. </p>
+<p>The following metric types are currently enabled:</p>
+<ul>
+<li>TYPE proxima_cache_attempt_total counter</li>
+<li>TYPE proxima_cache_keys gauge</li>
+<li>TYPE proxima_cache_miss_total counter</li>
+<li>TYPE proxima_config_renew_attempts_total counter</li>
+<li>TYPE proxima_config_renew_failures_total counter</li>
+<li>TYPE proxima_jwts_renew_attempts_total counter</li>
+<li>TYPE proxima_jwts_renew_failures_total counter</li>
+<li>TYPE proxima_requests_duration_seconds histogram</li>
+<li>TYPE proxima_requests_total counter</li>
+<li>TYPE proxima_response_errors_total counter</li>
+<li>TYPE proxima_security_client_authentication_total counter</li>
+<li>TYPE proxima_security_method_attempts_total counter</li>
+<li>TYPE proxima_security_method_blocked_total counter</li>
+</ul>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+            </nav>
+
+        </div>
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        <script src="elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+        <script type="text/javascript">
+        window.addEventListener('load', function() {
+            window.setTimeout(window.print, 100);
+        });
+        </script>
+    </body>
+</html>
